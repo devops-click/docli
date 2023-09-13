@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.01"
+install_version="0.0.02"
 install_file_name="$(basename "$0")"
 install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 install_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -53,7 +53,7 @@ arch=$(uname -m)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   os="macos"
   os_name="MacOS"
-  echo "** OS: ${os_name} (${arch}) Detected **"
+  echo "** OS: ${os_name} ${arch} Detected **"
   if [ "$DOCLI" == "" ]; then
     export DOCLI="$HOME/.devops"
     echo "** Using default docli location $DOCLI"
@@ -66,7 +66,7 @@ elif [[ -f "/etc/os-release" ]]; then
     if [[ "$VERSION_ID" == "2" ]]; then
       os="amzn2"
       os_name="Amazon Linux 2"
-      echo "** OS: ${os_name} (${arch}) Detected **"
+      echo "** OS: ${os_name} ${arch} Detected **"
       if [ $DOCLI == "" ]; then
         export DOCLI="/opt/devops"
         echo "** Using default docli location $DOCLI"
@@ -74,7 +74,7 @@ elif [[ -f "/etc/os-release" ]]; then
     elif [[ "$VERSION_ID" == "2022" ]]; then
       os="al2022"
       os_name="Amazon Linux 2022"
-      echo "** OS: ${os_name} (${arch}) Detected **"
+      echo "** OS: ${os_name} ${arch} Detected **"
       if [ $DOCLI == "" ]; then
         export DOCLI="/opt/devops"
         echo "** Using default docli location $DOCLI"
@@ -83,7 +83,7 @@ elif [[ -f "/etc/os-release" ]]; then
   elif [[ "$ID" == "ubuntu" ]]; then
     os="ubuntu"
     os_name="Ubuntu"
-    echo "** OS: ${os_name} (${arch}) Detected **"
+    echo "** OS: ${os_name} ${arch} Detected **"
     if [ $DOCLI == "" ]; then
       export DOCLI="/opt/devops"
       echo "** Using default docli location $DOCLI"
@@ -91,7 +91,7 @@ elif [[ -f "/etc/os-release" ]]; then
   elif [[ "$ID" == "debian" ]]; then
     os="debian"
     os_name="Debian"
-    echo "** OS: ${os_name} (${arch}) Detected **"
+    echo "** OS: ${os_name} ${arch} Detected **"
     if [ $DOCLI == "" ]; then
       export DOCLI="/opt/devops"
       echo "** Using default docli location $DOCLI"
