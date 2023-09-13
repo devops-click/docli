@@ -6,11 +6,17 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.02"
-install_file_name="$(basename "$0")"
-install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
-install_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-install_current_dir="$(pwd)"
+install_version="0.0.03"
+# Detect if the script is being sourced from the internet
+if [[ "$0" = "bash" ]] || [[ "$0" = "sh" ]] || [[ "$0" = "zsh" ]]; then
+  install_file_name="install.sh" # hardcode or otherwise determine
+  install_file_name_upper="INSTALL.SH" # hardcode or otherwise determine
+  install_current_dir="$PWD"
+else
+  install_file_name="$(basename "$0")"
+  install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+  install_current_dir="$(pwd)"
+fi
 
 ## docli Markdown Generation:
 #:: ## docli install
