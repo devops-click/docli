@@ -144,11 +144,18 @@ echo -e "** docli-install: Creating base structure **"
 [[ ! -d "${DOCLI}/scripts" ]] && mkdir -p $DOCLI/scripts || echo "$DOCLI/scripts exists"
 
 echo -e "** docli-install: Download/Updating docli files **"
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/.docli -H "Cache-Control: no-cache, no-store" -o $DOCLI/.docli
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/bin/docli -H "Cache-Control: no-cache, no-store" -o $DOCLI/bin/docli
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/functions/bash_basic_functions -H "Cache-Control: no-cache, no-store" -o $DOCLI/functions/bash_basic_functions
-curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/macos -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/macos
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/functions/bash_op -H "Cache-Control: no-cache, no-store" -o $DOCLI/functions/bash_op
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/packer -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/packer
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/setup -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/setup
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/sso -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/sso
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/sys -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/sys
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/scripts/docli_aws_copy_token_credentials -H "Cache-Control: no-cache, no-store" -o $DOCLI/scripts/docli_aws_copy_token_credentials
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/scripts/docli_colors_tput -H "Cache-Control: no-cache, no-store" -o $DOCLI/scripts/docli_colors_tput
+
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/resources/omz-zsh/themes/devops.click.zsh-theme -H "Cache-Control: no-cache, no-store" -o $HOME/.oh-my-zsh/themes/devops.click.zsh-theme
 
 echo -e "** docli-install: Setting file permissions **"
 chmod +x -R $DOCLI/bin/*
