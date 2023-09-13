@@ -1,0 +1,722 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                     docli MacOS Setup for Ops Engineers
+###############################################################################
+## docli Markdown Generation:
+#:: ## docli MacOS Setups
+#:: `macos` [--profile=devops]
+#:: `macos` [--skip=FUNCTIONS]
+#:: `macos` [--help]
+#:: ## DESCRIPTION
+#:: This program has the following functionalies: (Examples)
+#:: `macos --profile=devops` -> Run MacOS Setup for DevOps Engineer
+#:: `macos --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
+#:: `macos --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
+
+macos_version="1.0"
+macos_file_name="$(basename "$0")"
+macos_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+macos_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+macos_current_dir="$(pwd)"
+
+export DOCLI="$HOME/.devops"
+
+# Get current macuser to be used
+macos_username=$(whoami)
+# Get Architecture
+macos_arch_name="$(uname -m)"
+# All available functions to load/skip
+macos_function_names=(
+check_and_create_dirs
+files_check_and_creation
+private_envs_file
+setup_elasticsearch
+setup_macos_system_config
+setup_homebrew_and_packages
+setup_omzsh
+setup_aws_tools
+setup_terraform
+setup_variables_and_sources
+setup_mac_terminal_touchid
+setup_custom_routines
+)
+macos_files_to_check=(
+"$HOME/.bash_profile"
+"$HOME/.bashrc"
+"$HOME/.zshrc"
+)
+# All available profiles to load
+macos_ops_profiles=(
+devops
+secops
+dataops
+finops
+)
+# Initialize an empty skip_function
+macos_skip_functions=""
+# Initialize an empty array if --skip is not provided
+macos_skip_array=()
+
+########################################
+# BASIC FUNCTIONS
+########################################
+
+# Function to display help message
+macos_help() {
+  echo "Usage: $0 [OPTIONS]"
+  echo "Options:"
+  echo "  --profile=PROFILE     Single profile. Profiles are:"
+  for prof in "${macos_ops_profiles[@]}"; do
+    echo "                        - $prof"
+  done
+  echo "  --skip=FUNCTIONS      Comma-separated list of functions to skip. Functions are:"
+  for func in "${macos_function_names[@]}"; do
+    echo "                        - $func"
+  done
+  echo "  --help                Show this help message."
+  echo
+  echo "Example:"
+  echo "  --skip=setup_variables_and_sources,setup_mac_terminal_touchid"
+  echo
+  exit 0
+}
+
+# Check if running as root
+runnning_as_root() {
+  if [ "$EUID" -eq 0 ]; then
+    echo "** ERROR: Running this script as root user is not allowed **"
+    exit 1
+  fi
+}
+
+# Identify architecture
+which_architecture() {
+  if [ "$macos_arch_name" == "x86_64" ]; then
+    arch="darwin-x86_64"
+  elif [ "$macos_arch_name" == "arm64" ]; then
+    arch="darwin-aarch64"
+  else
+    echo "Unknown architecture"
+    exit 1
+  fi
+}
+
+# Insert a new line in case the line does not exist in the begging of valid values
+add_line_to_file_beggining() {
+  local line="$1"
+  local file="$2"
+  local temp_file="/tmp/zshrc_temp"
+
+  # Check if the line already exists in the file
+  if grep -Fxq "$line" "$file"; then
+    echo "$line already set in $file" >/dev/null
+  else
+    echo "Adding $line to $file"
+    echo "$line" > "$temp_file"
+    cat "$file" >> "$temp_file"
+    mv "$temp_file" "$file"
+  fi
+}
+
+# Insert a new line in case the file does not end with one. (Apply for line prefix match)
+add_line_to_file() {
+  line="$1"
+  file="$2"
+  prepend_newline="${3:-false}"
+  append_path="${4:-false}"
+
+  # Add a newline if the file exists and does not end with a newline
+  [ -f "$file" ] && [ "$(tail -c 1 "$file"; echo x)" != $'\nx' ] && echo "" >> "$file"
+
+  # Append the line if it does not already exist in the file as a prefix
+  if ! grep -qxE "^${line}.*" "$file"; then
+    [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+    if [ "$append_path" == "true" ]; then
+      echo "${line}:\$PATH" >> "$file"
+    else
+      echo "$line" >> "$file"
+    fi
+  fi
+}
+
+# Insert a new line in case the file does not end with one. (Apply only for full line match)
+add_line_to_file_whole_match() {
+  line="$1"
+  file="$2"
+  prepend_newline="${3:-false}"
+
+  # Add a newline if the file exists and does not end with a newline
+  [ -f "$file" ] && [ "$(tail -c 1 "$file"; echo x)" != $'\nx' ] && echo "" >> "$file"
+
+  # Append the line if it does not already exist in the file
+  if ! grep -qxF "$line" "$file"; then # FOR WHOLE LINE MATCH
+    [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+    echo "$line" >> "$file"
+  fi
+}
+
+########################################
+# PARSE SKIP FUNCTIONS
+########################################
+# Parse command-line options
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --profile=*)
+      macos_ops_profiles="${1#*=}"
+      ;;
+    --skip=*)
+      macos_skip_functions="${1#*=}"
+      ;;
+    --help)
+      macos_help
+      ;;
+    *)
+      echo "Unknown parameter passed: $1"
+      macos_help
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+# Check if we have any functions to skip
+if [[ -n "$macos_skip_functions" ]]; then
+  # Convert the comma-separated list into an array
+  IFS=',' read -ra macos_skip_array <<< "$macos_skip_functions"
+fi
+
+# Check if an item is in an array
+array_contains() {
+  local array="$1[@]"
+  local seeking="$2"
+  local in=1
+  for element in "${!array}"; do
+    if [[ "$element" == "$seeking" ]]; then
+      in=0
+      break
+    fi
+  done
+  return $in
+}
+
+echo -e "\n====== MacOS Setup Initiated ======"
+
+########################################
+# DIRECTORY CHECK AND CREATION
+########################################
+check_and_create_dirs() {
+  echo -e "\n**** DIRECTORY CHECK AND CREATION ****"
+  # List of directories to check and create if not present
+  declare -a dirs=(
+    "$HOME/devops/apps/aws"
+    "$HOME/devops/.private"
+    "$HOME/devops/bin"
+    "$HOME/devops/install"
+    "$HOME/devops/exports"
+    "$HOME/devops/s3"
+    "$HOME/devops/scripts"
+    "$HOME/devops/tmp"
+  )
+  # Loop through each directory and check if it exists
+  for dir in "${dirs[@]}"; do
+    eval dir_expanded=$dir  # Expand the tilde to the user's home directory
+
+    if [[ -d "$dir_expanded" ]]; then
+      echo "$dir_expanded already exists"
+    else
+      echo "$dir_expanded does not exist. Creating..."
+      mkdir -p "$dir_expanded"
+    fi
+  done
+}
+
+########################################
+# PRIVATE ENVS FILE
+########################################
+private_envs_file() {
+  echo -e "\n**** PRIVATE ENVS FILE ****"
+  if [[ -f $HOME/devops/.private/envs ]]; then
+    echo "$HOME/devops/.private/envs exists"
+    chmod 700 $HOME/devops/.private/envs
+  else
+    touch $HOME/devops/.private/envs
+  fi
+}
+
+########################################
+# FILES CHECK AND CREATION
+########################################
+files_check_and_creation() {
+  echo -e "\n**** FILES CHECK AND CREATION ****"
+  for f1 in "${macos_files_to_check[@]}"; do
+    if [[ -f $f1 ]]; then
+      # echo "$f1 already exists" >/dev/null
+      echo "$f1 exists"
+    else
+      echo "$f1 touched"
+      touch $f1
+    fi
+  done
+}
+
+########################################
+# SETUP ELASTICSEARCH
+########################################
+# Install ElasticSearch if not already installed:
+setup_elasticsearch() {
+  echo -e "\n**** ELASTICSEARCH ****"
+
+  # Fetch the latest version number using Python to scrape the Elasticsearch downloads page
+  latest_version=$(curl -s https://www.elastic.co/downloads/elasticsearch | python3 -c "import sys, re; print(re.search(r'elasticsearch-(\d+\.\d+\.\d+)', sys.stdin.read()).group(1))")
+
+  if [ ! -d "$HOME/devops/apps/elasticsearch-${latest_version}" ]; then
+    # Download the tarball and install binaries
+    echo "** Installing ELASTICSEARCH v$latest_version binaries on $HOME/devops/apps/elasticsearch-${latest_version}"
+    if [ -n "$latest_version" ]; then
+      url="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${latest_version}-${arch}.tar.gz"
+      echo "Downloading $url..."
+      curl -o $HOME/devops/apps/elasticsearch-${latest_version}-${arch}.tar.gz $url
+      (cd $HOME/devops/apps && curl "${url}.sha512" | shasum -a 512 -c - || exit 1)
+      (cd $HOME/devops/apps && tar -xzf elasticsearch-${latest_version}-${arch}.tar.gz)
+    else
+      echo "** ERROR: Failed to identify the latest ElasticSearch version."
+      exit 1
+    fi
+  else
+    echo "** ElasticSearch Latest binaries already installed! **"
+  fi
+}
+
+########################################
+# MACOS SYSTEM CONFIGURATION
+########################################
+# Setup MacOS Settings
+# To get domains: defaults domains
+# To get current values: defaults read NSGlobalDomain KeyRepeat
+setup_macos_system_config() {
+  echo -e "\n**** MACOS SYSTEM CONFIGURATION ****"
+
+  # KEYBOARD AND AUTO-CORRECTION
+  echo "** Set on NSGlobalDomain: Setting Keyboard repeat speed to maximum (0-120)"
+  defaults write NSGlobalDomain KeyRepeat -int 2
+  echo "** Set on NSGlobalDomain: Setting Keyboard repeat speed to maximum (15-120)"
+  defaults write NSGlobalDomain InitialKeyRepeat -int 30
+  echo "** Set on NSGlobalDomain: Disable auto-correct (Default 1)"
+  defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+  echo "** Set on NSGlobalDomain: SideBar Icon Size (Default 1)"
+  defaults write NSGlobalDomain "NSTableViewDefaultSizeMode" -int "1"
+  echo "** Set on NSGlobalDomain: Hold Key Behavior -> True = Accent Menu - False = Repeat key"
+  defaults write NSGlobalDomain "ApplePressAndHoldEnabled" -bool "true"
+  # echo "** Set on NSGlobalDomain: Disable opening and closing window animations"
+  # defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+  # echo "Expand save panel by default"
+  # defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+  # echo "Expand print panel by default"
+  # defaults read NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+
+  # DESKTOP SERVICES
+  echo "** Set on Desktop Services: Avoid creating .DS_Store files on network volumes"
+  defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+
+  # SAFARI
+  echo "** Set on Safari: Show status bar"
+  defaults write com.apple.Safari ShowStatusBar -boolean true
+  echo "** Set on Safari: Show full URL"
+  defaults write com.apple.Safari "ShowFullURLInSmartSearchField" -bool "true"
+
+  # FINDER
+  echo "** Set on Finder: Allow quitting via ⌘ + Q; doing so will also hide desktop icons"
+  defaults write com.apple.finder QuitMenuItem -bool true
+  echo "** Set on Finder: Show all hiding files"
+  defaults write com.apple.finder "AppleShowAllFiles" -bool "false"
+  echo "** Set on Finder: Show all items as a List"
+  defaults write com.apple.finder "FXPreferredViewStyle" -string "Nlsv"
+  echo "** Set on Finder: Keep folders on top"
+  defaults write com.apple.finder "_FXSortFoldersFirst" -bool "true"
+  echo "** Set on Finder: Disable the warning when changing a file extension"
+  defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+  echo "** Set on Finder: Instant Bar RollOver"
+  defaults write NSGlobalDomain "NSToolbarTitleViewRolloverDelay" -float "0"
+  echo "** Set on Finder: Show status bar"
+  defaults write com.apple.finder ShowStatusBar -boolean true
+  echo "** Set on Finder: Show path bar"
+  defaults write com.apple.finder ShowPathbar -boolean true
+  echo "** Set on Finder: Show side bar"
+  defaults write com.apple.finder ShowSidebar -boolean true
+  echo "** Set on Finder: Show Hard Drives on Desktop"
+  defaults write com.apple.finder ShowHardDrivesOnDesktop -boolean false
+  echo "** Set on Finder: Show Removable Media on Desktop"
+  defaults write com.apple.finder ShowRemovableMediaOnDesktop -boolean true
+  echo "** Set on Finder: Sidebar Width 160"
+  defaults write com.apple.finder SidebarWidth -integer 160 # Default = 143
+  # echo "** Set on Finder: Disable window animations and Get Info animations"
+  # defaults read com.apple.finder DisableAllAnimations -bool true
+
+  # MULTITOUCH
+  echo "** Set on TrackPad: Three Finger Drag"
+  # ensures DragLock does not conflict with TrackpadThreeFingerDrag
+  defaults write com.apple.AppleMultitouchTrackpad "DragLock" -bool "false"
+  defaults write com.apple.AppleMultitouchTrackpad "TrackpadThreeFingerDrag" -bool "true"
+
+  # TERMINAL
+  echo "** Set on Terminal: Only use UTF-8 in Terminal.app"
+  defaults write com.apple.terminal StringEncodings -array 4
+
+  # ITUNES
+  echo "** Set on iTunes: Disable the Ping sidebar in iTunes"
+  defaults write com.apple.iTunes disablePingSidebar -bool true
+  echo "** Set on iTunes: Disable all the other Ping stuff in iTunes"
+  defaults write com.apple.iTunes disablePing -bool true
+
+  # ACTIVITY MONITOR
+  echo "** Set on Activity Monitor: Monitor interval to 2s (Default: 5s)"
+  defaults write com.apple.ActivityMonitor "UpdatePeriod" -int "2"
+
+  # DOCK
+  echo "** Set on Dock: Enable highlight hover effect for the grid view of a stack (Dock)"
+  defaults write com.apple.dock mouse-over-hilte-stack -bool true
+  echo "** Set on Dock: Don’t animate opening applications from the Dock"
+  defaults write com.apple.dock launchanim -bool false
+  echo "** Set on Dock: Place on Left"
+  defaults write com.apple.dock "orientation" -string "left"
+  echo "** Set on Dock: Icon Size 36"
+  defaults write com.apple.dock "tilesize" -int "36"
+  echo "** Set on Dock: Minimize Effect Genie"
+  defaults write com.apple.dock "mineffect" -string "genie"
+  echo "** Set on Dock: Scroll on Dock to Open Related Windows"
+  defaults write com.apple.dock "scroll-to-open" -bool "true"
+  echo "** Set on Dock: MissionControl -> Group windows by application"
+  defaults write com.apple.dock "expose-group-apps" -bool "true"
+
+  # SCREENSHOT
+  echo "** Set on ScreenCapture: Screenshot Format to PNG"
+  defaults write com.apple.screencapture "type" -string "png"
+
+  # echo "Enable spring loading for all Dock items"
+  # defaults write enable-spring-load-actions-on-all-items -bool true
+
+  # EXTRAS
+  # echo "Remove Dropbox’s green checkmark icons in Finder"
+  # file=/Applications/Dropbox.app/Contents/Resources/check.icns
+  # [ -e "$file" ] && mv -f "$file" "$file.bak"
+  # unset file
+
+  # echo "Disable local Time Machine backups"
+  # sudo tmutil disablelocal
+
+  # echo "Reset Launchpad"
+  # [ -e $HOME/Library/Application\ Support/Dock/*.db ] && rm $HOME/Library/Application\ Support/Dock/*.db
+
+  # echo "Show the $HOME/Library folder"
+  # chflags nohidden $HOME/Library
+
+  # RESTART APPS TO GET CONFIGURATION
+  echo "** Reloading all affected applications... **"
+  for app in Safari Finder Dock Mail SystemUIServer; do
+    killall "$app" >/dev/null 2>&1 || true
+  done
+}
+
+########################################
+# HOMEBREW
+########################################
+# Install Brew (https://docs.brew.sh/Installation)
+setup_homebrew_and_packages() {
+  echo -e "\n**** HOMEBREW AND PACKAGES ****"
+
+  # Check if Homebrew is installed
+  if ! command -v brew &>/dev/null; then
+    echo "** Homebrew not found. Installing... **"
+    # Install Homebrew
+    export HOMEBREW_INSTALL_FROM_API=1
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+  else
+    echo "** Homebrew is already installed. **"
+  fi
+
+  ############## homebrew taps ##############
+  # Install homebrew additional taps
+
+  # List of taps to check and install if not already there
+  declare -a taps=("adoptopenjdk/openjdk" "homebrew/cask-fonts")
+
+  # Loop through each tap and check if it's already installed
+  for tap in "${taps[@]}"; do
+    if ! brew tap | grep -q "^$tap\$"; then
+      echo "$tap not found. Tapping..."
+      brew tap "$tap"
+    else
+      echo "$tap is already installed."
+    fi
+  done
+
+  ############## homebrew update ##############
+  brew update
+
+  ############## homebrew install ##############
+  # Execute MacOS specific Architecture Commands:
+  if [ "$macos_arch_name" == "x86_64" ]; then
+    if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
+      echo "** Detected ARM processor running in Rosetta."
+      echo
+    else
+      echo "** Detected INTEL processor."
+      brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch strace pbcopy xclip yt-download ffmpeg figlet boxes gh strongswan leapp macfuse duti go md5sum shellcheck shdoc kustomize gnupg 1password-cli openssl@3 ca-certificates
+      brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar
+      # not working brew install encfs # encfs needs macfuse first
+    fi
+  elif [ "$macos_arch_name" == "arm64" ]; then
+    echo "This is an ARM processor."
+    brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch xclip ffmpeg figlet boxes gh strongswan leapp macfuse duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 ca-certificates htop
+    brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome google-drive dbeaver-community visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar gimp cryptr kindle slack blender rsyncui xbar
+    # cryptr -> HashiCorp Vault UI Manager
+    # strace -> There is no ARM version yet
+  else
+    echo "** ERROR: Unknown processor architecture. **"
+    exit 1
+  fi
+}
+
+########################################
+# OH-MY-ZSH
+########################################
+setup_omzsh() {
+  echo -e "\n**** OH-MY-ZSH ****"
+  # Check if oh-my-zsh is installed
+  if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    echo "** oh-my-zsh not found. Installing... **"
+    # Install oh-my-zsh
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+  else
+    echo "** oh-my-zsh is already installed. **"
+  fi
+
+  # if needed - MacOS Permission
+  # sudo dseditgroup -o edit -a $macos_username -t user admin
+  # sudo dscl . append /Groups/admin GroupMembership $macos_username
+  # sudo chmod -R g+w /opt/homebrew
+}
+
+########################################
+# AWS TOOLS
+########################################
+setup_aws_tools() {
+  echo -e "\n**** AWS TOOLS ****"
+  echo "** Installing AWS Session Manager **"
+
+  # Install MacOS specific Architecture:
+  if [ "$macos_arch_name" == "x86_64" ]; then
+    if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
+      echo
+    else
+      curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip" -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip"
+      (
+        cd $HOME/devops/apps/aws \
+        && unzip -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
+        && $HOME/devops/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
+      )
+    fi
+  elif [ "$macos_arch_name" == "arm64" ]; then
+    curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/sessionmanager-bundle.zip" -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip"
+    (
+      cd $HOME/devops/apps/aws \
+      && unzip -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
+      && $HOME/devops/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
+    )
+  else
+    echo "** ERROR: Unknown processor architecture. **"
+    exit 1
+  fi
+}
+
+########################################
+# HASHICORP TOOLS CONFIGURATION
+########################################
+setup_terraform() {
+  echo -e "\n**** HASHICORP TOOLS ****"
+  echo "** Installing Terraform **"
+  tfenv install 1.5.6
+  tfenv use 1.5.6
+  ### Sets into $HOME/.zshrc and $HOME/.bash_profile:
+  # autoload -U +X bashcompinit && bashcompinit
+  # complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.6/terraform terraform
+  terraform -install-autocomplete >/dev/null 2>&1 || echo "** Terraform autocomplete already setup. Skipping... **"
+}
+
+########################################
+# VARIABLES AND SOURCES
+########################################
+setup_variables_and_sources() {
+  echo -e "\n**** VARIABLES EXPORT (auto-configure .bash_profile and .zshrc) ****"
+
+  # INITIAL VARS
+  # To be set into the beggining of .bash_profile and .zshrc PS: NEEDS TO BE IN THE BEGGINING OF THE FILE
+  export_line_lc_type_fix='export LC_CTYPE=en_US.UTF-8'
+
+  # AWS VARS
+  export_line_aws_summary="### AWS - ENVS"
+  export_line_aws_default_output="export AWS_DEFAULT_OUTPUT=table"
+  export_line_aws_sessionmanager_bin="export PATH=$DOCLI/apps/aws/sessionmanager-bundle/bin"
+
+  # ELASTICSEARCH VARS
+  export_line_es_summary="### ELASTICSEARCH - ENVS"
+  export_line_path="export PATH=$DOCLI/apps/elasticsearch-${latest_version}/bin"
+  export_line_es_home="export ES_HOME=$DOCLI/apps/elasticsearch-${latest_version}"
+
+  # DOCLI VARS
+  export_line_docli_summary="### DevOps CLI - ENVS"
+  # TODO: Make DOCLI customizable
+  export_line_docli="export DOCLI=$DOCLI"
+  export_line_docli_bin="export PATH=$DOCLI/bin"
+  export_line_devops_bin="export PATH=$HOME/devops/bin"
+
+  # SOURCING
+  export_line_extralibs_summary="### EXTRA LIBS, SOURCES AND SCRIPTS - ENVS"
+  export_line_extra_bins="export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export_line_libpq_bin="export PATH=/usr/local/opt/libpq/bin"
+  export_line_mysqlclient_bin="export PATH=/usr/local/opt/mysql-client/bin"
+  export_line_vscode_bin="export PATH=/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  export_line_source_colors_tput="source $HOME/devops/scripts/set-bash-colors-tput.sh"
+  export_line_source_private_envs="source $HOME/devops/.private/envs"
+  export_line_source_zsh_autosuggestions="source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+
+  echo "** Setting variables on .bash_profile and .zshrc **"
+
+  # INITIAL VARS
+  echo "* initial"
+  add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bash_profile
+  add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bashrc
+  add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.zshrc
+
+  # AWS VARS
+  echo "* aws"
+  add_line_to_file "$export_line_aws_summary" $HOME/.bash_profile true false
+  add_line_to_file "$export_line_aws_summary" $HOME/.bashrc true false
+  add_line_to_file "$export_line_aws_summary" $HOME/.zshrc true false
+  add_line_to_file "$export_line_aws_default_output" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_aws_default_output" $HOME/.bashrc false false
+  add_line_to_file "$export_line_aws_default_output" $HOME/.zshrc false false
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.zshrc false true
+
+  # ELASTICSEARCH VARS
+  echo "* es"
+  add_line_to_file "$export_line_es_summary" $HOME/.bash_profile true false
+  add_line_to_file "$export_line_es_summary" $HOME/.bashrc true false
+  add_line_to_file "$export_line_es_summary" $HOME/.zshrc true false
+  add_line_to_file "$export_line_path" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_path" $HOME/.bashrc false true
+  add_line_to_file "$export_line_path" $HOME/.zshrc false true
+  add_line_to_file "$export_line_es_home" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_es_home" $HOME/.bashrc false false
+  add_line_to_file "$export_line_es_home" $HOME/.zshrc false false
+
+  # DOCLI VARS
+  echo "* docli"
+  add_line_to_file "$export_line_docli_summary" $HOME/.bash_profile true
+  add_line_to_file "$export_line_docli_summary" $HOME/.bashrc true
+  add_line_to_file "$export_line_docli_summary" $HOME/.zshrc true
+  add_line_to_file "$export_line_docli" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_docli" $HOME/.bashrc false false
+  add_line_to_file "$export_line_docli" $HOME/.zshrc false false
+  add_line_to_file "$export_line_docli_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_docli_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_docli_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_devops_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_devops_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_devops_bin" $HOME/.zshrc false true
+
+  # EXTRA LIBS VARS
+  echo "* extras"
+  add_line_to_file "$export_line_extralibs_summary" $HOME/.bash_profile true
+  add_line_to_file "$export_line_extralibs_summary" $HOME/.bashrc true
+  add_line_to_file "$export_line_extralibs_summary" $HOME/.zshrc true
+  add_line_to_file "$export_line_extra_bins" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_extra_bins" $HOME/.bashrc false true
+  add_line_to_file "$export_line_extra_bins" $HOME/.zshrc false true
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_libpq_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_libpq_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_libpq_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_mysqlclient_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_mysqlclient_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_mysqlclient_bin" $HOME/.zshrc false true
+
+  # SOURCING
+  echo "* sources"
+  add_line_to_file "$export_line_source_colors_tput" $HOME/.bash_profile
+  add_line_to_file "$export_line_source_colors_tput" $HOME/.bashrc
+  add_line_to_file "$export_line_source_colors_tput" $HOME/.zshrc
+  add_line_to_file "$export_line_source_private_envs" $HOME/.bash_profile
+  add_line_to_file "$export_line_source_private_envs" $HOME/.bashrc
+  add_line_to_file "$export_line_source_private_envs" $HOME/.zshrc
+  add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bash_profile
+  add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bashrc
+  add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.zshrc
+  # add_line_to_file "$export_line_vscode_bin" $HOME/.bash_profile # Set automatically by homebrew
+  # add_line_to_file "$export_line_vscode_bin" $HOME/.bashrc # Set automatically by homebrew
+  # add_line_to_file "$export_line_vscode_bin" $HOME/.zshrc # Set automatically by homebrew
+}
+
+########################################
+# Use Touch ID into Terminal
+########################################
+setup_mac_terminal_touchid() {
+  echo -e "\n**** MACOS SETUP - ENABLE TERMINAL TOUCHID ****"
+  # Check if line already exists
+  if grep -q "auth       sufficient     pam_tid.so" /etc/pam.d/sudo; then
+    echo "** TouchID on Terminal: Line already exists. Skipping... **"
+  else
+    # # Add the line at the first "valid" position
+    # awk '/# sudo: auth account password session/{print; print "auth       sufficient     pam_tid.so"; next}1' /etc/pam.d/sudo | sudo tee /etc/pam.d/sudo > /dev/null
+    # Add the line at the first "valid" position (after comments)
+    awk 'BEGIN {p=0} /^#/ {print; next} !p && /^auth/ {print "auth       sufficient     pam_tid.so"; p=1} {print}' /etc/pam.d/sudo | sudo tee /etc/pam.d/sudo > /dev/null
+    echo "** TouchID on Terminal: Line added to /etc/pam.d/sudo **"
+  fi
+  echo "** Set on Authentication: Enable TouchID usage on Terminal"
+  defaults write com.apple.security.authorization ignoreArd -bool TRUE
+}
+
+########################################
+# Custom Routines (S3, 1Password, etc...)
+########################################
+setup_custom_routines() {
+  echo -e "\n**** RUNNING CUSTOM ROUTINES ($HOME/devops/install/custom_routines) ****"
+  if [ -f $HOME/devops/install/custom_routines ]; then
+    source $HOME/devops/install/custom_routines
+  else
+    echo "** $HOME/devops/install/custom_routines not found! If you intend to run more commands, please use this file to do this! **"
+  fi
+}
+
+########################################
+# Call functions, skipping those specified
+########################################
+# Call Initial Check functions
+runnning_as_root
+which_architecture
+
+for func in "${macos_function_names[@]}"; do
+  # Skip execution if function name is in the macos_skip_array
+  if [[ ${#macos_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
+    if [[ " ${macos_skip_array[@]} " =~ " ${func} " ]]; then
+      echo -e "> > > > Skipping $func"
+      continue
+    fi
+  fi
+  $func
+done
+
+echo -e "\n**** MacOS SETUP FINISHED! ****"
+
+########################################
+# OMZ reload
+########################################
+echo
+zsh -ic "omz reload"
