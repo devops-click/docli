@@ -53,8 +53,8 @@ arch=$(uname -m)
 if [[ "$OSTYPE" == "darwin"* ]]; then
   os="macos"
   os_name="MacOS"
-  echo "** OS: $os_name ($arch) Detected **"
-  if [ $DOCLI == "" ]; then
+  echo "** OS: ${os_name} (${arch}) Detected **"
+  if [ "$DOCLI" == "" ]; then
     export DOCLI="$HOME/.devops"
     echo "** Using default docli location $DOCLI"
   fi
@@ -66,7 +66,7 @@ elif [[ -f "/etc/os-release" ]]; then
     if [[ "$VERSION_ID" == "2" ]]; then
       os="amzn2"
       os_name="Amazon Linux 2"
-      echo "** OS: $os_name ($arch) Detected **"
+      echo "** OS: ${os_name} (${arch}) Detected **"
       if [ $DOCLI == "" ]; then
         export DOCLI="/opt/devops"
         echo "** Using default docli location $DOCLI"
@@ -74,7 +74,7 @@ elif [[ -f "/etc/os-release" ]]; then
     elif [[ "$VERSION_ID" == "2022" ]]; then
       os="al2022"
       os_name="Amazon Linux 2022"
-      echo "** OS: $os_name ($arch) Detected **"
+      echo "** OS: ${os_name} (${arch}) Detected **"
       if [ $DOCLI == "" ]; then
         export DOCLI="/opt/devops"
         echo "** Using default docli location $DOCLI"
@@ -83,7 +83,7 @@ elif [[ -f "/etc/os-release" ]]; then
   elif [[ "$ID" == "ubuntu" ]]; then
     os="ubuntu"
     os_name="Ubuntu"
-    echo "** OS: $os_name ($arch) Detected **"
+    echo "** OS: ${os_name} (${arch}) Detected **"
     if [ $DOCLI == "" ]; then
       export DOCLI="/opt/devops"
       echo "** Using default docli location $DOCLI"
@@ -91,7 +91,7 @@ elif [[ -f "/etc/os-release" ]]; then
   elif [[ "$ID" == "debian" ]]; then
     os="debian"
     os_name="Debian"
-    echo "** OS: $os_name ($arch) Detected **"
+    echo "** OS: ${os_name} (${arch}) Detected **"
     if [ $DOCLI == "" ]; then
       export DOCLI="/opt/devops"
       echo "** Using default docli location $DOCLI"
@@ -109,7 +109,7 @@ echo -e "** docli-install: Creating base structure **"
 [[ ! -d "${DOCLI}/bin" ]] && mkdir -p $DOCLI/bin || echo "$DOCLI/bin exists"
 [[ ! -d "${DOCLI}/main" ]] && mkdir -p $DOCLI/main || echo "$DOCLI/main exists"
 [[ ! -d "${DOCLI}/scripts" ]] && mkdir -p $DOCLI/scripts || echo "$DOCLI/scripts exists"
-
+exit 0
 echo -e "** docli-install: Download/Updating docli files **"
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/bin/docli -H "Cache-Control: no-cache, no-store" -o $DOCLI/bin/docli
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/functions/bash_basic_functions -H "Cache-Control: no-cache, no-store" -o $DOCLI/functions/bash_basic_functions
