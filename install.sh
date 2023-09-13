@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.03"
+install_version="0.0.04"
 # Detect if the script is being sourced from the internet
 if [[ "$0" = "bash" ]] || [[ "$0" = "sh" ]] || [[ "$0" = "zsh" ]]; then
   install_file_name="install.sh" # hardcode or otherwise determine
@@ -16,6 +16,33 @@ else
   install_file_name="$(basename "$0")"
   install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
   install_current_dir="$(pwd)"
+fi
+
+# source...bash_basic_functions # loaded to be executed independently
+#:: # Check if the script is running on macOS or Linux
+#:: ## Usage example:
+#:: `check_os_mac_linux_only`
+check_os_mac_linux_only() {
+  os_var=$(uname)
+  if [ "$os_var" == "Darwin" ]; then
+    os="macos"
+  elif [ "$os_var" == "Linux" ]; then
+    os="linux"
+  else
+    echo "** ERROR: Supported only by MacOS and Linux. **"
+    exit 1
+  fi
+}
+
+# Load environment Vars
+[[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
+[[ -f "$install_current_dir/.docli_envs" ]] && source $install_current_dir/.docli_envs
+if [[ -z ${DOCLI} ]]; then
+  echo "** .docli_envs found! using it's values when applicable **"
+else
+  check_os_mac_linux_only
+  [[ $os == "macos" ]] && export DOCLI="$HOME/devops"
+  [[ $os == "linux" ]] && export DOCLI="/opt/devops"
 fi
 
 ## docli Markdown Generation:
@@ -115,12 +142,13 @@ echo -e "** docli-install: Creating base structure **"
 [[ ! -d "${DOCLI}/bin" ]] && mkdir -p $DOCLI/bin || echo "$DOCLI/bin exists"
 [[ ! -d "${DOCLI}/main" ]] && mkdir -p $DOCLI/main || echo "$DOCLI/main exists"
 [[ ! -d "${DOCLI}/scripts" ]] && mkdir -p $DOCLI/scripts || echo "$DOCLI/scripts exists"
-exit 0
+
 echo -e "** docli-install: Download/Updating docli files **"
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/bin/docli -H "Cache-Control: no-cache, no-store" -o $DOCLI/bin/docli
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/functions/bash_basic_functions -H "Cache-Control: no-cache, no-store" -o $DOCLI/functions/bash_basic_functions
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/main/macos -H "Cache-Control: no-cache, no-store" -o $DOCLI/main/macos
 curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/scripts/docli_aws_copy_token_credentials -H "Cache-Control: no-cache, no-store" -o $DOCLI/scripts/docli_aws_copy_token_credentials
+curl -sL https://raw.githubusercontent.com/devops-click/docli/main/.devops/scripts/docli_colors_tput -H "Cache-Control: no-cache, no-store" -o $DOCLI/scripts/docli_colors_tput
 
 echo -e "** docli-install: Setting file permissions **"
 chmod +x -R $DOCLI/bin/*

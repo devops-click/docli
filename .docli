@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# PS: This script is intended to be used as source for others.
+#:: `.docli` -h (help)
+#:: ## Variables Summary
+#:: source_script_dir - Variable that receives the directory of the script sourcing it.
+#:: root_dir_depth    - Returns this script current dept (ex: ../../..), not the one sourcing it.
+#:: local DIR         - Returns this script current directory (ex: /opt/devops), not the one sourcing it.
+#:: local SOURCE_PWD  - Receives the Source PWD as variable to be used into it's functions
+#:: parse_arguments   - parse arguments and treat options ex: [-vdish]
+###############################################################################
+
+root_version="1.0"
+root_file_name="$(basename "$0")"
+root_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+root_current_dir="$(pwd)"
+
+# ENV file
+root_env_file="$root_script_dir/.devops/.env"
+
+# Receives or not the directory from script sourcing it.
+source_script_dir=${1:-not_available}
+# Return the root directory depth for every script in docli. Ex: ../../..
+root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
+
+# source $root_script_dir/.devops/functions/bash_base_get_arguments
+# set -- $(parse_arguments "$@")
+# #########################
+# # args_debug=0
+# # args_verbose=1
+
+# load_vars() {
+#   # Validations to activate modes:
+#   DOCLI_VERBOSE="[[ $args_verbose == 1 || $args_debug == 1 ]]"
+#   DOCLI_DEBUG="[[ $args_debug == 1 ]]"
+# }
+# load_vars
+
+eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+eval $DOCLI_DEBUG && echo "++ Entered .docli (main source) ++"
+eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+
+# echo "==> .docli -> source bash_basic_functions"
+# source $root_script_dir/.devops/functions/bash_basic_functions
+
+eval $DOCLI_DEBUG && echo "******* .docli - before setting DOCLI_PROJECT_ROOT ********"
+eval $DOCLI_DEBUG && echo $DOCLI_VERBOSE
+eval $DOCLI_DEBUG && echo $DOCLI_DEBUG
+eval $DOCLI_DEBUG && echo "***************"
+echo
+## INITIAL CHECKUPS AND LOADS
+# Check if DOCLI_PROJECT_ROOT is already set
+if [[ -n "${DOCLI_PROJECT_ROOT:-}" ]]; then
+  eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT already set. Using: $DOCLI_PROJECT_ROOT **"
+else
+# Load the .env file from the directory
+  if [[ -f "$root_env_file" ]]; then
+    # Extract the value of DOCLI_PROJECT_ROOT from .env file
+    export DOCLI_PROJECT_ROOT=$(grep -E '^DOCLI_PROJECT_ROOT=' "$root_env_file" | cut -d '=' -f 2-)
+    # Check and confirm it's set after extraction
+    if [[ -n "${DOCLI_PROJECT_ROOT}" ]]; then
+      eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT set to: $DOCLI_PROJECT_ROOT **"
+    else
+      echo "** ERROR: Unable to set DOCLI_PROJECT_ROOT from .env file. **"
+      exit 1
+    fi
+  else
+    echo "** ERROR: .env file not found at $root_env_file **"
+    exit 1
+  fi
+fi
+
+# Debug information for the begin of the routine/function.
+debug_begin(){
+  eval $DOCLI_DEBUG && echo -e "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  eval $DOCLI_DEBUG && echo -e "==> $1 initiated... ++++"
+  eval $DOCLI_DEBUG && echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  eval $DOCLI_DEBUG && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+"
+  eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[0] ${FUNCNAME[0]} called --++"
+  [[ -n ${FUNCNAME[1]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[1] ${FUNCNAME[1]} called --++"
+  [[ -n ${FUNCNAME[2]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[2] ${FUNCNAME[2]} called --++"
+  [[ -n ${FUNCNAME[3]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[3] ${FUNCNAME[3]} called --++"
+  eval $DOCLI_DEBUG && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+\n"
+  endofline=1
+}
+
+# Debug information for the end of the routine/function.
+debug_end(){
+  eval $DOCLI_DEBUG && echo -e "\n-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
+  eval $DOCLI_DEBUG && echo -e "==> $1 executed successfully! -+-+"
+  eval $DOCLI_DEBUG && echo -e "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n"
+  endofline=1
+}
+
+# Source Functions - Verbose information
+source_verbose_info(){
+  eval $DOCLI_VERBOSE && echo -e "** Received Current Directory     : ${1:-} (RECEIVED_SCRIPT_DIR)"
+  eval $DOCLI_VERBOSE && echo -e "** Received Root Script Directory : ${2:-} (RECEIVED_ROOT_DIR)"
+  eval $DOCLI_VERBOSE && echo -e "*********************************************************\n"
+  endofline=1
+}
+
+# Disabled, now using local namespaced variables
+# # Get the directory of the current script
+# get_current_script_dir() {
+#   debug_begin "${FUNCNAME[0]}"
+#   current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+#   eval $DOCLI_VERBOSE && echo -e "current_script_dir=$current_script_dir"
+#   debug_end "${FUNCNAME[0]}"
+# }
+
+# Source ALL .docli files until it reaches / root directory
+source_all_docli() {
+  # load_vars
+  debug_begin "${FUNCNAME[0]}"
+  local RECEIVED_SCRIPT_DIR=$1
+  local RECEIVED_ROOT_DIR=$2
+  # Get the directory of the current script
+  local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
+
+  # Loop while the directory is not the root directory
+  # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
+  while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
+    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    # If a .docli file exists in this directory, source it
+    if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
+      echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
+      source "$RECEIVED_SCRIPT_DIR/.docli"
+    fi
+
+    # Move up to the parent directory
+    RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
+    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+  done
+  if [[ -f "$RECEIVED_ROOT_DIR/.docli" ]]; then
+    echo "** source_all_docli FOUND on $RECEIVED_ROOT_DIR/.docli"
+    source "$RECEIVED_ROOT_DIR/.docli"
+  fi
+  debug_end "${FUNCNAME[0]}"
+  eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  endofline=1
+}
+
+# Source ALL .docli files until it reaches / root directory
+source_all_docli_ignore_root() {
+  load_vars
+  debug_begin "${FUNCNAME[0]}"
+  local RECEIVED_SCRIPT_DIR=$1
+  local RECEIVED_ROOT_DIR=$2
+  # Get the directory of the current script
+  local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
+
+  # Loop while the directory is not the root directory
+  # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
+  while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
+    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    # If a .docli file exists in this directory, source it
+    if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
+      echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
+      source "$RECEIVED_SCRIPT_DIR/.docli"
+    fi
+
+    # Move up to the parent directory
+    RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
+    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+  done
+  debug_end "${FUNCNAME[0]}"
+  eval $DOCLI_DEBUG && eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  endofline=1
+}
+
+# Source the first .docli under the current structure and then stops when finds it
+source_first_docli() {
+  load_vars
+  debug_begin "${FUNCNAME[0]}"
+  local RECEIVED_SCRIPT_DIR=$1
+  local RECEIVED_ROOT_DIR=$2
+  # Get the directory of the current script
+  local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
+
+  # Loop while the directory is not the root directory
+  # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
+  while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
+    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    # If a .docli file exists in this directory, source it
+    if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
+      echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
+      source "$RECEIVED_SCRIPT_DIR/.docli"
+      break
+    fi
+
+    # Move up to the parent directory
+    RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
+    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+  done
+  debug_end "${FUNCNAME[0]}"
+  eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  endofline=1
+}
+
+
+# # Source ALL .docli files until it reaches / root directory
+# source_all_docli_ignore_root() {
+#   debug_begin "${FUNCNAME[0]}"
+#   local SOURCE_PWD=$1
+#   # Get the directory of the current script
+#   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+#   eval $DOCLI_VERBOSE && echo -e "******* Sourcing ALL .docli ignoring root/.docli ********"
+#   source_verbose_info $SOURCE_PWD $DIR
+
+#   # Loop while the directory is not the root directory
+#   while [[ "$SOURCE_PWD" != "$DIR" ]]; do
+#     eval $DOCLI_VERBOSE && echo -e "** Looping... $SOURCE_PWD **"
+#     # If a .docli file exists in this directory, source it
+#     if [[ -f "$SOURCE_PWD/.docli" && "$SOURCE_PWD" != "$DIR" ]]; then
+#       eval $DOCLI_VERBOSE && echo -e "** source_all_docli FOUND on $SOURCE_PWD/.docli **"
+#       source "$SOURCE_PWD/.docli"
+#     fi
+
+#     # Move up to the parent directory
+#     SOURCE_PWD=${SOURCE_PWD%/*}
+#     eval $DOCLI_DEBUG && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#   done
+#   debug_end "${FUNCNAME[0]}"
+# }
+
+
+# # Source the first .docli under the current structure and then stops when finds it
+# source_first_docli() {
+#   debug_begin "${FUNCNAME[0]}"
+#   local SOURCE_PWD=$1
+#   # Get the directory of the current script
+#   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+#   eval $DOCLI_VERBOSE && echo -e "************** Sourcing FIRST .docli only ***************"
+#   source_verbose_info $SOURCE_PWD $DIR
+
+#   # Loop while the directory is not the root directory ("/")
+#   while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "$DIR" ]]; do
+#     eval $DOCLI_VERBOSE && echo -e "** Looping... $SOURCE_PWD **"
+#     # If a .docli file exists in this directory, source it
+#     if [[ -f "$SOURCE_PWD/.docli" ]]; then
+#       eval $DOCLI_VERBOSE && echo -e "** source_first_docli FOUND on $SOURCE_PWD/.docli **"
+#       source "$SOURCE_PWD/.docli"
+#       break  # Exit the loop once the file is found and sourced
+#     fi
+
+#     # Move up to the parent directory
+#     SOURCE_PWD=$(dirname "$SOURCE_PWD")
+#     eval $DOCLI_DEBUG && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#   done
+#   debug_end "${FUNCNAME[0]}"
+# }

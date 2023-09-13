@@ -3,33 +3,36 @@ set -euo pipefail
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
-#                     docli MacOS Setup for Ops Engineers
+#                     docli OS Setup for Ops Engineers
 ###############################################################################
 ## docli Markdown Generation:
-#:: ## docli MacOS Setups
-#:: `macos` [--profile=devops]
-#:: `macos` [--skip=FUNCTIONS]
-#:: `macos` [--help]
+#:: ## docli OS Setups
+#:: `setup` [--profile=devops]
+#:: `setup` [--skip=FUNCTIONS]
+#:: `setup` [--help]
 #:: ## DESCRIPTION
 #:: This program has the following functionalies: (Examples)
-#:: `macos --profile=devops` -> Run MacOS Setup for DevOps Engineer
-#:: `macos --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
-#:: `macos --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
+#:: `setup --profile=devops` -> Run MacOS/Linux Setup for DevOps Engineer
+#:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
+#:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-macos_version="1.0"
-macos_file_name="$(basename "$0")"
-macos_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-macos_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-macos_current_dir="$(pwd)"
+setup_version="1.1"
+setup_file_name="$(basename "$0")"
+setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+setup_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+setup_current_dir="$(pwd)"
 
-export DOCLI="$HOME/.devops"
+[[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
+[[ -f "$setup_script_dir/../../.docli_envs" ]] && source $setup_script_dir/../../.docli_envs
+[[ -f "$setup_current_dir/.docli_envs" ]] && source $setup_current_dir/.docli_envs
+[[ -z ${DOCLI} ]] && echo "** .docli_envs found! using it's values when applicable **" || export DOCLI="$HOME/.devops"
 
 # Get current macuser to be used
-macos_username=$(whoami)
+setup_username=$(whoami)
 # Get Architecture
-macos_arch_name="$(uname -m)"
+setup_arch_name="$(uname -m)"
 # All available functions to load/skip
-macos_function_names=(
+setup_function_names=(
 check_and_create_dirs
 files_check_and_creation
 private_envs_file
@@ -43,22 +46,24 @@ setup_variables_and_sources
 setup_mac_terminal_touchid
 setup_custom_routines
 )
-macos_files_to_check=(
+setup_files_to_check=(
 "$HOME/.bash_profile"
 "$HOME/.bashrc"
 "$HOME/.zshrc"
 )
 # All available profiles to load
-macos_ops_profiles=(
+setup_ops_profiles=(
 devops
 secops
 dataops
 finops
 )
 # Initialize an empty skip_function
-macos_skip_functions=""
+setup_skip_functions=""
 # Initialize an empty array if --skip is not provided
-macos_skip_array=()
+setup_skip_array=()
+# Initialize an empty array if for profile checking
+setup_select_profile=()
 
 ########################################
 # BASIC FUNCTIONS
@@ -69,11 +74,11 @@ macos_help() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
   echo "  --profile=PROFILE     Single profile. Profiles are:"
-  for prof in "${macos_ops_profiles[@]}"; do
+  for prof in "${setup_ops_profiles[@]}"; do
     echo "                        - $prof"
   done
   echo "  --skip=FUNCTIONS      Comma-separated list of functions to skip. Functions are:"
-  for func in "${macos_function_names[@]}"; do
+  for func in "${setup_function_names[@]}"; do
     echo "                        - $func"
   done
   echo "  --help                Show this help message."
@@ -94,9 +99,9 @@ runnning_as_root() {
 
 # Identify architecture
 which_architecture() {
-  if [ "$macos_arch_name" == "x86_64" ]; then
+  if [ "$setup_arch_name" == "x86_64" ]; then
     arch="darwin-x86_64"
-  elif [ "$macos_arch_name" == "arm64" ]; then
+  elif [ "$setup_arch_name" == "arm64" ]; then
     arch="darwin-aarch64"
   else
     echo "Unknown architecture"
@@ -123,16 +128,35 @@ add_line_to_file_beggining() {
 
 # Insert a new line in case the file does not end with one. (Apply for line prefix match)
 add_line_to_file() {
-  line="$1"
-  file="$2"
-  prepend_newline="${3:-false}"
-  append_path="${4:-false}"
+  local line="$1"
+  local file="$2"
+  local prepend_newline="${3:-false}"
+  local append_path="${4:-false}"
 
   # Add a newline if the file exists and does not end with a newline
   [ -f "$file" ] && [ "$(tail -c 1 "$file"; echo x)" != $'\nx' ] && echo "" >> "$file"
 
   # Append the line if it does not already exist in the file as a prefix
-  if ! grep -qxE "^${line}.*" "$file"; then
+  # if ! grep -qxE "^${line}.*" "$file"; then
+  #   [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+  #   if [ "$append_path" == "true" ]; then
+  #     echo "${line}:\$PATH" >> "$file"
+  #   else
+  #     echo "$line" >> "$file"
+  #   fi
+  # fi
+
+  # do not allow expansion
+  # if ! grep -qxF '^'"${line}"'.*' "$file"; then
+  #   [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+  #   if [ "$append_path" == "true" ]; then
+  #     echo "${line}:\$PATH" >> "$file"
+  #   else
+  #     echo "$line" >> "$file"
+  #   fi
+  # fi
+
+  if ! grep -Fq -- "$line" "$file"; then
     [ "$prepend_newline" == "true" ] && echo "" >> "$file"
     if [ "$append_path" == "true" ]; then
       echo "${line}:\$PATH" >> "$file"
@@ -144,9 +168,9 @@ add_line_to_file() {
 
 # Insert a new line in case the file does not end with one. (Apply only for full line match)
 add_line_to_file_whole_match() {
-  line="$1"
-  file="$2"
-  prepend_newline="${3:-false}"
+  local line="$1"
+  local file="$2"
+  local prepend_newline="${3:-false}"
 
   # Add a newline if the file exists and does not end with a newline
   [ -f "$file" ] && [ "$(tail -c 1 "$file"; echo x)" != $'\nx' ] && echo "" >> "$file"
@@ -165,17 +189,18 @@ add_line_to_file_whole_match() {
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --profile=*)
-      macos_ops_profiles="${1#*=}"
+      setup_select_profile="${1#*=}"
+      # selected_profiles+=("${arg#*=}")
       ;;
     --skip=*)
-      macos_skip_functions="${1#*=}"
+      setup_skip_functions="${1#*=}"
       ;;
     --help)
-      macos_help
+      setup_help
       ;;
     *)
       echo "Unknown parameter passed: $1"
-      macos_help
+      setup_help
       exit 1
       ;;
   esac
@@ -183,9 +208,9 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Check if we have any functions to skip
-if [[ -n "$macos_skip_functions" ]]; then
+if [[ -n "$setup_skip_functions" ]]; then
   # Convert the comma-separated list into an array
-  IFS=',' read -ra macos_skip_array <<< "$macos_skip_functions"
+  IFS=',' read -ra setup_skip_array <<< "$setup_skip_functions"
 fi
 
 # Check if an item is in an array
@@ -202,7 +227,7 @@ array_contains() {
   return $in
 }
 
-echo -e "\n====== MacOS Setup Initiated ======"
+echo -e "\n====== OS Setup Initiated ======"
 
 ########################################
 # DIRECTORY CHECK AND CREATION
@@ -251,7 +276,7 @@ private_envs_file() {
 ########################################
 files_check_and_creation() {
   echo -e "\n**** FILES CHECK AND CREATION ****"
-  for f1 in "${macos_files_to_check[@]}"; do
+  for f1 in "${setup_files_to_check[@]}"; do
     if [[ -f $f1 ]]; then
       # echo "$f1 already exists" >/dev/null
       echo "$f1 exists"
@@ -270,7 +295,7 @@ setup_elasticsearch() {
   echo -e "\n**** ELASTICSEARCH ****"
 
   # Fetch the latest version number using Python to scrape the Elasticsearch downloads page
-  latest_version=$(curl -s https://www.elastic.co/downloads/elasticsearch | python3 -c "import sys, re; print(re.search(r'elasticsearch-(\d+\.\d+\.\d+)', sys.stdin.read()).group(1))")
+  latest_version=$(curl -fsSL https://www.elastic.co/downloads/elasticsearch | python3 -c "import sys, re; print(re.search(r'elasticsearch-(\d+\.\d+\.\d+)', sys.stdin.read()).group(1))")
 
   if [ ! -d "$HOME/devops/apps/elasticsearch-${latest_version}" ]; then
     # Download the tarball and install binaries
@@ -278,8 +303,8 @@ setup_elasticsearch() {
     if [ -n "$latest_version" ]; then
       url="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${latest_version}-${arch}.tar.gz"
       echo "Downloading $url..."
-      curl -o $HOME/devops/apps/elasticsearch-${latest_version}-${arch}.tar.gz $url
-      (cd $HOME/devops/apps && curl "${url}.sha512" | shasum -a 512 -c - || exit 1)
+      curl -fsSL -o $HOME/devops/apps/elasticsearch-${latest_version}-${arch}.tar.gz $url
+      (cd $HOME/devops/apps && curl -fsSL "${url}.sha512" | shasum -a 512 -c - || exit 1)
       (cd $HOME/devops/apps && tar -xzf elasticsearch-${latest_version}-${arch}.tar.gz)
     else
       echo "** ERROR: Failed to identify the latest ElasticSearch version."
@@ -458,7 +483,7 @@ setup_homebrew_and_packages() {
 
   ############## homebrew install ##############
   # Execute MacOS specific Architecture Commands:
-  if [ "$macos_arch_name" == "x86_64" ]; then
+  if [ "$setup_arch_name" == "x86_64" ]; then
     if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
       echo "** Detected ARM processor running in Rosetta."
       echo
@@ -468,7 +493,7 @@ setup_homebrew_and_packages() {
       brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar
       # not working brew install encfs # encfs needs macfuse first
     fi
-  elif [ "$macos_arch_name" == "arm64" ]; then
+  elif [ "$setup_arch_name" == "arm64" ]; then
     echo "This is an ARM processor."
     brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch xclip ffmpeg figlet boxes gh strongswan leapp macfuse duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 ca-certificates htop
     brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome google-drive dbeaver-community visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar gimp cryptr kindle slack blender rsyncui xbar
@@ -495,8 +520,8 @@ setup_omzsh() {
   fi
 
   # if needed - MacOS Permission
-  # sudo dseditgroup -o edit -a $macos_username -t user admin
-  # sudo dscl . append /Groups/admin GroupMembership $macos_username
+  # sudo dseditgroup -o edit -a $setup_username -t user admin
+  # sudo dscl . append /Groups/admin GroupMembership $setup_username
   # sudo chmod -R g+w /opt/homebrew
 }
 
@@ -508,7 +533,7 @@ setup_aws_tools() {
   echo "** Installing AWS Session Manager **"
 
   # Install MacOS specific Architecture:
-  if [ "$macos_arch_name" == "x86_64" ]; then
+  if [ "$setup_arch_name" == "x86_64" ]; then
     if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
       echo
     else
@@ -519,7 +544,7 @@ setup_aws_tools() {
         && $HOME/devops/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
       )
     fi
-  elif [ "$macos_arch_name" == "arm64" ]; then
+  elif [ "$setup_arch_name" == "arm64" ]; then
     curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/sessionmanager-bundle.zip" -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip"
     (
       cd $HOME/devops/apps/aws \
@@ -554,33 +579,32 @@ setup_variables_and_sources() {
 
   # INITIAL VARS
   # To be set into the beggining of .bash_profile and .zshrc PS: NEEDS TO BE IN THE BEGGINING OF THE FILE
-  export_line_lc_type_fix='export LC_CTYPE=en_US.UTF-8'
-
-  # AWS VARS
-  export_line_aws_summary="### AWS - ENVS"
-  export_line_aws_default_output="export AWS_DEFAULT_OUTPUT=table"
-  export_line_aws_sessionmanager_bin="export PATH=$DOCLI/apps/aws/sessionmanager-bundle/bin"
-
-  # ELASTICSEARCH VARS
-  export_line_es_summary="### ELASTICSEARCH - ENVS"
-  export_line_path="export PATH=$DOCLI/apps/elasticsearch-${latest_version}/bin"
-  export_line_es_home="export ES_HOME=$DOCLI/apps/elasticsearch-${latest_version}"
+  export_line_lc_type_fix="export LC_CTYPE=en_US.UTF-8"
 
   # DOCLI VARS
   export_line_docli_summary="### DevOps CLI - ENVS"
   # TODO: Make DOCLI customizable
   export_line_docli="export DOCLI=$DOCLI"
-  export_line_docli_bin="export PATH=$DOCLI/bin"
-  export_line_devops_bin="export PATH=$HOME/devops/bin"
+  export_line_docli_bin="export PATH=\$DOCLI/bin"
+
+  # AWS VARS
+  export_line_aws_summary="### AWS - ENVS"
+  export_line_aws_default_output="export AWS_DEFAULT_OUTPUT=table"
+  export_line_aws_sessionmanager_bin="export PATH=\$DOCLI/apps/aws/sessionmanager-bundle/bin"
+
+  # ELASTICSEARCH VARS
+  export_line_es_summary="### ELASTICSEARCH - ENVS"
+  export_line_path="export PATH=\$DOCLI/apps/elasticsearch-${latest_version}/bin"
+  export_line_es_home="export ES_HOME=\$DOCLI/apps/elasticsearch-${latest_version}"
 
   # SOURCING
   export_line_extralibs_summary="### EXTRA LIBS, SOURCES AND SCRIPTS - ENVS"
-  export_line_extra_bins="export PATH=$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export_line_extra_bins="export PATH=\$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   export_line_libpq_bin="export PATH=/usr/local/opt/libpq/bin"
   export_line_mysqlclient_bin="export PATH=/usr/local/opt/mysql-client/bin"
   export_line_vscode_bin="export PATH=/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
-  export_line_source_colors_tput="source $HOME/devops/scripts/set-bash-colors-tput.sh"
-  export_line_source_private_envs="source $HOME/devops/.private/envs"
+  export_line_source_colors_tput="source \$HOME/devops/scripts/docli_colors_tput"
+  export_line_source_private_envs="source \$HOME/devops/.private/envs"
   export_line_source_zsh_autosuggestions="source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
   echo "** Setting variables on .bash_profile and .zshrc **"
@@ -590,6 +614,18 @@ setup_variables_and_sources() {
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bash_profile
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bashrc
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.zshrc
+
+  # DOCLI VARS
+  echo "* docli"
+  add_line_to_file "$export_line_docli_summary" $HOME/.bash_profile true
+  add_line_to_file "$export_line_docli_summary" $HOME/.bashrc true
+  add_line_to_file "$export_line_docli_summary" $HOME/.zshrc true
+  add_line_to_file "$export_line_docli" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_docli" $HOME/.bashrc false false
+  add_line_to_file "$export_line_docli" $HOME/.zshrc false false
+  add_line_to_file "$export_line_docli_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_docli_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_docli_bin" $HOME/.zshrc false true
 
   # AWS VARS
   echo "* aws"
@@ -614,21 +650,6 @@ setup_variables_and_sources() {
   add_line_to_file "$export_line_es_home" $HOME/.bash_profile false false
   add_line_to_file "$export_line_es_home" $HOME/.bashrc false false
   add_line_to_file "$export_line_es_home" $HOME/.zshrc false false
-
-  # DOCLI VARS
-  echo "* docli"
-  add_line_to_file "$export_line_docli_summary" $HOME/.bash_profile true
-  add_line_to_file "$export_line_docli_summary" $HOME/.bashrc true
-  add_line_to_file "$export_line_docli_summary" $HOME/.zshrc true
-  add_line_to_file "$export_line_docli" $HOME/.bash_profile false false
-  add_line_to_file "$export_line_docli" $HOME/.bashrc false false
-  add_line_to_file "$export_line_docli" $HOME/.zshrc false false
-  add_line_to_file "$export_line_docli_bin" $HOME/.bash_profile false true
-  add_line_to_file "$export_line_docli_bin" $HOME/.bashrc false true
-  add_line_to_file "$export_line_docli_bin" $HOME/.zshrc false true
-  add_line_to_file "$export_line_devops_bin" $HOME/.bash_profile false true
-  add_line_to_file "$export_line_devops_bin" $HOME/.bashrc false true
-  add_line_to_file "$export_line_devops_bin" $HOME/.zshrc false true
 
   # EXTRA LIBS VARS
   echo "* extras"
@@ -702,15 +723,30 @@ setup_custom_routines() {
 runnning_as_root
 which_architecture
 
-for func in "${macos_function_names[@]}"; do
-  # Skip execution if function name is in the macos_skip_array
-  if [[ ${#macos_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
-    if [[ " ${macos_skip_array[@]} " =~ " ${func} " ]]; then
-      echo -e "> > > > Skipping $func"
-      continue
-    fi
+for prof in "${setup_ops_profiles[@]}"; do
+  if [[ ${#setup_select_profile[@]} -ne 0 && ! " ${setup_select_profile[@]} " =~ " ${prof} " ]]; then
+    echo -e "Skipping profile: $prof"
+    continue
   fi
-  $func
+  if [ " ${setup_select_profile[@]} " == " devops " ]; then
+    echo -e "\n*** Setting up DevOps environment ***\n"
+    for func in "${setup_function_names[@]}"; do
+      # Skip execution if function name is in the setup_skip_array
+      if [[ ${#setup_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
+        if [[ " ${setup_skip_array[@]} " =~ " ${func} " ]]; then
+          echo -e "> > > > Skipping $func"
+          continue
+        fi
+      fi
+      $func
+    done
+  elif [ " ${setup_select_profile[@]} " == " secops " ]; then
+    echo -e "\n*** Setting up SecOps environment ***\n"
+  elif [ " ${setup_select_profile[@]} " == " dataops " ]; then
+    echo -e "\n*** Setting up DataOps environment ***\n"
+  elif [ " ${setup_select_profile[@]} " == " finops " ]; then
+    echo -e "\n*** Setting up FinOps environment ***\n"
+  fi
 done
 
 echo -e "\n**** MacOS SETUP FINISHED! ****"

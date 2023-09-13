@@ -89,6 +89,7 @@ Thumbs.db
 /terraform/**/deploy/**/*-custom.tf
 *-tbd/
 *-notused*
+.docli_envs
 
 # Private folder to keep sensitive data outside git scope
 /private/

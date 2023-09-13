@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                           docli Bash System Operations
+###############################################################################
+
+sys_print_usage() {
+    echo
+    banner
+    echo "Usage: docli sys (arguments) [OPTIONS]"
+    echo
+    echo "sys /path/file      -> Clean selected lines from files for Refactoring"
+    echo "sys $HOME/Documents/BitBucket/ops-config/"
+    echo
+    print_options
+    # echo "Options:"
+    # echo "  -v, --verbose [true|false]   Turn on verbose"
+    # echo "  -d, --debug [true|false]     Turn on DEBUG mode"
+    # echo "  -i, --ignore-questions       Ignore questions (always yes)"
+    # echo "  -s, --silent                 Silent for CI/CD pipelines"
+    # echo "  -h, --help                   Show this help message"
+    exit 1
+}
+
+sys_clean_files() {
+  # Root directory to start the search from. Adjust as necessary.
+  local SYS_DIR_TO_SEARCH="$1"
+
+  # Extensions to ignore
+  SYS_EXCLUSIONS=(
+    ini
+    txt
+  )
+
+  # V1 LINUX
+  # # Create a find exclusion string based on the extensions
+  # exclusions=""
+  # for ext in "${SYS_EXCLUSIONS[@]}"; do
+  #   exclusions="$exclusions -o -name *.${ext}"
+  # done
+
+  # # Find all files (excluding the ones with extensions in SYS_EXCLUSIONS list)
+  # # and process them if they are ASCII text
+  # find "$SYS_DIR_TO_SEARCH" -type f ! \( $exclusions \) | while read -r file; do
+  #   # Check if the file is ASCII text
+  #   if file "$file" | grep -q "ASCII text"; then
+  #     # Use sed in-place to remove lines containing #dltbr
+  #     sed -i '/#dltbr/d' "$file"
+  #   fi
+  # done
+
+  # echo "Processing complete."
+
+  # Detect OS for sed compatibility
+  OS=$(uname)
+
+  # Create a find exclusion string based on the extensions
+  exclusions="-name *.${SYS_EXCLUSIONS[0]}"
+  for ext in "${SYS_EXCLUSIONS[@]:1}"; do
+    exclusions="$exclusions -o -name *.${ext}"
+  done
+
+  # Find all files (excluding the ones with extensions in SYS_EXCLUSIONS list)
+  # and process them if they are text files
+  find "$SYS_DIR_TO_SEARCH" -type f ! \( $exclusions \) | while read -r file; do
+    # Check if the file is a text file
+    if file "$file" | grep -q "text"; then
+      # Use sed in-place to remove lines containing #dltbr
+      # Check OS and adjust sed accordingly
+      if [ "$OS" == "Darwin" ]; then  # macOS
+        sed -i '' '/#dltbr/d' "$file"
+      else  # Linux and others
+        sed -i '/#dltbr/d' "$file"
+      fi
+    fi
+  done
+
+  echo "Processing complete."
+}

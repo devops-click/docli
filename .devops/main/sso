@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                       docli AWS SSO Tools
+###############################################################################
+## docli Markdown Generation:
+#:: ## docli AWS SSO Tools
+#:: `sso` [-h|--help]
+#:: ## DESCRIPTION
+#:: This program has the following functionalies:
+#:: `sso clean` -> Cleans all AWS SSO Tokens (CLI and SSO caches)
+#:: `sso <aws_profile>` -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)
+eval $DOCLI_DEBUG && echo "+++++++++++++++++"
+eval $DOCLI_DEBUG && echo "++ Entered sso ++"
+eval $DOCLI_DEBUG && echo "+++++++++++++++++"
+
+sso_version="1.0"
+sso_file_name="$(basename "$0")"
+sso_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+sso_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+sso_current_dir="$(pwd)"
+
+sso_option=${1:-}      # always the company-short_region-environment (ex: xx-euc1-ent)
+sso_option2=${2:-}     # If mfa -> MFA TOKEN | If eks -> EKS_ASSIGN = true
+
+if [[ -z $sso_option2 ]]; then
+  sso_eks_assign=false
+elif [[ $sso_option2 == "eks" ]]; then
+  sso_eks_assign=true
+else
+  sso_eks_assign=false
+fi
+
+# source $sso_script_dir/../functions/bash_basic_functions
+# source $sso_script_dir/../../.docli
+
+eval $DOCLI_VERBOSE && echo -e "\n**** Running $sso_file_name_upper script ****"
+
+sso_print_usage() {
+  echo
+  banner
+  echo "  $sso_file_name_upper v$sso_version"
+  echo "'--------------------------------------------------------'"
+  echo
+  echo "Usage: $0 <aws_profile> [OPTIONS]"
+  echo
+  echo "sso clean          -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+  echo "sso <aws_profile>  -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)"
+  echo
+  print_options
+  exit 1
+}
+
+# Load Help
+echo "args_help=${args_help:-}"
+[[ ${args_help:-} == "$sso_file_name" ]] && sso_print_usage
+
+check_aws_profile() {
+  if [ $# -eq 0 ]; then
+    echo "** ERROR: profile name is required **"
+    sso_print_usage
+  elif ! grep -q "$1" ~/.aws/config; then
+    echo "** ERROR: profile $1 name is required **"
+    return 1
+  else
+    export AWS_PROFILE="$1"
+    echo "** $AWS_PROFILE profile found on ~/.aws/config **"
+  fi
+}
+
+check_aws_con() {
+  check_aws_con=$(aws sts get-caller-identity --query "Account" --output text)
+}
+
+check_file_age() {
+  # Define the directories to check
+  DIR1="$HOME/.aws/cli/cache/"
+  DIR2="$HOME/.aws/sso/cache/"
+
+  # Find .json files older than 9 hours in both directories
+  OLD_FILES_DIR1=$(find "$DIR1" -name "*.json" -type f -mmin +420)
+  OLD_FILES_DIR2=$(find "$DIR2" -name "*.json" -type f -mmin +420)
+
+  eval $DOCLI_VERBOSE && echo "** Checking SSO json files for token age..."
+
+  # If old files are found in either directory, clear both directories
+  if [[ -n "$OLD_FILES_DIR1" ]] || [[ -n "$OLD_FILES_DIR2" ]]; then
+    eval $DOCLI_VERBOSE && echo "** Old files detected. Clearing both directories..."
+
+    # Use find to delete .json files in each directory to ensure only those files are removed
+    find "$DIR1" -name "*.json" -type f -exec rm {} \;
+    find "$DIR2" -name "*.json" -type f -exec rm {} \;
+  else
+    return 0
+  fi
+}
+
+sso_clean() {
+  check_os_mac_linux_only
+  if [[ $os == "macos" ]]; then
+    find ~/.aws/cli/cache -name '*.json' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
+    find ~/.aws/sso/cache -name '*.json' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
+    find ~/.aws -name 'credentials-*' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
+  elif [[ $os == "linux" ]]; then
+    rm -rf ~/.aws/cli/cache/*.json &>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
+    rm -rf ~/.aws/sso/cache/*.json &>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
+    rm -rf ~/.aws/credentials-* &>/dev/null || eval $DOCLI_VERBOSE && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
+  else
+    echo "** ERROR: Not running MacOS or Linux. Could not clean SSO Credentials. **"
+    return 0
+  fi
+  eval $DOCLI_VERBOSE && echo -e "** SSO tokens cleaned successfully. **"
+  a=0 # Keep this line here...
+}
+
+sso_login() {
+  aws sso login --sso-session clearops-sso
+}
+
+# TODO: Make this work with MFA (If possible) to get a longer session life
+sso_login_mfa() {
+  if [ -z ${sso_option2} ]; then
+    read -rp $'\033[1;32m** Enter the MFA token code: \033[0m' token_code
+    export token_code="${token_code}"
+  else
+    export token_code="${sso_option2}"
+  fi
+
+  aws sts get-session-token \
+  --duration-seconds 129600 \
+  --serial-number "mfa1p" \
+  --token-code "$token_code" \
+  --profile co-euc1-ent-sso-start \
+  --debug
+}
+
+# Keep trying to set EKS Cluster to KubeConfig Context until successfully connected.
+eks_login() {
+  local eks_cluster=$1
+  local region=$2
+  local cust_awsprofile=$3
+
+  export AWS_PROFILE=$cust_awsprofile
+
+  while true; do
+    aws eks update-kubeconfig --name dc-eu-eks-$sso_env-$sso_short_region-v01 --alias $sso_env
+    if [[ $? -eq 0 ]]; then
+      echo "Successfully updated kubeconfig."
+      break
+    else
+      echo "Failed to update kubeconfig. Retrying in 5 seconds..."
+      sleep 5
+    fi
+  done
+}
+
+sso() {
+  input=${1:-}
+  [[ $input == "clean" ]] && sso_clean && exit 0 || echo ""
+  sso_client="${input%%-*}"
+  sso_env="${input##*-}"
+  sr_tmp="${input#*-}"
+  sso_short_region="${sr_tmp%%-*}"
+  sso_profile="$input-sso"
+  check_aws_profile "$sso_profile"
+  check_aws_profile "$sso_profile-start"
+
+  check_file_age
+
+  # check_aws_con=$(aws sts get-caller-identity --query "Account" --output text)
+  local check_aws_con_profile=$(aws sts get-caller-identity --query "Account" --profile $sso_profile --output text)
+  echo "** AWS Account: $check_aws_con_profile"
+  if [[ $check_aws_con_profile > 0 ]]; then
+    echo "** Already connected to AWS SSO using profile '$sso_profile' on account '$check_aws_con_profile' **"
+    export AWS_PROFILE="${sso_profile}-start"
+    [[ $sso_short_region == "euc1" ]] && export AWS_REGION="eu-central-1" # TODO: Do this dinamically, with convert function.
+    # [[ $sso_eks_assign == true ]] && aws eks update-kubeconfig --name dc-eu-eks-$sso_env-$sso_short_region-v01 --alias $sso_env || echo "** EKS Cluster dc-eu-eks-$sso_env-$sso_short_region-v01 NOT found! ***"
+    [[ $sso_eks_assign == true ]] && eks_login "dc-eu-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}"
+    echo
+  else
+    echo "** Not connected to AWS SSO using profile '$sso_profile' **"
+    echo "** Connecting... **"
+    sso_clean
+
+    aws sso login --sso-session clearops-sso
+    export AWS_PROFILE="${sso_profile}-start"
+    [[ $sso_short_region == "euc1" ]] && export AWS_REGION="eu-central-1" # TODO: Do this dinamically, with convert function.
+    [[ $sso_eks_assign == true ]] && eks_login "dc-eu-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}"
+    check_aws_con
+    [[ $check_aws_con > 0 ]] && echo -e "** SSO Connected! **\n" || echo -e "** ERROR: Could not connect to $sso_profile SSO. Please review your settings. **\n"
+  fi
+}
+
+# main() {
+#   # if [[ $sso_option == sso ]]
+#   # trap 'catch $? $LINENO' EXIT
+#   # banner
+#   # Error checking. Substituted by catch
+#   # if [ $? -ne 0 ]; then
+#   #     echo "Error: Terraform command failed."
+#   #     exit 1
+#   # fi
+#   [[ $sso_eks_assign == "true" ]] && sso $sso_option && return 0
+#   [[ $sso_option == "mfa" ]] && check_file_age && sso_login_mfa
+#   [[ $sso_option == "clean" ]] && sso_clean && return 0 || echo ""
+#   [[ -z $sso_option ]] && echo "** ERROR: No options provided **" && sso_print_usage && exit 0
+#   sso $sso_option
+# }
+
+# # Calls main with args
+# main "$@"

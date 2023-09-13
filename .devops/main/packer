@@ -1,0 +1,332 @@
+#!/bin/bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                         docli HashiCorp Packer
+###############################################################################
+## docli Markdown Generation:
+#:: ## docli AWS SSO Tools
+#:: `packer (option) [ARGUMENTS]` [-h|--help]
+#:: ## DESCRIPTION
+#:: This program has the following functionalies:
+#:: `packer aws build ent co-euc1 hashicorp-consul-amzn2-amd.json` -> Build Packer on AWS - Enterprise Environment for co-euc1
+eval $DOCLI_DEBUG && echo "+++++++++++++++++"
+eval $DOCLI_DEBUG && echo "++ Entered packer ++"
+eval $DOCLI_DEBUG && echo "+++++++++++++++++"
+
+packer_version="1.0"
+packer_file_name="$(basename "$0")"
+packer_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+packer_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+packer_current_dir="$(pwd)"
+
+# Read variables from environment
+current_key=$(basename $PWD)
+prefix_path=$(dirname -- "${BASH_SOURCE[0]}")
+
+# Load environment Vars
+[[ -f "$packer_script_dir/../functions/bash_basic_functions" ]] && source $packer_script_dir/../functions/bash_basic_functions
+
+# .docli_envs override order: HOME -> DOCLI INSTALLATION DIR -> CURRENT DIR
+[[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
+[[ -f "$packer_script_dir/../../.docli_envs" ]] && source $packer_script_dir/../../.docli_envs
+[[ -f "$packer_current_dir/.docli_envs" ]] && source $packer_current_dir/.docli_envs
+if [[ -z ${DOCLI} ]]; then
+  echo "** .docli_envs found! using it's values when applicable **"
+else
+  check_os_mac_linux_only
+  [[ $os == "macos" ]] && export DOCLI="$HOME/devops"
+  [[ $os == "linux" ]] && export DOCLI="/opt/devops"
+fi
+
+eval $DOCLI_VERBOSE && echo -e "\n**** Running $packer_file_name_upper script ****"
+
+packer_print_usage() {
+  echo
+  banner
+  echo "  $packer_file_name_upper v$packer_version"
+  echo "'--------------------------------------------------------'"
+  echo
+  echo "Usage: docli packer (option) [ARGUMENTS] [-h|--help]"
+  echo
+  echo "packer (option) [ARGUMENTS] [-h|--help]"
+  echo
+  echo "Example: packer build aws ent co-euc1 hashicorp-nomad-amzn2-amd.json"
+  echo
+  print_options
+  exit 1
+}
+
+# Load Help
+echo "args_help=${args_help:-}"
+[[ ${args_help:-} == "$packer_file_name" ]] && packer_print_usage
+
+packer_command=$1
+cloud=$2
+environ=$3
+awsprofile="$4-$environ"
+confdir="$4-$environ"
+packer_script=$5
+
+# Force user to use Packer dir...
+[[ $current_key != "packer" ]] && exit 0 && echo -e "\nERROR: Please execute this script from inside packer root dir!!!\n"
+
+source $packer_current_dir/.packer-env
+
+# List of valid parameters
+VALID_PROVIDERS=("aws" "azure" "gcp")
+VALID_COMMANDS=("build")
+VALID_ENVIRONMENTS=("dev" "qas" "stg" "prd" "sec" "ent" "val" "fin")
+REQUIRED_PACKER_VERSION="v$packer_version"
+FILE_OR_DIR_CHECK=(
+    $DOCLI/scripts/set-bash-colors-tput.sh
+    $DOCLI/envs
+    $DOCLI/.envs_override
+    $DOCLI/bin
+)
+PROFILES=$(sed -n 's/^\[profile \([^]]*\)]/\1/p' ~/.aws/config) # Read AWS config file and filter profile names
+
+# Convert profile names to an array
+profile_list=()
+while read -r line; do
+    profile_list+=("$line")
+done <<< "$PROFILES"
+
+# Function to check if a value is in an array
+contains() {
+    local value="$1"
+    shift
+    for item; do
+        [[ "$item" == "$value" ]] && return 0
+    done
+    return 1
+}
+
+# Iterate through the sources and source or check them
+for source in "${FILE_OR_DIR_CHECK[@]}"; do
+    if [[ -f $source ]]; then
+        echo "** Sourcing file: $source"
+        source $source
+    elif [[ -d $source ]]; then
+        echo "** Directory found: $source"
+    else
+        echo "ERROR: $source not found. Please execute the basic setup before proceeding."
+        exit 1
+    fi
+done
+
+if contains "$awsprofile" "${profile_list[@]}"; then
+    echo "** Profile $awsprofile found. Proceeding..."
+else
+    echo -e "${TEXT_RED}ERROR: AWS Profile $awsprofile not found on ~/.aws/config${END}"
+    exit 1
+fi
+
+# Set variables for each cloud
+if [[ $cloud == "aws" ]]; then
+    echo "** Loading AWS specific vars..."
+fi
+if [[ $cloud == "azure" ]]; then
+    echo "** Loading Azure specific vars..."
+fi
+
+# Check for the correct number of arguments
+if [ "$#" -ne 5 ]; then
+    echo "Error: Incorrect number of arguments provided."
+    help
+    exit 1
+fi
+
+# Check if the script is running on macOS or Linux
+OS=$(uname)
+if [ "$OS" != "Darwin" ] && [ "$OS" != "Linux" ]; then
+    echo "Error: This script only supports macOS and Linux."
+    exit 1
+fi
+
+# Validate the provided cloud provider
+if ! contains "$cloud" "${VALID_PROVIDERS[@]}"; then
+    echo "Error: Invalid cloud provider."
+    help
+    exit 1
+fi
+
+# Validate the provided packer command
+if ! contains "$packer_command" "${VALID_COMMANDS[@]}"; then
+    echo "Error: Invalid packer command."
+    help
+    exit 1
+fi
+
+# Validate the provided environment
+if ! contains "$environ" "${VALID_ENVIRONMENTS[@]}"; then
+    echo "Error: Invalid environment."
+    help
+    exit 1
+fi
+
+if [[ -f $packer_script ]]; then
+    echo "** Using packer recipe: $packer_script"
+else
+    echo "ERROR: $packer_script not found. Please ensure you did write the right script name. (case sensitive)"
+    echo "Existing scripts list:"
+    ls -larthp $prefix_path | grep -v /
+    exit 1
+fi
+
+banner() {
+    echo -e "\n${BOLD}${TEXT_BLUE}** Running Packer Script for $cloud on $environ **\n${END}"
+}
+
+# Function to display help information
+help() {
+    echo "Usage: $0 <cloud> <packer_command> <environment> <awsprofile>"
+    echo "Valid cloud providers:"
+    printf " - %s\n" "${VALID_PROVIDERS[@]}"
+    echo "Valid packer commands:"
+    printf " - %s\n" "${VALID_COMMANDS[@]}"
+    echo "Valid environments:"
+    printf " - %s\n" "${VALID_ENVIRONMENTS[@]}"
+    echo "Valid awsprofiles:"
+    cat ~/.aws/config | grep "\[profile" | sed "s/\[profile //;s/\]//"
+    echo "Existing scripts to be used:"
+    ls -larthp $prefix_path | grep -v /
+}
+
+catch() {
+  if [ "$1" != "0" ]; then
+    # Error Handling
+    echo "Error $1 occurred on $2"
+    # cleanup_on_error
+  else
+    echo -e "Good bye! ;) \n"
+  fi
+}
+
+# Remove script created files
+cleanup() {
+    echo -e "${TEXT_MAGENTA}** Cleaning Packer temporary and state files${TEXT_BLUE}"
+    rm -rf $prefix_path/files/packer-temp/*
+    echo "${END}"
+}
+
+# Clean up on errors
+cleanup_on_error() {
+    echo -e "${BOLD}${TEXT_RED}ERROR DETECTED... Cleaning Packer temporary and state files and rolling back changes${END}\n"
+    cleanup
+    exit 1
+}
+
+# Check Packer Version
+packer_version_check () {
+    # Check packer version
+    PACKER_VERSION=$(packer version | grep v1 | awk '{ print $2 }')
+    if [ "$PACKER_VERSION" != "$REQUIRED_PACKER_VERSION" ]; then
+        echo "${TEXT_RED}${BOLD}Error: Required Packer version is $REQUIRED_PACKER_VERSION, but you have $PACKER_VERSION${END}"
+        exit 1
+    fi
+    echo -e "${TEXT_GREEN}** Packer Version ${REQUIRED_PACKER_VERSION} check: ${BOLD}OK ${END}"
+}
+
+lock_environments() {
+    echo "${TEXT_GREEN}** Validating any Environment Hard Lock${END}"
+    banner1="** !${TEXT_RED} !! WARNING !! ${BOLD}Running Packer on $environ${END} !\n==>${TEXT_RED} AMI's are normally created on ${BOLD}enterprise environment (ent)${END}${TEXT_RED} and shared between accounts${END} ! <=="
+    [[ $environ != "ent" ]] \
+    && echo -e $banner1 \
+    && read -p "${TEXT_RED}If you really want to do that, press ${BOLD}enter${END}${TEXT_RED} to continue and ${BOLD}build $packer_script on => $environ <==${END}${TEXT_RED}. (Or Control+C to abort)${END}" \
+    || :
+    echo -e "${TEXT_GREEN}** Lock check: ${BOLD}OK ${END}"
+}
+
+# TODO: Use bash_op
+# Login to 1Password if not before start
+check_op_con=$(op account get 2>&1 | tee /tmp/op_con.log || echo "failure" )
+echo $check_op_con
+if [[ $check_op_con == *"You are not currently signed in"* ]]; then
+    echo "** 1Password CHECK: not signed in ;( - Please enter your 1Password account password! **"
+    eval $(op signin --account $ONEPASSWORD_URL)
+else
+    echo -e "** 1Password CHECK: already logged in ;)\n"
+fi
+
+op_doc_get_packer(){
+    if [[ -f ~/.ssh/packer-ec2-keypair.pem ]]; then
+        echo "** Local ~/.ssh/packer-ec2-keypair.pem found! Using it..."
+    else
+        op_signin
+        op_doc_packer_pem_list=$(op document list | grep -i packer-ec2-keypair.pem | awk '{ print $2 }' || echo "** List PEM is empty...")
+        if [[ $op_doc_packer_pem_list == *"packer-ec2-keypair.pem"* ]]; then
+            echo "** 1Password document $op_doc_packer_pem_list found! Using it..."
+            op document get packer-ec2-keypair.pem --vault='DevOps' --out-file ~/.ssh/packer-ec2-keypair.pem && chmod 600 ~/.ssh/packer-ec2-keypair.pem || echo "ERROR: Could not get $op_doc_packer_pem_list from 1Password!"
+        else
+            echo "ERROR: Could not get $op_doc_packer_pem_list from 1Password!"
+        fi
+    fi
+}
+
+op_doc_get_setup_auth(){
+    echo "** Download aws-setup-auth from 1Password"
+    [[ ! -d files/packer-temp ]] && mkdir files/packer-temp || echo "** files/packer-temp dir found!"
+
+    op_doc_setup_auth_list=$(op document list | grep -i aws-setup-auth | awk '{ print $2 }' || echo "** List SETUP-AUTH is empty...")
+    if [[ $op_doc_setup_auth_list == *"aws-setup-auth"* ]]; then
+        echo "** 1Password document $op_doc_setup_auth_list found! Using it..."
+        rm -rf files/packer-temp/setup-auth.sh
+        op document get aws-setup-auth --vault='DevOps' --out-file files/packer-temp/setup-auth.sh && chmod 755 /opt/packer-temp/setup-auth.sh || echo "ERROR: Could not get $op_doc_setup_auth_list from 1Password!"
+    else
+        echo "ERROR: Could not get $op_doc_setup_auth_list from 1Password!"
+    fi
+    echo -e "${TEXT_GREEN}${BOLD}Packer setup-auth successfully downloaded!${END}"
+}
+
+# Function to run packer command
+run_packer() {
+    local command=$packer_command
+    case "$command" in
+        build)
+            echo "Running Packer with profile: $awsprofile"
+            [[ $cloud == "aws" ]] && echo "** Initiating Packer for $packer_script" \
+            && aws-vault exec "$awsprofile" -- packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
+
+            [[ $cloud == "azure" ]] && echo "** Initiating Packer for $packer_script" \
+            && packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
+            ;;
+        *)
+            echo "Invalid packer command"
+            return 1
+            ;;
+    esac
+}
+
+# main() {
+run_packer_main() {
+    # trap 'catch $? $LINENO' EXIT
+    banner
+    if [[ $cloud == "aws" ]]; then
+        packer_version_check
+        lock_environments
+        # exit 0
+    fi
+    if [[ $cloud == "azure" ]]; then
+        packer_version_check
+        lock_environments
+    fi
+
+    op_doc_get_packer
+    op_doc_get_setup_auth
+    run_packer
+    cleanup
+
+    # Error checking. Substituted by catch
+    # if [ $? -ne 0 ]; then
+    #     echo "Error: Packer command failed."
+    #     exit 1
+    # fi
+
+    echo "Packer script executed successfully."
+}
+
+# Disabled: Script must be sourced now.
+# Calls main with args
+# main "$@"

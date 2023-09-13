@@ -1,0 +1,8 @@
+# DOCLI Home
+DOCLI=$HOME/devops
+
+# Used for all Integrations
+DOCLI_PROJECT_ROOT=~/Documents/GitHub/yourrepo
+
+# OnePassword (1Password)
+ONEPASSWORD_URL=companyname.1password.com
