@@ -62,21 +62,21 @@ ARCH=$(uname -m)
 case "$(uname -s)" in
   Linux*|MINGW*|MSYS*|CYGWIN*)
     if grep -qEi "(Microsoft|WSL)" /proc/version &> /dev/null ; then
-      OS="wsl"
-      install_dir="$HOME/docli"
+      export OS="wsl"
+      export install_dir="$HOME/docli"
     elif [ -f /etc/os-release ]; then
       . /etc/os-release
-      OS=$ID
-      VERSION=$VERSION_ID
+      export OS=$ID
+      export VERSION=$VERSION_ID
     else
       echo "Unable to determine Linux distribution."
       exit 1
     fi
     ;;
   Darwin*)
-    OS="macos"
-    VERSION=$(sw_vers -productVersion)
-    install_dir="$HOME/docli"
+    export OS="macos"
+    export VERSION=$(sw_vers -productVersion)
+    export install_dir="$HOME/docli"
     ;;
   *)
     echo "Unsupported operating system."
@@ -131,7 +131,7 @@ check_and_add_line "DOCLI_CONFIG_TEAM_MAIL_SEC=\"$mail_sec\"" "$env_file"
 check_and_add_line "DOCLI_CONFIG_TEAM_MAIL_DATA=\"$mail_data\"" "$env_file"
 check_and_add_line "DOCLI_CONFIG_TEAM_MAIL_DEV=\"$mail_dev\"" "$env_file"
 check_and_add_line "DOCLI_CONFIG_TEAM_MAIL_GDPR=\"$mail_gdpr\"" "$env_file"
-check_and_add_line "DOCLI_VAR_SSL_SELFSIGNED_PK=\"$DOCLI/certs/privkey.pem\""
-check_and_add_line "DOCLI_VAR_SSL_SELFSIGNED_CRT=\"$DOCLI/certs/cert.pem\""
+check_and_add_line "DOCLI_VAR_SSL_SELFSIGNED_PK=\"$DOCLI/certs/privkey.pem\"" "$env_file"
+check_and_add_line "DOCLI_VAR_SSL_SELFSIGNED_CRT=\"$DOCLI/certs/cert.pem\"" "$env_file"
 
 echo "* DOCLI: Basic Setup complete *"
