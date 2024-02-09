@@ -296,7 +296,7 @@ copy_or_download() {
 }
 
 # Main logic - deploy - put in here to keep logic in one place only
-elif [[ $deploy == true ]]; then
+if [[ $deploy == true ]]; then
   echo -e "** docli-deploy: Deploying to config dir **"
   copy_or_download true "$DOCLI_REPOSITORY" "$HOME/Documents/GitHub/ops-config/terraform/aws/deploy/ec2-flask-tools/apps/config.devops.click/files"
 fi
