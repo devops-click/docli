@@ -380,6 +380,21 @@ run_fixes() {
 }
 
 ########################################
+# BREW
+########################################
+brew_tap() {
+  # Loop through each tap and check if it's already installed
+  for tap in "${1[@]:-}"; do
+    if ! brew tap | grep -q "^$tap\$"; then
+      echo "$tap not found. Tapping..."
+      brew tap "$tap"
+    else
+      echo "$tap is already installed."
+    fi
+  done
+}
+
+########################################
 # DIRECTORY CHECK AND CREATION
 ########################################
 check_and_create_dirs() {
@@ -882,15 +897,17 @@ setup_homebrew_and_packages() {
   # List of taps to check and install if not already there
   declare -a taps=("homebrew/cask-fonts")
 
-  # Loop through each tap and check if it's already installed
-  for tap in "${taps[@]}"; do
-    if ! brew tap | grep -q "^$tap\$"; then
-      echo "$tap not found. Tapping..."
-      brew tap "$tap"
-    else
-      echo "$tap is already installed."
-    fi
-  done
+  brew_tap $taps
+
+  # # Loop through each tap and check if it's already installed
+  # for tap in "${taps[@]}"; do
+  #   if ! brew tap | grep -q "^$tap\$"; then
+  #     echo "$tap not found. Tapping..."
+  #     brew tap "$tap"
+  #   else
+  #     echo "$tap is already installed."
+  #   fi
+  # done
 
   ############## homebrew update ##############
   brew update
@@ -926,6 +943,16 @@ setup_homebrew_and_packages() {
       latest_bash_path=$(brew --prefix bash)/bin/bash
       echo $latest_bash_path | sudo tee -a /etc/shells
       chsh -s $latest_bash_path
+      if [ "${DOCLI_ADDITIONAL_PACKAGES:-false}" == true ]; then
+        echo "* ADDITIONAL $setup_arch_name packages *"
+        # brew install
+        brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
+      fi
+      if [ "${DOCLI_ALL_PACKAGES:-false}" == true ]; then
+        echo "* EXTRA $setup_arch_name packages *"
+        brew install leapp ffmpeg macfuse
+        brew install --cask gimp microsoft-teams karabiner-elements wp-cli
+      fi
     fi
   elif [ "$setup_arch_name" == "arm64" ]; then
     echo "This is an ARM processor."
@@ -949,14 +976,16 @@ setup_homebrew_and_packages() {
     latest_bash_path=$(brew --prefix bash)/bin/bash
     echo $latest_bash_path | sudo tee -a /etc/shells
     chsh -s $latest_bash_path
-  elif [ "$setup_arch_name" == "arm64" ] && [ -n "$DOCLI_ALL_PACKAGES" == true ]; then
-    echo "* EXTRA ARM packages *"
-    if [ "$DOCLI_ALL_PACKAGES" == true ]; then
-      brew install leapp ffmpeg macfuse
+    if [ "${DOCLI_ADDITIONAL_PACKAGES:-false}" == true ]; then
+      echo "* ADDITIONAL $setup_arch_name packages *"
+      # brew install
       # removed from --cask extras: keybase
-      brew install --cask gimp google-chrome google-drive kindle blender aws-vpn-client \
-      firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli \
-      github slack microsoft-teams karabiner-elements wp-cli
+      brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
+    fi
+    if [ "${DOCLI_ALL_PACKAGES:-false}" == true ]; then
+      echo "* EXTRA $setup_arch_name packages *"
+      brew install leapp ffmpeg macfuse
+      brew install --cask gimp microsoft-teams karabiner-elements wp-cli
     fi
   else
     echo "** ERROR: Unknown processor architecture. **"
@@ -970,19 +999,27 @@ setup_homebrew_and_packages() {
 setup_java() {
   echo -e "\n**** JAVA ****"
   # List of taps to check and install if not already there
-  declare -a taps=("adoptopenjdk/openjdk")
+  # declare -a taps_java=("adoptopenjdk/openjdk")
+
+  # brew_tap $taps_java
 
   # Loop through each tap and check if it's already installed
-  for tap in "${taps[@]}"; do
-    if ! brew tap | grep -q "^$tap\$"; then
-      echo "$tap not found. Tapping..."
-      brew tap "$tap"
-    else
-      echo "$tap is already installed."
-    fi
-  done
+  # for tap in "${taps[@]}"; do
+  #   if ! brew tap | grep -q "^$tap\$"; then
+  #     echo "$tap not found. Tapping..."
+  #     brew tap "$tap"
+  #   else
+  #     echo "$tap is already installed."
+  #   fi
+  # done
 
-  brew install --cask adoptopenjdk16
+  # BUG
+  # brew install --cask adoptopenjdk16
+
+  # If needed to solve adoptopenjdkXX error
+  # brew uninstall --cask adoptopenjdk16
+  # brew untap AdoptOpenJDK/openjdk
+  brew install --cask temurin
 
   ############## homebrew update ##############
   brew update
@@ -1114,8 +1151,6 @@ setup_variables_and_sources() {
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bash_profile
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bashrc
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.zshrc
-
-  # ENVS -> 1 - | 2 - 
 
   # DOCLI VARS
   echo "* docli"

@@ -1,48 +1,31 @@
 #!/bin/bash
+set -euo pipefail
+
+source $DOCLI_PROJECT_ROOT/.docli_envs
+source $DOCLI/functions/bash_basic_functions
 
 hops=1
-
-read -r -d '' vpcs << EOM
-10.128.0.2,53
-10.130.0.2,53
-10.131.0.2,53
-10.132.0.2,53
-10.134.0.2,53
-10.137.0.2,53
-10.138.0.2,53
-10.139.0.2,53
-172.31.0.2,53
-172.30.160.2,53
-172.30.192.2,53
-172.30.224.2,53
-192.168.0.2,53
-192.168.200.2,53
-192.168.224.2,53
-192.168.250.2,53
-192.168.252.2,53
-EOM
-
-# Convert the multiline string into an array, splitting by line
-IFS=$'\n' read -rd '' -a vpc_array <<<"$vpcs"
 
 # Function to print messages with hostname in regular, bold font and the message in colored, bold font
 print_message() {
   local hostname="$1"
   local port="$2"
   local success="$3" # Boolean value: 1 for success, 0 for failure
+  local sent="$4"
+  local received="$5"
 
-  # Determine VPC type based on port
-  local type=""
-  if [ "$port" -eq 53 ]; then
-    type="DNS"
-  elif [ "$port" -eq 5432 ]; then
-    type="Consul DNS"
+  # Determine protocol type based on port
+  local protocol_type=""
+  if [ "$port" == "53" ]; then
+    protocol_type="DNS"
+  elif [ "$port" == "8600" ]; then
+    protocol_type="Consul DNS"
   else
-    type="Unknown"
+    protocol_type="Unknown Protocol"
   fi
 
-  # Bold but not colored for hostname and VPC type
-  echo -ne "\033[1m$hostname ($type):\033[0m "
+  # Bold but not colored for hostname and protocol type
+  echo -ne "\033[1m$hostname ($protocol_type):\033[0m "
 
   # Apply color for the status message
   if [ "$success" -eq 1 ]; then
@@ -52,25 +35,22 @@ print_message() {
   fi
 }
 
-############################################
-# SHELL TITLE
-############################################
-DOCLI_SCRIPT_TITLE="docli => VPC Connectivity Tests" && echo -e '\033k'$DOCLI_SCRIPT_TITLE'\033\\'
-## clear screen to show banner
-printf '\033[2J'
+##################
+#### SPECIFIC ####
+##################
 
+# Display Title
+DOCLI_SCRIPT_TITLE="docli => VPC Connectivity Tests" && echo -e '\033k'$DOCLI_SCRIPT_TITLE'\033\\'
+printf '\033[2J' # clear screen to show banner
 if [[ "${DOCLI_PARAM_MODE:-}" == "funny" ]]; then
   echo -e "VPC Connectivity Tests - Number of hops: $hops" | boxes -d shell -p a5v0
 else
   toilet -w 120 -f future "VPC Connectivity Tests - Number of hops: $hops" | lolcat -f | boxes -d unicornthink -p a2v1
 fi
 
-
 # Iterate through the array
-for vpc in "${vpc_array[@]}"; do
-  IFS=',' read -r hostname port <<<"$vpc"
-  hostname=$(echo "$hostname" | xargs)
-  port=$(echo "$port" | xargs)
+for item in "${DOCLI_CHECK_BL_VPCS[@]}"; do
+  IFS=',' read -r hostname port <<<"${item/:/,}"
 
   # Run synping and capture the output
   output=$(synping "$hostname" -n "$hops" -p "$port" 2>&1)
@@ -81,16 +61,15 @@ for vpc in "${vpc_array[@]}"; do
 
   # Ensure sent and received are integers
   if ! [[ "$sent" =~ ^[0-9]+$ ]] || ! [[ "$received" =~ ^[0-9]+$ ]]; then
-    # echo "Error parsing synping output for $hostname"
-    print_message "$hostname" "$port" 0
-    continue # Skip to next database
+    print_message "$hostname" "$port" 0 "$sent" "$received"
+    continue # Skip to next item
   fi
 
   # Check if Sent equals Received
   if [ "$sent" -eq "$received" ] && [ "$received" -ne 0 ]; then
-    print_message "$hostname" "$port" 1
+    print_message "$hostname" "$port" 1 "$sent" "$received"
   else
-    print_message "$hostname" "$port" 0
+    print_message "$hostname" "$port" 0 "$sent" "$received"
   fi
 done
 
