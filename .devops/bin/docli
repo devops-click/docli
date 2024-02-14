@@ -18,7 +18,13 @@ DOCLI_MODULE_TYPE=bin
 DOCLI_MODULE_VERSION="$docli_version"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
+DOCLI_REMOTE_REPOSITORY_INSTALL_URL="https://raw.githubusercontent.com/devops-click/docli/main/install.sh"
+
 # echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# # Creates Optional DOCLI Variables if not exists
+# : "${DOCLI_REPOSITORY:=""}"
+# : "${DOCLI_DEVELOPER_MODE:=""}"
 
 # echo "==> .docli -> source bash_basic_functions"
 source $docli_script_dir/../functions/bash_basic_functions
@@ -40,9 +46,13 @@ docli_arg8="${8:-}"
 #   docli_current_version=$(echo -e "$docli_version")
 #   skip_options=check_and_create_dirs,files_check_and_creation,private_envs_file,setup_macos_system_config,setup_macos_system_config_sudoers,setup_homebrew_and_packages,setup_variables_and_sources,setup_java,setup_omzsh,setup_aws_tools,setup_terraform,setup_elasticsearch,setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_custom_routines,setup_linux_packages
 #   if [[ -v install_local && -n $install_local && $install_local == true ]]; then
-#     $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+#     if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+#       $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+#     else
+#       bash -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)" && $DOCLI/main/setup --profile=devops --skip="$skip_options"
+#     fi
 #   else
-#     bash -c "$(curl -fsSL http://home.devops.click:8080/install.sh)" || sh -c "$(curl -fsSL http://home.devops.click:8080/install.sh)"
+#     bash -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)" || sh -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)"
 #   fi
 # ) > /dev/null 2>&1
 
@@ -62,24 +72,25 @@ docli_arg8="${8:-}"
 help_var=$(help_index $docli_command)
 
 docli_print_usage() {
-    echo
-    banner
-    echo "  $docli_file_name_upper v$docli_version"
-    echo "'--------------------------------------------------------'"
-    echo
-    echo "Usage: $0 <aws_profile> [OPTIONS]"
-    echo
-    echo "sso clean                 -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
-    echo "sso <aws_profile>         -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)"
-    echo "backup <system> <options> -> Backups multiple kinds of systems. From Mac to Databases"
-    echo "operations <options>      -> Internal docli Operations. May suffer constant updates"
-    echo "gendoc /path/file         -> Generate Markdown Documentation for specified file. (For more info how to configure go to https://devops.click/)"
-    echo
-    print_options
-    exit 1
+  echo
+  banner
+  echo "  $docli_file_name_upper v$docli_version"
+  echo "'--------------------------------------------------------'"
+  echo
+  echo "Usage: $0 <option> [OPTIONS]"
+  echo
+  echo "sso clean                 -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+  echo "sso <aws_profile>         -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)"
+  echo "setup <profile>           -> Setup the desired profile (devops|secops|dataops|mlops|finops)"
+  echo "backup <system> <options> -> Backups multiple kinds of systems. From Mac to Databases"
+  echo "operations <options>      -> Internal docli Operations. May suffer constant updates"
+  echo "gendoc /path/file         -> Generate Markdown Documentation for specified file. (For more info how to configure go to https://devops.click/)"
+  echo
+  print_options
+  exit 1
 }
 
-#:: # Function to update docli.
+#:: # Function to update docli with minimal package and update dependency.
 #:: ## Usage example:
 #:: `docli_update`
 docli_update() {
@@ -87,20 +98,26 @@ docli_update() {
   # Check if $DOCLI_UPDATE_SKIP_OPTIONS is set and not empty; otherwise, use the default string
   skip_options=${DOCLI_UPDATE_SKIP_OPTIONS:-"setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_homebrew_and_packages,setup_macos_system_config_sudoers,setup_java,setup_omzsh,setup_aws_tools,setup_macos_system_config"}
   if [[ -v install_local && -n $install_local && $install_local == true ]]; then
-    $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+    if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+      $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+    else
+      bash -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)" && $DOCLI/main/setup --profile=devops --skip="$skip_options"
+    fi
   else
-    # bash -c "$(curl -fsSL https://config.devops.click/install.sh)" || sh -c "$(curl -fsSL https://config.devops.click/install.sh)"
-    # bash -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/install.sh)" || sh -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/install.sh)"
-    sh -c "$(curl -fsSL https://home.devops.click/install.sh)" # Testing purposes only
+    bash -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)" || sh -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)"
   fi
 }
 
-#:: # Function to upgrade docli.
+#:: # Function to upgrade docli and all it's packages and dependencies.
 #:: ## Usage example:
 #:: `docli_upgrade`
 docli_upgrade() {
   echo -e "\n** Running DOCLI UPGRADE (Update docli app and macos full setup completely) **"
-  $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops
+  if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+    $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops
+  else
+    bash -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY_INSTALL_URL)" && $DOCLI/main/setup --profile=devops
+  fi
 }
 
 # Argument Parsing

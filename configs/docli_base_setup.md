@@ -15,7 +15,7 @@ The **DevOps.click** Installation Script is a versatile tool designed to set up 
 To run the script, use the following command:
 
 ```bash
-curl -s https://config.devops.click/install.sh | sudo bash -s -- [OPTIONS]
+curl -s https://raw.githubusercontent.com/devops-click/docli/main/install.sh | sudo bash -s -- [OPTIONS]
 ```
 
 ### Options

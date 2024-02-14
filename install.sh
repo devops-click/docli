@@ -6,11 +6,10 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.07"
+install_version="0.0.08"
 os_var=$(uname)
 DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
 DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
-
 
 if [[ $DOCLI_DEPLOY == true ]]; then
   echo "* INFO: docli deploy *"
@@ -18,13 +17,26 @@ fi
 
 # Detect if the script is being sourced from the internet
 if [[ "$0" = "bash" ]] || [[ "$0" = "/bin/bash" ]] || [[ "$0" = "/bin/sh" ]] || [[ "$0" = "sh" ]] || [[ "$0" = "/bin/zsh" ]] || [[ "$0" = "zsh" ]]; then
-  echo "* INFO: docli installation sourced from GitHub *"
+  echo -e "\n************************************************************"
+  echo -e "* INFO: docli installation sourced from GitHub *"
+  echo -e "************************************************************\n"
   install_file_name="install.sh" # hardcode or otherwise determine
   install_file_name_upper="INSTALL.SH" # hardcode or otherwise determine
   install_current_dir="$PWD"
   install_local="false" # used when running from a forked repository
-else
+elif [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  echo -e "\n************************************************************"
   echo "* INFO: docli installation sourced LOCALLY (DEVELOPER MODE) *"
+  echo -e "************************************************************\n"
+  echo -e "\n** DETECTEC LOCAL RUN: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)"
+  install_file_name="$(basename "$0")"
+  install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+  install_current_dir="$(pwd)"
+  install_local="true" # used when running from a forked repository
+else
+  echo -e "\n************************************************************"
+  echo "* INFO: docli installation sourced LOCALLY (DEVELOPER MODE) *"
+  echo -e "************************************************************\n"
   echo -e "\n** DETECTEC LOCAL RUN: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)"
   install_file_name="$(basename "$0")"
   install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
@@ -80,22 +92,22 @@ fi
 #:: Run this script using:
 #:: ```bash
 #:: curl:
-#::   sh -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/tools/install.sh)"
+#::   sh -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY/install.sh)"
 #:: wget:
-#::   sh -c "$(wget -qO- https://raw.githubusercontent.com/devops-click/docli/main/tools/install.sh)"
+#::   sh -c "$(wget -qO- $DOCLI_REMOTE_REPOSITORY/install.sh)"
 #:: fetch:
-#::   sh -c "$(fetch -o - https://raw.githubusercontent.com/devops-click/docli/main/tools/install.sh)"
+#::   sh -c "$(fetch -o - $DOCLI_REMOTE_REPOSITORY/install.sh)"
 #:: ```
 #::
 #:: To pass arguments to the installation, do the following:
 #:: ```bash
 #:: arguments: module_argument
-#:: sh -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/tools/install.sh)" -- --only-modules=macos_devops
+#:: sh -c "$(curl -fsSL $DOCLI_REMOTE_REPOSITORY/install.sh)" -- --only-modules=macos_devops
 #:: to run only MacOS Setup for DevOps Engineers
 #:: ```
 #::
 #:: As an alternative, you may first download it to then run it afterwards:
-#::   wget https://raw.githubusercontent.com/devops-click/docli/main/tools/install.sh
+#::   wget $DOCLI_REMOTE_REPOSITORY/install.sh
 #::   sh install.sh
 #::
 #:: You can set variables to interact with the script. Ex: to change the path to the docli repository:

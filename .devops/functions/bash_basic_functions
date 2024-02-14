@@ -71,6 +71,10 @@ declare -a args=()
 : "${DOCLI_VERBOSE:=}"
 : "${DOCLI_DEBUG:=}"
 
+# Creates Optional DOCLI Variables if not exists
+: "${DOCLI_REPOSITORY:=}"
+: "${DOCLI_DEVELOPER_MODE:=}"
+
 load_vars() {
   # Validations to activate modes:
   DOCLI_VERBOSE="[[ $DOCLI_ARGS_VERBOSE == 1 || $DOCLI_ARGS_DEBUG == 1 ]]"
