@@ -6,16 +6,14 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.06"
+install_version="0.0.07"
 os_var=$(uname)
-deploy=${1:-false}
+DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
+DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli
 
 
-if [[ $deploy == true ]]; then
-  install_file_name="$(basename "$0")"
-  install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
-  install_current_dir="$(pwd)"
-  install_local="true"
+if [[ $DOCLI_DEPLOY == true ]]; then
+  echo "* INFO: docli deploy *"
 fi
 
 # Detect if the script is being sourced from the internet
@@ -241,16 +239,17 @@ declare -a file_paths=(
 
 # Define special directories for tools
 declare -a tool_dirs=(
-  "tools/ai"
+  # "tools/ai"
   "tools/ca-generator"
   "tools/aws-account-cleaner"
-  "tools/aws-vpc-connectivity-tests"
-  "tools/aws-rds-connectivity-tests"
+  "tools/aws-instance-backup-to-ami"
+  # "tools/aws-rds-connectivity-tests"
+  # "tools/aws-vpc-connectivity-tests"
   "tools/aws-instance-backup-to-ami"
   "tools/gcp-storage-bucket-cleanup"
-  "tools/gcp-storage-bucket-copy"
-  "tools/macos-troubleshoot"
-  "tools/mfa-expect"
+  # "tools/gcp-storage-bucket-copy"
+  # "tools/macos-troubleshoot"
+  # "tools/mfa-expect"
 )
 
 # Copy or download function
@@ -269,7 +268,7 @@ copy_or_download() {
       fi
     else
       echo "Downloading $file_path"
-      curl -ksL "https://home.devops.click/$file_path" -H "Cache-Control: no-cache, no-store" -o "$target_path/$file_path" || echo "* Error downloading $file_path *"
+      curl -sL "$DOCLI_REMOTE_REPOSITORY/.devops/$file_path" -H "Cache-Control: no-cache, no-store" -o "$target_path/$file_path" || echo "* Error downloading $file_path *"
     fi
   done
 
@@ -291,12 +290,12 @@ copy_or_download() {
   if [[ $install_local == true ]]; then
     cp "$repo_path/resources/omz-zsh/themes/devops.click.zsh-theme" "$HOME/.oh-my-zsh/themes/devops.click.zsh-theme"
   else
-    curl -ksL "https://home.devops.click/resources/omz-zsh/themes/devops.click.zsh-theme" -H "Cache-Control: no-cache, no-store" -o "$HOME/.oh-my-zsh/themes/devops.click.zsh-theme" || echo "* Error downloading devops.click.zsh-theme *"
+    curl -sL "$DOCLI_REMOTE_REPOSITORY/resources/omz-zsh/themes/devops.click.zsh-theme" -H "Cache-Control: no-cache, no-store" -o "$HOME/.oh-my-zsh/themes/devops.click.zsh-theme" || echo "* Error downloading devops.click.zsh-theme *"
   fi
 }
 
 # Main logic - deploy - put in here to keep logic in one place only
-if [[ $deploy == true ]]; then
+if [[ $DOCLI_DEPLOY == true ]]; then
   echo -e "** docli-deploy: Deploying to config dir **"
   copy_or_download true "$DOCLI_REPOSITORY" "$HOME/Documents/GitHub/ops-config/terraform/aws/deploy/ec2-flask-tools/apps/config.devops.click/files"
 fi

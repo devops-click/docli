@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# source ../envs
+
+# Declare an array of environments
+declare -a short_regions=("euc1" "use2" "apse2" "sae1")
+declare -a used_short_regions=("euc1")
+declare -a environments=("ent" "sec" "fin" "prd" "stg" "qas" "dev" "val")
+declare -a used_environments=("ent" "prd" "stg" "qas" "val")
+declare -a systems=("consul" "nomad" "vault" "vpn" "k8s")
+declare -a used_systems=("consul" "nomad" "*")
+
+# Nested Loops to iterate through regions, environments, and systems
+for req_short_region in "${used_short_regions[@]}"; do
+  for req_environment in "${used_environments[@]}"; do
+    for req_system in "${used_systems[@]}"; do
+
+      export SSL_PROFILE=$req_system
+      export SSL_SHORT_REGION=$req_short_region
+      export SSL_ENV=$req_environment
+
+      export SSL_PRODUCT_DOMAIN=$SSL_PRODUCT_DOMAIN
+      export SSL_COMPANY_DOMAIN=$SSL_COMPANY_DOMAIN
+
+      export SSL_COUNTRY=$SSL_COUNTRY
+      export SSL_LOCALITY=$SSL_LOCALITY
+      export SSL_STATE=$SSL_STATE
+      export SSL_COMPANY=$SSL_COMPANY
+      export SSL_OU=$SSL_OU
+
+      echo -e "** Using **"
+      echo "SSL_PROFILE=$SSL_PROFILE"
+      echo "SSL_SHORT_REGION=$SSL_SHORT_REGION"
+      echo "SSL_ENV=$SSL_ENV"
+
+      echo $PWD
+
+      envsubst < cert-reqs/region-req-template.cnf > cert-reqs/region-req.cnf
+
+      key_file="$DOCLI/CA/intermediateCA/private/$req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN.key.pem"
+      csr_file="$DOCLI/CA/intermediateCA/csr/$req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN.csr.pem"
+      cert_file="$DOCLI/CA/intermediateCA/certs-servers/$req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN.cert.pem"
+
+      if [ ! -f "$key_file" ]; then
+        echo "** $req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN -> Generating private key **"
+        openssl genpkey \
+        -algorithm RSA \
+        -out "$key_file"
+      else
+        echo "** "$key_file" -> Private key already exist. Skipping... **"
+      fi
+
+      echo "** $req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN -> Setting private key file permissions to 600 **"
+      chmod 600 "$key_file"
+
+      if [ ! -f "$csr_file" ]; then
+        echo "** $req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN -> Generating CSR **"
+        openssl req \
+        -new \
+        -sha256 \
+        -key "$key_file" \
+        -out "$csr_file" \
+        -config "cert-reqs/region-req.cnf" \
+        -extensions req_ext \
+        -subject
+      else
+        echo "** "$csr_file" -> CSR already exist. Skipping... **"
+      fi
+
+      if [ ! -f "$cert_file" ]; then
+        echo "** $req_system.$req_short_region.$req_environment.$SSL_PRODUCT_DOMAIN -> Requesting a 10-year certificate and signing it with its private key... **"
+        openssl x509 -req \
+        -days 3650 \
+        -in "$csr_file" \
+        -signkey "$key_file" \
+        -extfile "cert-reqs/region-req.cnf" \
+        -extensions req_ext \
+        -out "$cert_file"
+      else
+        echo "** "$cert_file" -> Certificate already exist. Skipping... **"
+      fi
+    done
+  done
+done

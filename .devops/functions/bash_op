@@ -6,7 +6,14 @@ set -euo pipefail
 #                       docli Bash OnePassword Functions
 ###############################################################################
 
-bash_op_version="1.0"
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_op
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
 bash_op_file_name="$(basename "$0")"
 bash_op_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 bash_op_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -14,8 +21,9 @@ bash_op_current_dir="$(pwd)"
 
 # Load environment Vars
 [[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
-[[ -f "$bash_op_script_dir/../../.docli_envs" ]] && source $bash_op_current_dir/.docli_envs
+[[ -f "$bash_op_script_dir/../../.docli_envs" ]] && source $bash_op_script_dir/../../.docli_envs
 [[ -f "$bash_op_current_dir/.docli_envs" ]] && source $bash_op_current_dir/.docli_envs
+source $DOCLI/functions/bash_basic_functions
 if [[ -z ${DOCLI} ]]; then
   echo "** .docli_envs found! using it's values when applicable **"
 else
@@ -32,7 +40,8 @@ op_print_usage() {
     echo "Usage: op (arguments) [OPTIONS]"
     echo
     echo "op create document        -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
-    echo "op create item        -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+    echo "op create item            -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+    echo "op signout                -> Sign out from all current sessions"
     echo
     print_options
     # echo "Options:"
@@ -59,7 +68,7 @@ op_check_connection() {
 op_check_requirement() {
     # Check OnePassword Requirement
     echo -e "\n${TEXT_MAGENTA} Checking 1 Password requirement"
-    if contains "$cloud" "${ONEPASSWORD_REQUIRED[@]}"; then
+    if contains "$DOCLI_PARAM_CLOUD" "${ONEPASSWORD_REQUIRED[@]}"; then
         echo -e "==== 1Password Required ====\n ${END}"
         op_check_connection
     fi

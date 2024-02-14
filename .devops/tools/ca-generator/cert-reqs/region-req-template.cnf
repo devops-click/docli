@@ -1,0 +1,26 @@
+[ req ]
+default_bits       = 2048
+default_md         = sha256
+prompt             = no
+encrypt_key        = no
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+
+[ req_distinguished_name ]
+countryName            = ${SSL_COUNTRY}
+localityName           = ${SSL_LOCALITY}
+stateOrProvinceName    = ${SSL_STATE}
+organizationName       = ${SSL_COMPANY}
+organizationalUnitName = ${SSL_OU}
+commonName             = ${SSL_PROFILE}.${SSL_SHORT_REGION}.${SSL_ENV}.${SSL_PRODUCT_DOMAIN}
+emailAddress           = devops@${SSL_COMPANY_DOMAIN}
+
+[req_ext]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = ${SSL_PROFILE}.${SSL_SHORT_REGION}.${SSL_ENV}.${SSL_COMPANY_DOMAIN}
+DNS.2 = ${SSL_PROFILE}.${SSL_ENV}.${SSL_PRODUCT_DOMAIN}
+DNS.3 = ${SSL_PROFILE}.${SSL_ENV}.${SSL_COMPANY_DOMAIN}
+DNS.4 = ${SSL_PROFILE}.${SSL_PRODUCT_DOMAIN}
+DNS.5 = ${SSL_PROFILE}.${SSL_COMPANY_DOMAIN}

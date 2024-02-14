@@ -1,0 +1,71 @@
+#!/bin/bash
+set -euo pipefail
+
+source $DOCLI_PROJECT_ROOT/.docli_envs
+
+hops=1
+
+# Function to print messages with hostname in regular, bold font and the message in colored, bold font
+print_message() {
+  local hostname="$1"
+  local port="$2"
+  local success="$3" # Boolean value: 1 for success, 0 for failure
+  local sent="$4"
+  local received="$5"
+
+  # Determine DB type based on port
+  local db_type=""
+  if [ "$port" == "3306" ]; then
+    db_type="MySQL"
+  elif [ "$port" == "5432" ]; then
+    db_type="PostgreSQL"
+  else
+    db_type="Unknown DB"
+  fi
+
+  # Bold but not colored for hostname and DB type
+  echo -ne "\033[1m$hostname ($db_type):\033[0m "
+
+  # Apply color for the status message
+  if [ "$success" -eq 1 ]; then
+    echo -e "\033[1;32mconnection was successful!\033[0m - Sent: $sent | Received: $received" # Bold Green
+  else
+    echo -e "\033[1;31mconnection failed!\033[0m - Sent: $sent | Received: $received" # Bold Red
+  fi
+}
+
+# Display Title
+DOCLI_SCRIPT_TITLE="docli => DB Connectivity Tests" && echo -e '\033k'$DOCLI_SCRIPT_TITLE'\033\\'
+printf '\033[2J' # clear screen to show banner
+if [[ "${DOCLI_PARAM_MODE:-}" == "funny" ]]; then
+  echo -e "DB Connectivity Tests - Number of hops: $hops" | boxes -d shell -p a5v0
+else
+  toilet -w 120 -f future "DB Connectivity Tests - Number of hops: $hops" | lolcat -f | boxes -d unicornthink -p a2v1
+fi
+
+# Iterate through the DBS array
+for db in "${DOCLI_CHECK_BL_DBS[@]}"; do
+  IFS=',' read -r hostname port <<<"${db/:/,}"
+
+  # Run synping and capture the output
+  output=$(synping "$hostname" -n "$hops" -p "$port" 2>&1)
+
+  # Extract the Sent and Received packet counts using awk
+  sent=$(echo "$output" | awk '/Sent:/ {print $2}')
+  received=$(echo "$output" | awk '/Received:/ {print $2}')
+
+  # Ensure sent and received are integers
+  if ! [[ "$sent" =~ ^[0-9]+$ ]] || ! [[ "$received" =~ ^[0-9]+$ ]]; then
+    print_message "$hostname" "$port" 0 "$sent" "$received"
+    continue # Skip to next database
+  fi
+
+  # Check if Sent equals Received
+  if [ "$sent" -eq "$received" ] && [ "$received" -ne 0 ]; then
+    print_message "$hostname" "$port" 1 "$sent" "$received"
+  else
+    print_message "$hostname" "$port" 0 "$sent" "$received"
+  fi
+done
+
+echo

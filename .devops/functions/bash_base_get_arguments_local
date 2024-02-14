@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# PS: Contains functions for basic Basic Argument Checks and interaction
+# To be used only locally. Cannot be used thru sourcing.
+###############################################################################
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_base_get_arguments_local
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+bash_base_get_arguments_local_file_name="$(basename "$0")"
+bash_base_get_arguments_local_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+bash_base_get_arguments_local_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+bash_base_get_arguments_local_current_dir="$(pwd)"
+
+# Default values
+args_verbose=0
+args_debug=0
+args_ignore_questions=0
+args_silent=0
+
+# Usage/help message function
+print_usage() {
+  echo "Usage: $0 [-v] [-i] [-s] [-h]"
+  echo
+  echo "Options:"
+  echo "  -v    Turn on verbose"
+  echo "  -d    Turn on DEBUG mode"
+  echo "  -i    Ignore questions (always yes)"
+  echo "  -s    Silent for CI/CD pipelines"
+  echo "  -h    Show this help message"
+  exit 1
+}
+
+# Allow script to be called by other scripts via source
+# Function for parsing command-line options
+parse_arguments() {
+  # Reset getopts in case it has been used previously in the shell.
+  OPTIND=1
+
+  # Process the options.
+  while getopts "vdish" opt; do
+    case "$opt" in
+    v) VERBOSE=1 ;;
+    d) DEBUG=1 ;;
+    i) IGNORE_QUESTIONS=1 ;;
+    s) SILENT=1 ;;
+    h)
+      echo "Usage: $0 [-v] [-d] [-i] [-s] [-h]"
+      return 1
+      ;;
+    esac
+  done
+
+  # Shift off the options and optional --.
+  shift "$((OPTIND-1))"
+  shift
+}
+
+# Parse options
+while getopts "vish" opt; do
+  case $opt in
+    v) args_verbose=1 ;;
+    d) args_debug=1 ;;
+    i) args_ignore_questions=1 ;;
+    s) args_silent=1 ;;
+    h) print_usage ;;
+    *) print_usage ;;
+  esac
+done
+
+# After parsing, shift the $@ array to remove the parsed options
+shift $((OPTIND -1))
+
+# Use the options
+if (( args_verbose )); then
+  echo "VERBOSE mode is on."
+fi
+
+if (( args_debug )); then
+  echo "DEBUG mode is on."
+fi
+
+if (( args_ignore_questions )); then
+  echo "Ignoring questions."
+fi
+
+if (( args_silent )); then
+  echo "Running in silent mode."
+fi

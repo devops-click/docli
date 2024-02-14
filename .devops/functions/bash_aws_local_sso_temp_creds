@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_aws_local_sso_temp_creds
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.2
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
+
+sso_local_creds() {
+  echo "** ######## AWS SSO INFORMATION ####### **"
+  if [[ -z ${AWS_PROFILE+x} ]]; then
+    export AWS_PROFILE="$awsprofile-sso"
+    echo "** Using AWS_PROFILE=${AWS_PROFILE}"
+  else
+    echo "** Using AWS_PROFILE=${AWS_PROFILE}"
+  fi
+  docli sso $awsprofile
+  local account_id role_name access_token region
+  account_id="$(aws configure get sso_account_id --profile ${AWS_PROFILE})"
+  role_name="$(aws configure get sso_role_name --profile ${AWS_PROFILE})"
+  region="$(aws configure get region --profile ${AWS_PROFILE})"
+#   region="$(aws configure get sso_region --profile ${AWS_PROFILE})"
+  access_token="$( \
+    \ls -c "${HOME}/.aws/sso/cache/" | grep -v botocore \
+    | sort -nr | cut -d' ' -f14 | head -n1 \
+    | xargs -I{} jq -r .accessToken ${HOME}/.aws/sso/cache/{}
+  )"
+  echo $access_token
+  # access_token="$( \
+  #   \ls -c "${HOME}/.aws/sso/cache/" | grep -v botocore \
+  #   | sort -nr | cut -d' ' -f2 | head -n1 \
+  #   | xargs -I{} jq -r .accessToken ${HOME}/.aws/sso/cache/{}
+  # )"
+  sso_cache=$(ls -c "${HOME}/.aws/sso/cache/" | grep -v botocore | sort -nr | cut -d' ' -f14 | head -n1)
+  echo $sso_cache
+  echo -e "\n=============================================================="
+  echo "** Account ID      : $account_id"
+  echo "** AWS Role        : $role_name"
+  echo "** AWS Region      : $region"
+  echo "** SSO Files       : $sso_cache"
+  echo "** AWS Profile     : $AWS_PROFILE (Also the TF backend profile)"
+  # echo "** AWS Access Token: $access_token"
+  echo -e "==============================================================\n"
+  # TODO: SOLVE ERROR HERE
+  # Get credentials and export to ~/.aws/credentials file
+  credentials=$(aws sso get-role-credentials \
+    --account-id "${account_id}" \
+    --role-name "${role_name}" \
+    --region "${region:-us-east-1}" \
+    --access-token "${access_token}" \
+    --no-sign-request \
+    --profile ${AWS_PROFILE} \
+    --output json \
+    | jq -r '.roleCredentials |
+      {
+        "AWS_ACCESS_KEY_ID": .accessKeyId,
+        "AWS_SECRET_ACCESS_KEY": .secretAccessKey,
+        "AWS_SESSION_TOKEN": .sessionToken,
+        "AWS_CREDENTIALS_EXPIRATION": (.expiration / 1000 | todate)
+      } | keys[] as $k | "export \($k)=\(.[$k])"')
+
+  eval "$credentials"
+  echo -e "**** End of AWS SSO Information ****\n"
+  # exit 0
+}
+
+sso_sha_local_creds() {
+  # THIS VERSION CHECKS FOR SHA TO MATCH PROFILE. WE WILL USE SINGLE SSO-SESSION INSTEAD OF INDIVIDUAL PROFILES.
+  if [[ -z ${AWS_PROFILE+x} ]]; then
+    export AWS_PROFILE="$awsprofile-sso-start"
+    echo "** Using AWS_PROFILE=${AWS_PROFILE}"
+  else
+    echo "** Using AWS_PROFILE=${AWS_PROFILE}"
+  fi
+  # Convert the value to lowercase
+  local company_lower=$(echo "$company" | tr '[:upper:]' '[:lower:]')
+
+  local profile="${1:-${AWS_PROFILE}}"
+  local account_id="$(aws configure get sso_account_id --profile "${profile}")" \
+  role_name="$(aws configure get sso_role_name --profile "${profile}")" \
+  region="$(aws configure get region --profile "${profile}")" \
+  start_url="$(aws configure get sso_start_url --profile ${company_lower}-sso)"
+
+  if [ -z "$start_url" ] ; then
+    echo "did not find sso_start_url in profile ${company_lower}-sso"
+    exit 1
+  fi
+
+  local cache_file="${HOME}/.aws/sso/cache/$(echo -n "$start_url" | shasum5.34 | awk '{print $1}').json"
+
+  if [ ! -f "$cache_file" ] ; then
+    echo "sso creds not found. are you logged into AWS SSO?"
+    echo ;
+    echo "aws sso login --profile \"${profile}\""
+    exit 1
+  fi
+
+  local access_token=$(jq -r .accessToken "${cache_file}")
+
+  echo -e "\n=============================================================="
+  echo "** Account ID  : $account_id"
+  echo "** AWS Role    : $role_name"
+  echo "** AWS Region  : $region"
+  echo "** AWS Profile : $AWS_PROFILE"
+  # echo "** Access Token: $access_token"
+  echo -e "==============================================================\n"
+
+  credentials=$(aws sso get-role-credentials \
+    --account-id "${account_id}" \
+    --role-name "${role_name}" \
+    --region "${region:-us-east-1}" \
+    --access-token "${access_token}" \
+    --no-sign-request \
+    --output json \
+    | jq -r '.roleCredentials |
+      {
+      "AWS_ACCESS_KEY_ID": .accessKeyId,
+      "AWS_SECRET_ACCESS_KEY": .secretAccessKey,
+      "AWS_SESSION_TOKEN": .sessionToken,
+      "AWS_CREDENTIALS_EXPIRATION": (.expiration / 1000 | todate)
+      } | keys[] as $k | "export \($k)=\(.[$k])"')
+  eval "$credentials"
+}
+
+old_sso_local_creds() {
+    aws-sso-creds
+
+    # exit 0
+
+    # JSON_BASEPATH="${HOME}/.aws/cli/cache"
+    # # JSON_BASEPATH="${HOME}/.aws/sso/cache"
+    # AWS_CREDENTIALS_PATH="${HOME}/.aws/credentials"
+    # ls -larth $JSON_BASEPATH
+
+    # # Iterate through each file in the directory
+    # for file in "$JSON_BASEPATH"/*.json; do
+    #     # Extract the expiration date from the JSON file - SSO
+    #     expiration=$(jq -r '.Expiration' "$file")
+    #     # Extract the expiration date from the JSON file - SSO
+    #     # expiration=$(jq -r '.expiresAt' "$file")
+
+
+    #     # Convert the expiration date to epoch timestamp using Python
+    #     # expiration_timestamp=$(python3 -c "import time; print(int(time.mktime(time.strptime('$expiration', '%Y-%m-%dT%H:%M:%SZ'))))" 2>/dev/null)
+    #     # Convert the expiration date to epoch timestamp using bash
+    #     expiration_timestamp=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$expiration" "+%s" 2>/dev/null)
+    #     current_timestamp=$(date -u "+%s")
+
+    #     # Check if the expiration date has passed
+    #     if [[ $expiration_timestamp -lt $current_timestamp ]]; then
+    #         # Delete the file
+    #         rm "$file"
+    #         echo "Deleted $file"
+    #     fi
+    # done
+
+    # ls -larth $JSON_BASEPATH
+
+    # # Check if any valid SSO Token still exists:
+    # [[ "$(find "$JSON_BASEPATH" -maxdepth 1 -type f -print -quit)" ]] && echo "** Valid SSO token found. Proceeding... **" || aws sso login --profile "$awsprofile-sso"
+
+    # if [ -f ${AWS_CREDENTIALS_PATH} ]; then
+    #         echo "backing up existing credentials"
+    #     cp -rf ${AWS_CREDENTIALS_PATH} "${AWS_CREDENTIALS_PATH}-"$(date +"%s")
+    # fi
+
+    # cat /dev/null > $AWS_CREDENTIALS_PATH
+
+    # # find the latest CLI JSON file
+
+    # json_file=$(ls -tr "${JSON_BASEPATH}" | tail -n1)
+
+    # # use jq to dump stuff in the right place
+
+    # unset AWS_ACCESS_KEY_ID
+    # unset AWS_SECRET_ACCESS_KEY
+    # unset AWS_SESSION_TOKEN
+    # # unset AWS_REGION
+    # unset AWS_PROFILE
+    # unset AWS_DEFAULT_PROFILE
+
+    # aws_access_key_id=$(cat ${JSON_BASEPATH}/${json_file} | jq -r '.Credentials.AccessKeyId')
+    # aws_secret_access_key=$(cat ${JSON_BASEPATH}/${json_file} | jq -r '.Credentials.SecretAccessKey')
+    # # aws_session_token=$(cat ${JSON_BASEPATH}/${json_file} | jq -r '.Credentials.SessionToken')
+
+    # # AWS SSO Token:
+    # # "startUrl": "https://devopsclick.awsapps.com/start", "region": "eu-central-1"
+    # # aws_session_token=$(cat ${JSON_BASEPATH}/${json_file} | jq -r '.accessToken')
+
+
+    # # echo "[default]" > ${AWS_CREDENTIALS_PATH}
+
+    # echo "aws_access_key_id = ${aws_access_key_id}" >> ${AWS_CREDENTIALS_PATH}
+    # echo "aws_secret_access_key = ${aws_secret_access_key}" >> ${AWS_CREDENTIALS_PATH}
+    # # echo "aws_session_token = ${aws_session_token}" >> ${AWS_CREDENTIALS_PATH}
+
+    # export AWS_ACCESS_KEY_ID=$aws_access_key_id
+    # export AWS_SECRET_ACCESS_KEY=$aws_secret_access_key
+    # export AWS_SESSION_TOKEN=$aws_session_token
+    # echo $AWS_SESSION_TOKEN
+    # export AWS_REGION="eu-central-1"
+    # export AWS_PROFILE="$awsprofile-sso"
+    # export AWS_DEFAULT_PROFILE="$awsprofile-sso"
+
+    # aws sso login --sso-session "devopsclick-sso"
+    # aws sso login --profile $awsprofile-sso
+}

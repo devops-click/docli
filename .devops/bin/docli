@@ -6,199 +6,60 @@ set -euo pipefail
 #                                   docli
 ###############################################################################
 
-docli_version="0.0.01"
+docli_version="0.0.02"
 docli_file_name="$(basename "$0")"
 docli_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 docli_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 docli_current_dir="$(pwd)"
 
-echo "==> .docli -> source bash_basic_functions"
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli
+DOCLI_MODULE_TYPE=bin
+DOCLI_MODULE_VERSION="$docli_version"
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+# echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# echo "==> .docli -> source bash_basic_functions"
 source $docli_script_dir/../functions/bash_basic_functions
 
 docli_command="${1:-}"
 docli_option="${2:-}"
+docli_arg3="${3:-}"
+docli_arg4="${4:-}"
+docli_arg5="${5:-}"
+docli_arg6="${6:-}"
+docli_arg7="${7:-}"
+docli_arg8="${8:-}"
 
-# Declare global variables
-declare -a args=()
-# Check if the variable is set and if not, set it to its default value
-: "${args_verbose:=0}"
-: "${args_debug:=0}"
-: "${args_ignore_questions:=0}"
-: "${args_silent:=0}"
+############################################
+# DOCLI VERSION UPDATE
+############################################
+# (
+#   docli_current_version=$(bash -c "$(curl -fsSL https://docli.devops.click/install.sh && cat install.sh | grep "docli_version")")
+#   docli_current_version=$(echo -e "$docli_version")
+#   skip_options=check_and_create_dirs,files_check_and_creation,private_envs_file,setup_macos_system_config,setup_macos_system_config_sudoers,setup_homebrew_and_packages,setup_variables_and_sources,setup_java,setup_omzsh,setup_aws_tools,setup_terraform,setup_elasticsearch,setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_custom_routines,setup_linux_packages
+#   if [[ -v install_local && -n $install_local && $install_local == true ]]; then
+#     $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+#   else
+#     bash -c "$(curl -fsSL http://home.devops.click:8080/install.sh)" || sh -c "$(curl -fsSL http://home.devops.click:8080/install.sh)"
+#   fi
+# ) > /dev/null 2>&1
 
-: "${DOCLI_VERBOSE:=}"
-: "${DOCLI_DEBUG:=}"
-
-load_vars() {
-  echo "==> .docli -> load_vars"
-  # Validations to activate modes:
-  DOCLI_VERBOSE="[[ $args_verbose == 1 || $args_debug == 1 ]]"
-  DOCLI_DEBUG="[[ $args_debug == 1 ]]"
-  scape=x
-}
-# load_vars
+# (  docli_update ) > /dev/null 2>&1
+## or
+# screen -dm bash -c 'DOCLI_UPDATE_SKIP_OPTIONS=check_and_create_dirs,files_check_and_creation,private_envs_file,setup_macos_system_config,setup_macos_system_config_sudoers,setup_homebrew_and_packages,setup_variables_and_sources,setup_java,setup_omzsh,setup_aws_tools,setup_terraform,setup_elasticsearch,setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_custom_routines,setup_linux_packages docli_update; exec sh'
 
 # source $docli_script_dir/../functions/bash_base_get_arguments
 # set -- $(parse_arguments "$@")
 #########################
-# args_debug=0
-# args_verbose=1
-
-# Argument Parsing
-parse_arguments() {
-    # echo parse_arguments
-    while (( "$#" )); do
-        # local current_arg="${1:-}"
-        local current_arg="$1"
-        echo $current_arg
-        case "$current_arg" in
-            -v|--verbose)
-                if [ "${2:-}" == "true" ]; then
-                    args_verbose=1
-                    shift 2
-                elif [ "${2:-}" == "false" ]; then
-                    args_verbose=0
-                    shift 2
-                else
-                    args_verbose=1
-                    shift
-                fi
-                ;;
-            --verbose=*)
-                if [ "${1#*=}" == "true" ]; then
-                    args_verbose=1
-                else
-                    args_verbose=0
-                fi
-                shift
-                ;;
-            -d|--debug)
-                if [ "${2:-}" == "true" ]; then
-                    args_debug=1
-                    shift 2
-                elif [ "${2:-}" == "false" ]; then
-                    args_debug=0
-                    shift 2
-                else
-                    args_debug=1
-                    shift
-                fi
-                ;;
-            --debug=*)
-                if [ "${1#*=}" == "true" ]; then
-                    args_debug=1
-                else
-                    args_debug=0
-                fi
-                shift
-                ;;
-            -i|--ignore-questions)
-                args_ignore_questions=1
-                shift
-                ;;
-            -s|--silent)
-                args_silent=1
-                shift
-                ;;
-            --version)
-                # clear
-                echo -e "DevOps.click CLI v$docli_version"
-                exit 0
-                ;;
-            --version-short)
-                # clear
-                echo -e "$docli_version"
-                exit 0
-                ;;
-            -h|--help)
-                args_help=$(help_index $docli_command)
-                # help_index $docli_command
-                source $docli_script_dir/../$args_help
-                eval ${docli_command}_print_usage
-                break
-                # return 0
-                ;;
-            *)
-                # Preserve any other argument for later (used for other option validations menus like remaining_args=($(parse_arguments "$@")) )
-                # args+=("$1")
-                # args+=("${1:-}")
-                args+=("${current_arg}")
-                eval $DOCLI_DEBUG && echo "++ args+=$args"
-                # remaining_args+=("$current_arg")
-                shift
-                # return 0
-                # break
-                # # Unsupported options
-                # echo "Error: Unsupported option $1"
-                # print_usage
-                ;;
-        esac
-    done
-    # This will print args to be used in next scripts.
-    # TODO: Make a way to pass this without printing on screen
-    # export exported_args=$(echo "${args[@]}")
-    echo
-    echo "${args[@]}"
-}
-
-load_vars
-
-# set -- $(parse_arguments "$@")
-parse_arguments "$@"
-
-# Use the options
-if [ "$args_verbose" == "1" ]; then
-    echo "VERBOSE mode is on."
-fi
-
-if [ "$args_debug" == "1" ]; then
-    echo "DEBUG mode is on."
-fi
-
-if (( args_ignore_questions )); then
-    echo "Ignoring questions."
-fi
-
-if (( args_silent )); then
-    echo "Running in SILENT mode."
-fi
-
-eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
-eval $DOCLI_DEBUG && echo "++ Entered docli ++"
-eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
-
-eval $DOCLI_DEBUG && echo "++> docli_command=$docli_command"
-eval $DOCLI_DEBUG && echo "++> docli_option=$docli_option"
-
-echo "==> docli -> source .docli"
-source $docli_script_dir/../../.docli
-
-echo "==> docli -> echo args_help"
-echo "args_help=${args_help:-}"
-
-# Check docli_eks_assign existence before set.
-: "${docli_eks_assign:=false}"
-eval $DOCLI_DEBUG && echo "++> docli_eks_assign=$docli_eks_assign"
-
-# parse_arguments "$@"
-## docli Markdown Generation:
-#:: ## docli AWS SSO Tools
-#:: `sso` [-h|--help]
-#:: ## DESCRIPTION
-#:: This program has the following functionalies:
-#:: `sso clean` -> Cleans all AWS SSO Tokens (CLI and SSO caches)
-#:: `sso <aws_profile>` -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)
-# source $docli_script_dir/../functions/bash_basic_functions
-# source $docli_script_dir/../functions/bash_base_get_arguments
+# DOCLI_ARGS_DEBUG=0
+# DOCLI_ARGS_VERBOSE=1
 
 #:: ## help index search
 #:: Search into help index for the location of the correct help to load.
 #:: `help_index <command>` [-h|--help]
 help_var=$(help_index $docli_command)
-# [[ -f $bash_base_get_arguments_script_dir/../$help_var ]] && source $bash_base_get_arguments_script_dir/../$help_var
-eval $DOCLI_DEBUG && echo "++> help_var=$help_var"
-
-eval $DOCLI_VERBOSE && echo -e "\n**** Running $docli_file_name_upper script ****"
 
 docli_print_usage() {
     echo
@@ -218,6 +79,213 @@ docli_print_usage() {
     exit 1
 }
 
+#:: # Function to update docli.
+#:: ## Usage example:
+#:: `docli_update`
+docli_update() {
+  echo -e "\n** Running DOCLI UPDATE (Update docli app and macos setup skipping package upgrades) **"
+  # Check if $DOCLI_UPDATE_SKIP_OPTIONS is set and not empty; otherwise, use the default string
+  skip_options=${DOCLI_UPDATE_SKIP_OPTIONS:-"setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_homebrew_and_packages,setup_macos_system_config_sudoers,setup_java,setup_omzsh,setup_aws_tools,setup_macos_system_config"}
+  if [[ -v install_local && -n $install_local && $install_local == true ]]; then
+    $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
+  else
+    # bash -c "$(curl -fsSL https://config.devops.click/install.sh)" || sh -c "$(curl -fsSL https://config.devops.click/install.sh)"
+    # bash -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/install.sh)" || sh -c "$(curl -fsSL https://raw.githubusercontent.com/devops-click/docli/main/install.sh)"
+    sh -c "$(curl -fsSL https://home.devops.click/install.sh)" # Testing purposes only
+  fi
+}
+
+#:: # Function to upgrade docli.
+#:: ## Usage example:
+#:: `docli_upgrade`
+docli_upgrade() {
+  echo -e "\n** Running DOCLI UPGRADE (Update docli app and macos full setup completely) **"
+  $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops
+}
+
+# Argument Parsing
+parse_arguments() {
+  # echo parse_arguments
+  while (( "$#" )); do
+    # local current_arg="${1:-}"
+    local current_arg="$1"
+    # echo $current_arg
+    case "$current_arg" in
+      -v|--verbose)
+        if [ "${2:-}" == "true" ]; then
+          DOCLI_ARGS_VERBOSE=1
+          shift 2
+        elif [ "${2:-}" == "false" ]; then
+          DOCLI_ARGS_VERBOSE=0
+          shift 2
+        else
+          DOCLI_ARGS_VERBOSE=1
+          shift
+        fi
+        ;;
+      --verbose=*)
+        if [ "${1#*=}" == "true" ]; then
+          DOCLI_ARGS_VERBOSE=1
+        else
+          DOCLI_ARGS_VERBOSE=0
+        fi
+        shift
+        ;;
+      -d|--debug)
+        if [ "${2:-}" == "true" ]; then
+          DOCLI_ARGS_DEBUG=1
+          shift 2
+        elif [ "${2:-}" == "false" ]; then
+          DOCLI_ARGS_DEBUG=0
+          shift 2
+        else
+          DOCLI_ARGS_DEBUG=1
+          shift
+        fi
+        ;;
+      --debug=*)
+        if [ "${1#*=}" == "true" ]; then
+          DOCLI_ARGS_DEBUG=1
+        else
+          DOCLI_ARGS_DEBUG=0
+        fi
+        shift
+        ;;
+      -i|--ignore-questions)
+        args_ignore_questions=1
+        shift
+        ;;
+      -s|--silent)
+        args_silent=1
+        shift
+        ;;
+      -e|--envs)
+        echo -e "######################################################################################"
+        echo -e "                         DOCLI Environment Variables"
+        env | grep "DOCLI_*"
+        echo -e "######################################################################################"
+        exit 0
+        ;;
+      -v|--version)
+        # clear
+        echo -e "DevOps.click CLI v$docli_version"
+        exit 0
+        ;;
+      -vs|--version-short)
+        # clear
+        echo -e "$docli_version"
+        exit 0
+        ;;
+      -h|--help)
+        args_help=$(help_index $docli_command)
+        # help_index $docli_command
+        if [[ $args_help == "" ]] || [[ $args_help == "docli" ]] || [[ $args_help == "-h" ]] || [[ $args_help == "--help" ]]; then
+          docli_print_usage
+        else
+          source $docli_script_dir/../$args_help
+        fi
+        eval ${docli_command}_print_usage
+        break
+        # return 0
+        ;;
+      -u|--update)
+        docli_update
+        exit 0
+        ;;
+      -um|--update-minimal)
+        # DOCLI_UPDATE_SKIP_OPTIONS=setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_homebrew_and_packages,setup_omzsh,setup_java,setup_aws_tools docli update
+        DOCLI_UPDATE_SKIP_OPTIONS=check_and_create_dirs,files_check_and_creation,private_envs_file,setup_macos_system_config,setup_macos_system_config_sudoers,setup_homebrew_and_packages,setup_variables_and_sources,setup_java,setup_omzsh,setup_aws_tools,setup_terraform,setup_elasticsearch,setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_custom_routines,setup_linux_packages docli_update
+        exit 0
+        ;;
+      -upg|--upgrade)
+        docli_upgrade
+        exit 0
+        ;;
+      *)
+        # Preserve any other argument for later (used for other option validations menus like remaining_args=($(parse_arguments "$@")) )
+        # args+=("$1")
+        # args+=("${1:-}")
+        args+=("${current_arg}")
+        eval $DOCLI_DEBUG && echo "++ args+=$args"
+        # remaining_args+=("$current_arg")
+        shift
+        # return 0
+        # break
+        # # Unsupported options
+        # echo "Error: Unsupported option $1"
+        # print_usage
+        ;;
+    esac
+  done
+  # This will print args to be used in next scripts.
+  # TODO: Make a way to pass this without printing on screen
+  # export exported_args=$(echo "${args[@]}")
+  echo
+  echo "${args[@]}"
+}
+
+load_vars
+eval $DOCLI_DEBUG && echo "==> .docli -> load_vars"
+
+eval $DOCLI_VERBOSE && echo -e "\n**** Running $docli_file_name_upper script ****"
+
+# Check sourcing location / devmode
+if [[ "$0" = "bash" ]] || [[ "$0" = "/bin/bash" ]] || [[ "$0" = "/bin/sh" ]] || [[ "$0" = "sh" ]] || [[ "$0" = "/bin/zsh" ]] || [[ "$0" = "zsh" ]]; then
+  install_local="false" # used when running from a forked repository
+else
+  eval $DOCLI_DEBUG && echo -e "\n******************** INFO: docli installation sourced LOCALLY (DEVELOPER MODE) ********************"
+  eval $DOCLI_DEBUG && echo -e "\n** LOCAL RUN INFO: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)\n"
+  install_local="true" # used when running from a forked repository
+fi
+
+# set -- $(parse_arguments "$@")
+parse_arguments "$@"
+
+# Use the options
+if [ "$DOCLI_ARGS_VERBOSE" == "1" ]; then
+  echo "VERBOSE mode is on."
+fi
+
+if [ "$DOCLI_ARGS_DEBUG" == "1" ]; then
+  echo "DEBUG mode is on."
+fi
+
+if (( args_ignore_questions )); then
+  echo "Ignoring questions."
+fi
+
+if (( args_silent )); then
+  echo "Running in SILENT mode."
+fi
+
+eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
+eval $DOCLI_DEBUG && echo "++ Entered docli ++"
+eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
+
+eval $DOCLI_DEBUG && echo "++> docli_command=$docli_command"
+eval $DOCLI_DEBUG && echo "++> docli_option=$docli_option"
+
+eval $DOCLI_VERBOSE && echo "==> docli -> source .docli"
+source $docli_script_dir/../.docli
+
+eval $DOCLI_VERBOSE && echo "==> docli -> echo args_help"
+eval $DOCLI_VERBOSE && echo "args_help=${args_help:-}"
+
+# Check docli_eks_assign existence before set.
+: "${docli_eks_assign:=false}"
+eval $DOCLI_DEBUG && echo "++> docli_eks_assign=$docli_eks_assign"
+
+# parse_arguments "$@"
+## docli Markdown Generation:
+#:: ## docli AWS SSO Tools
+#:: `sso` [-h|--help]
+#:: ## DESCRIPTION
+#:: This program has the following functionalies:
+#:: `sso clean` -> Cleans all AWS SSO Tokens (CLI and SSO caches)
+#:: `sso <aws_profile>` -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)
+# source $docli_script_dir/../functions/bash_basic_functions
+# source $docli_script_dir/../functions/bash_base_get_arguments
+
 #:: # Function to check software versions.
 #:: ## Usage example:
 #:: `check_versions`
@@ -233,22 +301,82 @@ check_aws_con() {
   check_aws_con=$(aws sts get-caller-identity --query "Account" --output text)
 }
 
+
 ## ATTENTION: Do not call scripts in here that source our base scripts. Doing so will break it.
 main() {
   # remaining Args, allow cascading of while functions to work with 2 layer validation.
   remaining_args=($(parse_arguments "$@"))
   while (( "${#remaining_args[@]}" )); do
     case "${remaining_args[0]}" in
-      tf)
-        source $docli_script_dir/../main/tf
+      #---------------- docli CA Management ----------------#
+      ca)
         if [ "${1#*=}" == "" ]; then
-          tf_print_usage
+          echo "** Create the CA and Import the certificates into MacOS Keychain + Firefox or Client Certificates **"
+          echo "Usage: docli ca create-update-ca"
+          echo "       docli ca create-client-cert"
         fi
         shift
-        runtfzao
+        if [[ $docli_option == "create-update-ca" ]]; then
+          cd $DOCLI/tools/ca-generator
+          ./run
+          return 0
+        elif [[ $docli_option == "create-client-cert" ]]; then
+          cd $DOCLI/tools/ca-generator/client-certificates
+          ./run
+          return 0
+        elif [[ $docli_option == "completely-erase-everything" ]]; then
+          shift
+          cd $DOCLI/tools/ca-generator
+          ./delete-all "$@"
+          return 0
+        else
+          echo "Incorrect option."
+          exit 0
+        fi
         break
         ;;
-      #---------------- HashiCorp Packer ----------------#
+      #---------------- docli run debug for Applications ----------------#
+      # TODO: Single debug -d or --debug for all
+      debug)
+        if [ "${1#*=}" == "" ]; then
+          echo "** Turn debug mode for external tools like Terraform **"
+          echo "Usage: docli debug (on|off)"
+        fi
+        shift
+        if [[ $docli_option == "on" ]]; then
+          shift
+          export TF_LOG="DEBUG"
+          # exec $SHELL "${@-'-i'}" # if arguments are needed
+          exec $SHELL -i
+          echo " debug mode for extra apps is ON."
+        else
+          export TF_LOG=""
+          exec $SHELL -i
+          echo " debug mode for extra apps is OFF."
+        fi
+        break
+        ;;
+      #---------------- docli checks for deployed resources ----------------#
+      check)
+        if [ "${1#*=}" == "" ]; then
+          echo "** You must specify a check test. ex: vpc|rds|etc **"
+          echo "Usage: docli check vpc"
+        fi
+        shift
+        if [[ $docli_option == "all" ]]; then
+          echo "* Running all available checks *"
+          $DOCLI/tools/aws-vpc-connectivity-tests/run
+          $DOCLI/tools/aws-rds-connectivity-tests/run
+        elif [[ $docli_option == "aws-vpc" ]]; then
+          $DOCLI/tools/aws-vpc-connectivity-tests/run
+        elif [[ $docli_option == "aws-rds" ]]; then
+          $DOCLI/tools/aws-rds-connectivity-tests/run
+        else
+          echo "else"
+        fi
+        break
+        ;;
+      #---------------- docli run HashiCorp Packer ----------------#
       packer)
         shift
         source $docli_script_dir/../main/packer
@@ -265,13 +393,48 @@ main() {
           sso_print_usage
           exit 1
         fi
-        sso $docli_option
         break
         ;;
-      #---------------- SSO ----------------#
+      #---------------- docli run OnePassword ----------------#
+      op)
+        shift
+        source $docli_script_dir/../functions/bash_op
+        # if [ "${1:-}" == "" ]; then
+        if [ "${1#*=}" == "" ]; then
+          op_print_usage
+        elif [ $1 == "signout" ]; then
+          echo "* 1Password: Signing out from all sessions *"
+          op signout --all
+          return 0
+          # op signout --forget # to clean all information of sessions in the computer
+        elif [ $1 == "create" ]; then
+          shift
+          local title="${1:-}" #item_name
+          local file_source="${2:-}"
+          local file_name="${3:-}"
+          local file_vault="${4:-}"
+          local tags="${5:-}"
+          [[ -z $tags ]] && tags="$DOCLI_PROJECT_COMPANY"
+          op_create_document $file_source $title "$file_vault" $file_name $tags
+          exit 0
+        else
+          echo "** Invalid Option **"
+          return 0
+        fi
+        ;;
+      #---------------- docli setenv ----------------#
+      setenv)
+        # source $DOCLI/bin/setenv prd use1 tf do
+        source $DOCLI/bin/$docli_command $docli_option $docli_arg3 $docli_arg4 $docli_arg5
+        echo "  Environment: $docli_arg3"
+        echo "  System:      $docli_arg4"
+        echo "  Client:      $docli_arg5"
+        break
+        ;;
+      #---------------- docli SSO ----------------#
       sso)
         source $docli_script_dir/../main/sso
-        echo docli_option=$docli_option
+        echo "SSO Profile: $docli_option"
         if [ "${1:-}" == "" ]; then
           sso_print_usage
         elif [[ $docli_option == "clean" ]]; then
@@ -291,6 +454,7 @@ main() {
           check_file_age
           sso_login_mfa
           return 0
+        # Error if empty
         elif [[ -z $docli_option ]]; then
           eval $DOCLI_DEBUG && echo "++> options -> sso -> ERROR(exception)"
           echo "** SSO ERROR: No options provided **"
@@ -300,26 +464,7 @@ main() {
         sso $docli_option
         break
         ;;
-      #---------------- OP ----------------#
-      op)
-        shift
-        source $docli_script_dir/../functions/bash_op
-        if [ "${1#*=}" == "" ]; then
-          op_print_usage
-        elif [ $1 == "create" ]; then
-          shift
-          local title="${1:-}" #item_name
-          local file_source="${2:-}"
-          local file_name="${3:-}"
-          local file_vault="${4:-}"
-          local tags="${5:-}"
-          [[ -z $tags ]] && tags='ClearOps'
-          op_create_document $file_source $title "$file_vault" $file_name $tags
-          exit 0
-        else
-          echo "** Invalid Option **"
-        fi
-        ;;
+      #---------------- docli System ----------------#
       sys)
         shift
         source $docli_script_dir/../main/sys
@@ -335,17 +480,38 @@ main() {
           shift
           [[ "${1:-}" == "aws" ]]
           local local_file="${1:-}"
-          $docli_script_dir/../scripts/docli_generate_markdown_doc $local_file
+          $DOCLI/scripts/docli_generate_markdown_doc $local_file
           return 0
         else
           echo "** No operation provided **"
           return 0
         fi
         ;;
+      #---------------- docli run HashiCorp Terraform ----------------#
+      tf)
+        source $docli_script_dir/../main/tf
+        if [ "${1#*=}" == "" ]; then
+          tf_print_usage
+        fi
+        shift
+        runtfzao
+        break
+        ;;
+      #---------------- docli GenDoc ----------------#
       gendoc)
         shift
         local local_file="${1:-}"
-        $docli_script_dir/../scripts/docli_generate_markdown_doc $local_file
+        $DOCLI/scripts/docli_generate_markdown_doc $local_file
+        return 0
+        ;;
+      #---------------- docli update ----------------#
+      update)
+        docli_update
+        return 0
+        ;;
+      #---------------- docli upgrade ----------------#
+      upgrade)
+        docli_upgrade
         return 0
         ;;
       *)

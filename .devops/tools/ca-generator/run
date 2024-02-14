@@ -1,0 +1,679 @@
+#!/usr/bin/env bash
+set -euo pipefail
+###############################################################################
+#                       docli Generate CA Certificates
+#                             and firt client cert
+###############################################################################
+# v1.0
+# https://www.golinuxcloud.com/openssl-create-certificate-chain-linux/
+
+source $DOCLI/.docli_envs
+
+current_dir_name=$(basename $PWD)
+fresh_install=false
+
+if [[ $current_dir_name != "ca-generator" ]]; then
+  echo "* ERROR: Please run this script from the root folder of ca-generator tool *"
+  exit 1
+fi
+
+echo -e "\n** Sourcing $DOCLI_PROJECT_ROOT/.docli_envs **"
+[[ ! -f $DOCLI_PROJECT_ROOT/.docli_envs ]] && echo "* ERROR: $DOCLI_PROJECT_ROOT/.docli_envs not found. Please create one!" && exit 1 || source $DOCLI_PROJECT_ROOT/.docli_envs
+
+if [[ "$(uname)" != "Darwin" ]] && [[ -f $DOCLI/.docli_envs ]]; then
+echo -e "\n** Detected LINUX and $DOCLI/.docli_envs exists!!! << If any variable is set in here, it takes precedence and overwrite all others **"
+  source $DOCLI/.docli_envs
+fi
+
+
+echo -e "\n###############################################"
+echo -e "########## RUNNING PREPARATION STEPS ##########"
+echo -e "###############################################"
+
+### DOCLI HOME
+if [ -z "${DOCLI}" ]; then
+  if [[ "$(uname)" == "Darwin" ]]; then  # macOS
+    export DOCLI="${HOME}/devops"
+  else # Assuming Linux or other
+    export DOCLI="/opt/devops"
+  fi
+fi
+
+### PRIVATE DIR
+if [ ! -d "$DOCLI_PRIVATE_DIR" ]; then
+  mkdir -p "$DOCLI_PRIVATE_DIR"
+fi
+
+### BACKUPS
+if [ -z "${DOCLI_BACKUP_DIR}" ]; then
+  export DOCLI_BACKUP_DIR="${DOCLI}/.backups"
+fi
+if [ ! -d "$DOCLI_BACKUP_DIR/CA" ]; then
+  mkdir -p "$DOCLI_BACKUP_DIR/CA"
+fi
+ca_backup_files() {
+  # CA Backup Function
+  echo BACKUP ENTROU
+  backup_time=$(date "+%Y-%m-%d_%H-%M-%S")
+  saved_dir_path="${PWD}"
+  if [[ -d $DOCLI/CA ]]; then
+    cd $DOCLI/CA
+    [[ -d $DOCLI/CA/rootCA ]] && zip -r "$DOCLI_BACKUP_DIR/CA/${backup_time}_rootCA.zip" "rootCA" || echo "* WARNING: $DOCLI/CA/rootCA not found *"
+    [[ -d $DOCLI/CA/intermediateCA ]] && zip -r "$DOCLI_BACKUP_DIR/CA/${backup_time}_intermediateCA.zip" "intermediateCA" || echo "* WARNING: $DOCLI/CA/intermediateCA directory not found *"
+    [[ -d $DOCLI/CA/clientsINTERMEDIATE ]] && zip -r "$DOCLI_BACKUP_DIR/CA/${backup_time}_clientsINTERMEDIATE.zip" "clientsINTERMEDIATE" || echo "* WARNING: $DOCLI/CA/clientsINTERMEDIATE directory not found *"
+    [[ -d $DOCLI/CA/clientsROOT ]] && zip -r "$DOCLI_BACKUP_DIR/CA/${backup_time}_clientsROOT.zip" "clientsROOT" || echo "* WARNING: $DOCLI/CA/clientsROOT directory not found *"
+    cd $saved_dir_path
+    echo "INFO: CA Backup realized on $backup_time ($DOCLI_BACKUP_DIR/CA)"
+  else
+    echo "* FRESH INSTALLATION DETECTED *"
+    fresh_install=true
+  fi
+}
+
+ca_get_latest_encrypted_backup_from_s3() {
+  aws_response=$(aws-vault exec "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" -- aws s3api list-objects-v2 \
+    --bucket "$DOCLI_PROJECT_S3_BACKUP_BUCKET" \
+    --prefix "custom/CA/" \
+    --output json 2>/dev/null)
+
+  # Check for empty or null response
+  if [ -z "$aws_response" ] || [ "$aws_response" == "null" ]; then
+    echo "No backup found or an error occurred. Skipping restore."
+  else
+    latest_backup=$(echo "$aws_response" | jq -r "reverse(sort_by(Contents,&LastModified))[:1].Key" || true)
+
+    if [ -z "$latest_backup" ]; then
+      echo "No backup found or an error occurred. Skipping restore."
+    else
+      # Extract the timestamp pattern from the latest backup
+      latest_timestamp=$(echo "$latest_backup" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}')
+      # Download all files with the same timestamp pattern
+      if [ -n "$latest_timestamp" ]; then
+        local restore_folder=${DOCLI_BACKUP_DIR}/CA
+        aws-vault exec "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" -- aws s3 sync "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/custom/CA/" "$restore_folder/" \
+          --exclude "*" \
+          --include "${latest_timestamp}*"
+
+        # Decrypt -> Unzip -> Place Files
+        for file in "${restore_folder}/${latest_timestamp}"*.gpg; do
+          full_name=$(basename -- "$file")
+          file_name="${full_name%.gpg}"
+          gpg --decrypt "$file" > "${restore_folder}/${file_name}"
+          unzip -o "${restore_folder}/${file_name}" -d $DOCLI/CA/
+        done
+
+        ls -larth $restore_folder
+
+      else
+        if [[ -d $DOCLI/CA ]] && [[ ! $fresh_install ]]; then
+          echo "No backup found. Using local CA from $DOCLI/CA"
+        else
+          echo "ATTENTION: NO backup and NO local CA files were found."
+          read -p "Press enter to proceed and CREATE A BRAND NEW CA, or CONTROL+C to abort!"
+        fi
+      fi
+    fi
+  fi
+
+# # Get the latest backup file
+# latest_backup=$(aws-vault exec "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" -- aws s3api list-objects-v2 \
+#   --bucket "$DOCLI_PROJECT_S3_BACKUP_BUCKET" \
+#   --prefix "custom/CA/" \
+#   --query "reverse(sort_by(Contents,&LastModified))[:1].Key" \
+#   --output json | jq -r '.[0]')
+
+# Extract the timestamp pattern from the latest backup
+# latest_timestamp=$(echo "$latest_backup" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}')
+
+# # Download all files with the same timestamp pattern
+# if [ -n "$latest_timestamp" ]; then
+#   local restore_folder=${DOCLI_BACKUP_DIR}/CA
+#   aws-vault exec "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" -- aws s3 sync "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/custom/CA/" "$restore_folder/" \
+#     --exclude "*" \
+#     --include "${latest_timestamp}*"
+
+#   # Decrypt -> Unzip -> Place Files
+#   for file in "${restore_folder}/${latest_timestamp}"*.gpg; do
+#     full_name=$(basename -- "$file")
+#     file_name="${full_name%.gpg}"
+#     gpg --decrypt "$file" > "${restore_folder}/${file_name}"
+#     unzip -o "${restore_folder}/${file_name}" -d $DOCLI/CA/
+#   done
+# # exit 0
+
+#   ls -larth $restore_folder
+#   # exit 0
+# else
+#   if [[ -d $DOCLI/CA ]]; then
+#     echo "No backup found. Using local CA from $DOCLI/CA"
+#   else
+#     echo "ATTENTION: NO backup and NO local CA files were found."
+#     read -p "Press enter to proceed and CREATE A BRAND NEW CA, or CONTROL+C to abort!"
+#   fi
+# fi
+
+  # # Download the latest backup
+  # if [ -n "$s3_latest_backup" ]; then
+  #   aws-vault exec "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" -- aws s3 cp "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/${s3_latest_backup}" "${DOCLI_BACKUP_DIR}/CA/${s3_latest_backup}"
+  #   ca_decrypt_backup ${DOCLI_BACKUP_DIR}/CA/test
+  #   unzip ${s3_latest_backup}
+  #   ls -larth ${DOCLI_BACKUP_DIR}/CA/test
+  #   exit 0
+  # else
+  #   if [[ -d $DOCLI/CA ]]; then
+  #   echo "No backup found. Using local CA from $DOCLI/CA"
+  #   else
+  #     echo "ATTENTION: NO backup and NO local CA files were found."
+  #     read -p "Press enter to proceed and CREATE A BRAND NEW CA, or CONTROL+C to abort!"
+  #   fi
+  # fi
+}
+
+ca_get_latest_encrypted_backup_from_s3
+
+### Setting variables and also targeting Homebrew binaries
+echo -e "\nDOCLI=$DOCLI"
+echo -e "\n** Using HomeBrew OpenSSL **"
+SSL_VER=$(openssl version)
+echo "Current OpenSSL: $SSL_VER"
+# PATH="/opt/homebrew/bin:$PATH"
+export PATH="/opt/homebrew/bin:$DOCLI/bin:$PATH"
+SSL_VER=$(openssl version)
+echo "Now Using OpenSSL: $SSL_VER !"
+
+# CA-BACKUPS Before any intervention
+ca_backup_files
+echo ${backup_time:-}
+echo ${backup_time:-}
+echo ${backup_time:-}
+first_backup_time="${backup_time}" # To be used into routines since it will get another time window
+echo $first_backup_time
+echo $first_backup_time
+echo $first_backup_time
+
+[[ ! -d $DOCLI/CA/rootCA ]] && mkdir -p $DOCLI/CA/rootCA/{certs,crl,newcerts,private,csr} || echo "* $DOCLI/CA/rootCA found! Skipping it's creation... *"
+[[ ! -d $DOCLI/CA/intermediateCA ]] && mkdir -p $DOCLI/CA/intermediateCA/{certs,certs-servers,crl,newcerts,private,csr} || echo "* $DOCLI/CA/intermediateCA found! Skipping it's creation... *"
+
+# Generate Serial Number to keep track of Issued Certificates
+[[ ! -f "$DOCLI/CA/rootCA/serial" ]]         && echo 1000 > $DOCLI/CA/rootCA/serial         || echo "* $DOCLI/CA/rootCA/serial found! Proceeding..."
+[[ ! -f "$DOCLI/CA/intermediateCA/serial" ]] && echo 1000 > $DOCLI/CA/intermediateCA/serial || echo "* $DOCLI/CA/intermediateCA/serial found! Proceeding..."
+
+# Generate Serial Number to keep track of Revoked Certificates
+echo "** Preparation Steps: Generating index.txt files ****"
+[[ ! -f "$DOCLI/CA/rootCA/crlnumber" ]]         && echo 0100 > $DOCLI/CA/rootCA/crlnumber         || echo "* $DOCLI/CA/rootCA/crlnumber found! Proceeding..."
+[[ ! -f "$DOCLI/CA/intermediateCA/crlnumber" ]] && echo 0100 > $DOCLI/CA/intermediateCA/crlnumber || echo "* $DOCLI/CA/intermediateCA/crlnumber found! Proceeding..."
+
+echo "** Preparation Steps: Generating index.txt files ****"
+[[ ! -f $DOCLI/CA/rootCA/index.txt ]]         && touch $DOCLI/CA/rootCA/index.txt         || echo "* $DOCLI/CA/rootCA/index.txt found! Proceeding..."
+[[ ! -f $DOCLI/CA/intermediateCA/index.txt ]] && touch $DOCLI/CA/intermediateCA/index.txt || echo "* $DOCLI/CA/intermediateCA/index.txt found! Proceeding..."
+
+
+echo -e "\n#######################################################"
+echo -e "########## CREATE ROOT CERTIFICATE AUTHORITY ##########"
+echo -e "#######################################################"
+
+echo -e "\n** Root CA: Generating RSA Key Pair for Root CA Certificate ****"
+if [[ ! -f "$DOCLI/CA/rootCA/private/ca.key.pem" ]]; then
+  openssl genrsa -out $DOCLI/CA/rootCA/private/ca.key.pem 2048
+  # chmod 400 $DOCLI/CA/rootCA/private/ca.key.pem
+else
+  echo "* $DOCLI/CA/rootCA/private/ca.key.pem found! Proceeding..."
+fi
+
+# TODO: Always disable after testing...
+# echo "** Root CA: SHOWING CONTENT OF ROOT CA PRIVATE KEY (rootCA/private/ca.key.pem) **"
+# openssl rsa -noout -text -in $DOCLI/CA/rootCA/private/ca.key.pem
+
+echo "** Root CA: Generating Root CA Certificate (rootCA/certs/ca.cert.pem) ****"
+if [[ ! -f "$DOCLI/CA/rootCA/certs/ca.cert.pem" ]]; then
+  openssl req \
+  -config openssl-root-ca.cnf \
+  -key $DOCLI/CA/rootCA/private/ca.key.pem \
+  -new -x509 \
+  -days 7300 \
+  -sha256 \
+  -extensions v3_ca \
+  -out $DOCLI/CA/rootCA/certs/ca.cert.pem \
+  -subj "$ROOT_SUBJ"
+  # PATH="/opt/homebrew/bin:$PATH" openssl req -config openssl-root-ca.cnf -key $DOCLI/CA/rootCA/private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out $DOCLI/CA/rootCA/certs/ca.cert.pem -subj "/C=$SSL_COUNTRY/ST=$SSL_STATE/L=$SSL_LOCALITY/O=$SSL_COMPANY/OU=$SSL_OU/CN=Root CA"
+
+  echo "** Root CA: Setting 444 permission to allow sign by anyone (rootCA/certs/ca.cert.pem) ****"
+  # chmod 444 $DOCLI/CA/rootCA/certs/ca.cert.pem
+
+  echo "** Root CA: VALIDATING ROOT CA CERTIFICATE FILE (rootCA/certs/ca.cert.pem) **"
+  openssl x509 -noout -text -in $DOCLI/CA/rootCA/certs/ca.cert.pem
+else
+  echo "* $DOCLI/CA/rootCA/certs/ca.cert.pem found! Proceeding..."
+fi
+
+
+echo -e "\n######################################################"
+echo -e "########## CREATE INTERMEDIATE CERTIFICATES ##########"
+echo -e "######################################################"
+
+# declare -A configMap=(
+#   ["ent"]="openssl-intermediate-ca.cnf"
+#   ["sec"]="openssl-intermediate-ca.cnf"
+#   ["fin"]="openssl-intermediate-ca.cnf"
+#   ["prd"]="openssl-intermediate-ca.cnf"
+#   ["stg"]="openssl-intermediate-ca.cnf"
+#   ["qas"]="openssl-intermediate-ca.cnf"
+#   ["dev"]="openssl-intermediate-ca.cnf"
+#   ["val"]="openssl-intermediate-ca.cnf"
+# )
+
+# Declare an array of environments
+# declare -a DOCLI_SSL_ENVIRONMENTS=("ent" "sec" "fin" "prd" "stg" "qas" "dev" "val")
+
+echo -e "\n** Intermediate CA: Generating private keys, setting permissions, and generating CSRs **"
+
+# If the variable is empty or not set
+if [ -z ${DOCLI_SSL_ENVIRONMENTS[@]+x} ]; then
+  DOCLI_SSL_ENVIRONMENTS=("ent" "sec" "fin" "prd" "stg" "qas" "dev" "val")
+else
+  IFS=' ' read -ra DOCLI_SSL_ENVIRONMENTS <<< "$DOCLI_SSL_ENVIRONMENTS"
+fi
+
+for envi in "${DOCLI_SSL_ENVIRONMENTS[@]}"; do
+  key_file="$DOCLI/CA/intermediateCA/private/intermediate.${envi}.key.pem"
+  csr_file="$DOCLI/CA/intermediateCA/certs/intermediate.${envi}.csr.pem"
+  SSL_ENV="${envi}"
+  # SSL_ENV_CAPS=${envi^^}
+  SSL_ENV_CAPS=$(echo "${envi}" | tr 'a-z' 'A-Z')
+
+  # Generate private key
+  echo "** $envi Intermediate CA: Generating private key **"
+  [[ ! -f "$key_file" ]] && openssl genrsa -out "$key_file" 2048 || echo "* $key_file found! Proceeding..."
+
+  # Set private key file permissions to 400
+  echo "** $envi Intermediate CA: Setting private key file permissions to 600 **"
+  # chmod 600 "$key_file"
+
+  # Generate CSR
+  echo "** $envi Intermediate CA: Generating CSR **"
+  # export SSL_ENV="${envi}"
+  if [[ ! -f "$csr_file" ]]; then
+      export SSL_ENV=$envi
+      export SSL_PRODUCT_DOMAIN=$SSL_PRODUCT_DOMAIN
+      export SSL_COMPANY_DOMAIN=$SSL_COMPANY_DOMAIN
+      export SSL_COUNTRY=$SSL_COUNTRY
+      export SSL_LOCALITY=$SSL_LOCALITY
+      export SSL_STATE=$SSL_STATE
+      export SSL_COMPANY=$SSL_COMPANY
+      export SSL_OU=$SSL_OU
+    envsubst < openssl-intermediate-ca-template.cnf > openssl-intermediate-ca.cnf
+    openssl req -config openssl-intermediate-ca.cnf -key "$key_file" -new -sha256 -out "$csr_file" -subj "/C=$SSL_COUNTRY/ST=$SSL_STATE/L=$SSL_LOCALITY/O=$SSL_COMPANY/OU=$SSL_OU/OU=$SSL_ENV/CN=$SSL_COMPANY $SSL_ENV_CAPS Intermediate CA"
+  else
+    echo "* $csr_file found! Proceeding..."
+  fi
+
+  echo "** $envi Intermediate CA: Generating Intermediate CA Certificate **"
+  if [[ ! -f "$DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem" ]]; then
+    openssl ca -batch -config openssl-root-ca.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.csr.pem -out $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem
+  else
+    echo "* $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem found! Proceeding..."
+  fi
+
+  echo "** $envi Intermediate CA: Setting intermediate Certificate permissions to 444 (Global Read) **"
+  # chmod 444 $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem
+
+  echo "** $envi Intermediate CA: Checking index.txt **"
+  # Certificate STATUS
+  # V: "Valid
+  # R: "Revoked"
+  # E: "Expired"
+  # V 330503082700Z 1000 unknown /C=PT/ST=Lisbon/O=DevOps.click/OU=IT Department/CN=Intermediate CA
+  cat $DOCLI/CA/rootCA/index.txt
+
+  echo "** $envi Intermediate CA: Verifying Intermediate CA Certificate content **"
+  openssl x509 -noout -text -in $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem
+
+  echo "** $envi Intermediate CA: Verifying the intermediate certificate against the Root CA **"
+  openssl verify -CAfile $DOCLI/CA/rootCA/certs/ca.cert.pem $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem
+  # Should return:
+  # /root/myCA/intermediateCA/certs/intermediate.cert.pem: OK
+
+  echo "** $envi Intermediate CA: Creating chain for $SSL_ENV_CAPS Environment + Root CA **"
+  ENV_CHAIN="$DOCLI/CA/intermediateCA/certs/chain.$envi.cert.pem"
+  [[ -f "$ENV_CHAIN" ]] && rm "$ENV_CHAIN" && echo "* $ENV_CHAIN found. Removing and re-generating to most recent updates. *"
+  touch $ENV_CHAIN
+  cat $DOCLI/CA/intermediateCA/certs/intermediate.${envi}.cert.pem >> "$ENV_CHAIN"
+  cat $DOCLI/CA/rootCA/certs/ca.cert.pem >> "$ENV_CHAIN"
+
+done
+
+
+echo -e "\n###################################################"
+echo -e "########## CREATE FULL CERTIFICATE CHAIN ##########"
+echo -e "###################################################"
+
+echo -e "\n**** Generate OpenSSL Create Certificate Chain (Certificate Bundle - ALL) ****"
+
+echo -e "\n** CA Chain certification bundle: Creating Certificate chain bundle (Root+Intermediates) **"
+# Start with an empty chain bundle or truncate if exists
+chain_bundle="$DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem"
+: > "$chain_bundle"
+
+# Append each intermediate cert to the chain bundle
+for cert in $(find "$DOCLI/CA/intermediateCA/certs/" -name "intermediate.*.cert.pem"); do
+  cat "$cert" >> "$chain_bundle"
+done
+
+# Append the ROOT CA cert to the chain bundle
+cat "$DOCLI/CA/rootCA/certs/ca.cert.pem" >> "$chain_bundle"
+
+echo -e "\n** CA Chain certification bundle: Verifying chain file with ENT Intermediate CA **"
+openssl verify -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem
+# Should return:
+# $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem: OK
+
+echo -e "\n** CA Chain certification bundle: Verifying chain file with Root CA **"
+openssl verify -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $DOCLI/CA/rootCA/certs/ca.cert.pem
+# Should return:
+# $DOCLI/CA/rootCA/certs/ca.cert.pem: OK
+
+
+echo -e "\n###########################################################"
+echo -e "########## CREATE INTERMEDIATE CERTIFICATE CHAIN ##########"
+echo -e "###########################################################"
+
+echo -e "\n**** Generate OpenSSL Create INTERMEDIATE ONLY Certificate Chain (Certificate Bundle - ALL INTERMEDIATES ONLY) ****"
+
+echo -e "\n** CA Chain certification bundle: Creating Certificate chain bundle (Intermediates) **"
+# Start with an empty chain bundle or truncate if exists
+chain_bundle="$DOCLI/CA/intermediateCA/certs/ca-intermediates-chain-cert.pem"
+: > "$chain_bundle"
+
+# Append each intermediate cert to the chain bundle
+for cert in $(find "$DOCLI/CA/intermediateCA/certs/" -name "intermediate.*.cert.pem"); do
+  cat "$cert" >> "$chain_bundle"
+done
+
+echo -e "\n** CA Chain certification bundle: Verifying chain file with ENT Intermediate CA **"
+openssl verify -CAfile $DOCLI/CA/intermediateCA/certs/chain.ent.cert.pem $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem
+# Should return:
+# $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem: OK
+
+echo -e "\n** CA Chain certification bundle: Verifying chain file with Root CA **"
+openssl verify -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $DOCLI/CA/rootCA/certs/ca.cert.pem
+# Should return:
+# $DOCLI/CA/rootCA/certs/ca.cert.pem: OK
+
+
+echo -e "\n#####################################################"
+echo -e "########## PROCESSING SERVER CERT REQUESTS ##########"
+echo -e "#####################################################"
+
+echo -e "\n**** Generate and Sign Server Certificates using Intermediate CA ****"
+
+for reqfile in cert-reqs/*.sh; do
+  source "$reqfile"
+done
+
+
+echo -e "\n##########################################################################"
+echo -e "########## COPY CERTIFICATES TO NEEDED CI/CD & AUTOMATION PATHS ##########"
+echo -e "##########################################################################"
+
+echo -e "\n**** Copying Certificates to necessary folders ****"
+sudo cp $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-chain-cert.pem || echo "* ERROR: Could not copy Root + Intermediates CA Chain Bundle (ca-chain-cert.pem) *"
+sudo chown $USER:staff $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-chain-cert.pem
+sudo chmod 644 $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-chain-cert.pem
+sudo cp $DOCLI/CA/intermediateCA/certs/ca-intermediates-chain-cert.pem $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-intermediates-chain-cert.pem || echo "* ERROR: Could not copy Intermediates CA Chain Bundle (ca-intermediates-chain-cert.pem) *"
+sudo chown $USER:staff $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-intermediates-chain-cert.pem
+sudo chmod 644 $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca-intermediates-chain-cert.pem
+sudo cp $DOCLI/CA/rootCA/certs/ca.cert.pem $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca.cert.pem || echo "* ERROR: Could not copy Root CA Certificate (ca.cert.pem) *"
+sudo chown $USER:staff $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca.cert.pem
+sudo chmod 644 $DOCLI_PROJECT_ROOT/packer/files/base/opt/devops/certs/ca-private/ca.cert.pem
+
+## TODO: PUT FLEET WITH PRIVATE CA - Today: $DOCLI/Documents/BitBucket/ops-config/terraform/runtf-all
+# sudo cp $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem \
+# $DOCLI_PROJECT_ROOTkubernetes/deploy/es-fleet-01/ca-chain-cert.pem || \
+# echo "* ERROR: Could not copy Root + Intermediates CA Chain Bundle (ca-chain-cert.pem) *"
+
+# sudo cp $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem \
+# $DOCLI_PROJECT_ROOTkubernetes/deploy/es-fleet-01/ca-chain-cert.pem || \
+# echo "* ERROR: Could not copy Root + Intermediates CA Chain Bundle (ca-chain-cert.pem) *"
+
+###################################
+### REMOVING FRESH INSTALL FLAG ###
+###################################
+
+fresh_install=false
+
+###################################
+####### S3 BACKUP AND SYNC ########
+###################################
+
+echo -e "\n########################################"
+echo -e "########## S3 BACKUP AND SYNC ##########"
+echo -e "########################################"
+
+# Sources
+echo -e "\n** Loading: $DOCLI/functions/bash_gpg_key"
+source $DOCLI/functions/bash_gpg_key
+# DOCLI_PRIVATE_DIR variable comes from bash_gpg_key. If unset it will be "${DOCLI}/.private"
+echo "** Loading: $DOCLI/functions/bash_op"
+source $DOCLI/functions/bash_op
+
+ca_get_all_env_gpg_keys() {
+  ### GET ALL ENVIRONMENT KEYS
+  # DOCLI_SSL_ENVIRONMENTS comes from $DOCLI/.docli_envs
+  for envi in "${DOCLI_SSL_ENVIRONMENTS[@]}"; do
+    echo "* Getting GPG Key for $envi *"
+
+    # echo - "* Cleaning Local GPG DB for importing fresh keys *"
+    # gpg_remove_all_local_keys "$gpg_key_filename.gpg"
+
+    # Check 1Password Connectivity
+    op_check_connection
+
+    gpg_import_priv_keys $envi
+  done
+}
+
+ca_get_ent_gpg_key() {
+  # Check 1Password Connectivity
+  op_check_connection
+  # Get ENTERPRISE GPG Keys to encrypt CA Backups and send to S3
+  gpg_import_priv_keys "ent"
+}
+
+ca_encrypt_backup() {
+  [[ ! $fresh_install ]] && for file in "${DOCLI_BACKUP_DIR}/CA/${first_backup_time}"*; do
+    gpg --encrypt --trust-model always --recipient "ENT GPG Key for Service Accounts" "$file"
+  done
+  for file in "${DOCLI_BACKUP_DIR}/CA/${last_backup_time}"*; do
+    gpg --encrypt --trust-model always --recipient "ENT GPG Key for Service Accounts" "$file"
+  done
+}
+
+ca_send_encrypted_backup_to_s3() {
+  [[ ! $fresh_install ]] && aws s3 cp "${DOCLI_BACKUP_DIR}/CA/" "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/custom/CA/" --profile "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso-start" \
+  --recursive \
+  --exclude "*" \
+  --include "${first_backup_time}*.gpg"
+  aws s3 cp "${DOCLI_BACKUP_DIR}/CA/" "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/custom/CA/" --profile "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso-start" \
+  --recursive \
+  --exclude "*" \
+  --include "${last_backup_time}*.gpg"
+}
+
+ca_get_ent_gpg_key
+# ca_get_all_env_gpg_keys
+ca_backup_files
+last_backup_time=$backup_time
+ca_encrypt_backup
+ca_send_encrypted_backup_to_s3
+
+
+echo -e "\n#####################################################################"
+echo -e "########## GENERATING C_REHASH FOLDER TO BE USED IN CAPATH ##########"
+echo -e "#####################################################################"
+
+echo -e "\n** Generating c_rehash folder for CApath **"
+rehash_folder="$DOCLI/CA/c_rehash"
+[[ ! -d $rehash_folder ]] && mkdir -p $rehash_folder || rm -rf $rehash_folder/*
+sudo cp $DOCLI/CA/rootCA/certs/ca.cert.pem $rehash_folder
+sudo cp $DOCLI/CA/intermediateCA/certs/chain.*.pem $rehash_folder
+# sudo cp $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $rehash_folder
+c_rehash $rehash_folder
+echo -e "\n** c_rehash ended **"
+
+
+echo -e "\n########################################################"
+echo -e "########## IMPORT MACOS KEYCHAIN CERTIFICATES ##########"
+echo -e "########################################################"
+
+if [[ ! -f $DOCLI/exports/cert_chain_added_to_macs ]]; then
+
+  ############# CA REMOVAL ##############
+  # List of CNs you want to remove
+
+  echo -e "\n########## CLEAN MACOS KEYCHAIN CERTIFICATES ##########"
+  # If the variable is empty or not set
+  if [ -z "${DOCLI_CERT_LIST+x}" ]; then
+    DOCLI_CERT_LIST=("Root CA" "ENT Intermediate CA" "FIN Intermediate CA" "SEC Intermediate CA" "PRD Intermediate CA" "STG Intermediate CA" "QAS Intermediate CA" "DEV Intermediate CA" "VAL Intermediate CA" "*.$DOCLI_PROJECT_ENTERPRISE_SRG.$DOCLI_PROJECT_ENTERPRISE_ENV.$DOCLI_PROJECT_EXT_URL")
+  else
+    IFS=';' read -ra DOCLI_CERT_LIST <<< "$DOCLI_CERT_LIST"
+  fi
+
+  # Loop through each CN and remove the cert from the System keychain when created by "security add-trusted-cert" command
+  for cn in "${DOCLI_CERT_LIST[@]}"; do
+    echo -e "\n* Cleaning $cn from /Library/Keychains/System.keychain *"
+    sudo security delete-certificate -c "$cn" /Library/Keychains/System.keychain || echo "* INFO: $cn not found! *"
+  done
+
+  # Find and delete the certificate from the system keychain when created by "security import" command:
+  for cn in "${DOCLI_CERT_LIST[@]}"; do
+    echo "* Cleaning $cn from /Library/Keychains/System.keychain *"
+    sudo security find-certificate -c "$cn" -a -Z /Library/Keychains/System.keychain | \
+    awk '/SHA-1 hash:/{system("sudo security delete-certificate -Z "$3" /Library/Keychains/System.keychain")}' || echo "* INFO: $cn not found! *"
+
+    # Repeat for the login keychain if needed
+    echo "* Cleaning $cn from ~/Library/Keychains/login.keychain-db *"
+    security find-certificate -c "$cn" -a -Z ~/Library/Keychains/login.keychain-db | \
+    awk '/SHA-1 hash:/{system("security delete-certificate -Z "$3" ~/Library/Keychains/login.keychain-db")}' || echo "* INFO: $cn not found! *"
+  done
+
+  echo -e "\n########## IMPORT MACOS KEYCHAIN CERTIFICATES ##########"
+  ############# CA IMPORT ##############
+  # Define the path to your ca-intermediates-chain-cert.pem
+  macos_chain_file="$DOCLI/CA/intermediateCA/certs/ca-intermediates-chain-cert.pem"
+  macos_intermediate_path="$DOCLI/CA/intermediateCA/certs"
+  macos_root_path="$DOCLI/CA/rootCA/certs/ca.cert.pem"
+
+  # Add Trusted Root to Keychain first
+  echo -e "\n* ROOT CA -> Adding $macos_root_path to /Library/Keychains/System.keychain *"
+  sudo security import "$macos_root_path" -k /Library/Keychains/System.keychain -t cert -T /usr/bin/codesign || echo "* ERROR: ROOT CERT -> $macos_root_path had a problem adding on /Library/Keychains/System.keychain!!! *"
+  ## Set permissions for the certificate: (ASK FOR MACOS CONFIRMATION/PASSWORD)
+  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$macos_root_path" || echo "* ERROR: ROOT CERT -> $macos_root_path had a problem setting it to "trustRoot" on /Library/Keychains/System.keychain!!! *"
+
+  #### Split the chain.pem into individual .pem files ####
+  # Check if directory exists, if not create it
+  macos_tmp_dir="$DOCLI/CA/tmp"
+  if [ ! -d "$macos_tmp_dir" ]; then
+    mkdir -p "$macos_tmp_dir"
+  fi
+
+  # Cleanup the individual .pem files
+  rm -f $macos_tmp_dir/cert*.pem || echo "* No cert file on $macos_tmp_dir directory *"
+
+  # List generated certificates
+  ls -larth $macos_tmp_dir
+
+  # Add each certificate to the System keychain
+  for cert in $macos_intermediate_path/intermediate.*.cert.pem; do
+    echo -e "\n* INTERMEDIATE CA -> Adding $cert to /Library/Keychains/System.keychain *"
+    sudo security import "$cert" -k /Library/Keychains/System.keychain -t cert -A || echo "* ERROR: INTERMEDIATE CERT -> $cert had a problem adding on /Library/Keychains/System.keychain!!! *"
+    ## Set permissions for the certificate: (ASK FOR MACOS CONFIRMATION/PASSWORD)
+    # sudo security add-trusted-cert -d -r unspecified -k /Library/Keychains/System.keychain "$cert" || echo "* ERROR: INTERMEDIATE CERT -> $cert had a problem setting it to "unspecified" on /Library/Keychains/System.keychain!!! *"
+    # sudo security add-trusted-cert -d -r trustAsRoot -k /Library/Keychains/System.keychain "$cert" || echo "* ERROR: INTERMEDIATE CERT -> $cert had a problem setting it to "trustAsRoot" on /Library/Keychains/System.keychain!!! *"
+  done
+
+  # Cleanup the individual .pem files
+  rm -f $macos_tmp_dir/cert*.pem || echo "* No cert file on $macos_tmp_dir directory *"
+
+  # Avoid multiple imports
+  touch $DOCLI/exports/cert_chain_added_to_mac
+fi
+
+
+echo -e "\n#########################################################"
+echo -e "########## IMPORT FIREFOX CERTIFICATES (MACOS) ##########"
+echo -e "#########################################################"
+
+# Define the path to the CA chain bundle
+ca_chain_path="$DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem"
+ca_intermediate_path="$DOCLI/CA/intermediateCA/certs"
+
+# Install certutil if it's not installed (platform-specific)
+if ! command -v certutil &> /dev/null; then
+    echo "certutil not found. Installing..."
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Amazon Linux or Ubuntu
+        . /etc/os-release
+        case "$ID" in
+            ubuntu)
+                sudo apt-get update
+                sudo apt-get install -y libnss3-tools
+                ;;
+            amzn)
+                sudo yum install -y nss-tools
+                ;;
+        esac
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # MacOS
+        brew install nss
+    else
+        echo "Unknown OS. Exiting."
+        exit 1
+    fi
+fi
+
+# Find Firefox profiles and import the certificate
+while read -r profile; do
+  echo -e "\n########## CLEAN FIREFOX CERTIFICATES ##########"
+  # Clean actual Firefox certificates
+  echo -e "\n* ROOT CA -> Removing $DOCLI/CA/rootCA/certs/ca.cert.pem from Firefox Profiles *"
+  certutil -D -n "$DOCLI_PROJECT_COMPANY Root CA" -d "sql:$profile" || echo "* $DOCLI_PROJECT_COMPANY Root CA does not exist *"
+  for cert in $ca_intermediate_path/intermediate.*.cert.pem; do
+    wildcard_value=$(basename "$cert" | sed -E 's/intermediate\.([^.]+)\.cert\.pem/\1/')
+    echo -e "\n* INTERMEDIATE CA -> Removing $cert from Firefox Profiles *"
+    wildcard_value_upper=$(echo "$wildcard_value" | tr '[:lower:]' '[:upper:]')
+    cert_name="$DOCLI_PROJECT_COMPANY $wildcard_value_upper CA"  # Combine with the wildcard value
+    certutil -D -n "$cert_name" -d "sql:$profile" || echo "* $cert_name does not exist *"
+  done
+
+  echo -e "\n########## IMPORT FIREFOX CERTIFICATES ##########"
+  echo -e "\n** Importing certificate into Firefox profile in directory: $profile **"
+  echo -e "\n* Importing Root CA *"
+  certutil -A -n "$DOCLI_PROJECT_COMPANY Root CA" -t "CT,C,C" -i "$DOCLI/CA/rootCA/certs/ca.cert.pem" -d "$profile"
+  # Add each certificate to the Firefox profiles keychain
+  for cert in $ca_intermediate_path/intermediate.*.cert.pem; do
+    wildcard_value=$(basename "$cert" | sed -E 's/intermediate\.([^.]+)\.cert\.pem/\1/')
+    echo -e "\n* INTERMEDIATE CA -> Adding $cert to Firefox Profiles *"
+    echo "Wildcard value extracted: $wildcard_value"
+    wildcard_value_upper=$(echo "$wildcard_value" | tr '[:lower:]' '[:upper:]')
+    cert_name="$DOCLI_PROJECT_COMPANY $wildcard_value_upper CA"  # Combine with the wildcard value
+    certutil -A -n "$cert_name" -t "CT,C,C" -i "$cert" -d "$profile" || echo "* Fail to import $cert_name *"
+  done
+  # List if all Keys were cleaned
+  echo -e "\n======================================================================================"
+  echo -e "*                          LISTING ALL FIREFOX CERTIFICATES                          *"
+  echo -e "======================================================================================"
+  certutil -L -d "sql:$profile"
+  echo -e "\n======================================================================================\n"
+done < <(find $HOME/.mozilla/firefox/ $HOME/.mozilla/firefox/*/ "$HOME/Library/Application Support/Firefox/Profiles" -maxdepth 1 -name '*.default*' -type d)
+
+echo -e "\n** Done importing certificates **\n"
+
+
+echo -e "\n##############################################"
+echo -e "########## RUNNING CLEANUP ROUTINES ##########"
+echo -e "##############################################"
+
+echo -e "\n** Cleaning template generated files: openssl-intermediate-ca.cnf,cert-reqs/region-req.cnf **"
+
+[[ -f "openssl-intermediate-ca.cnf" ]] && rm openssl-intermediate-ca.cnf && echo "* openssl-intermediate-ca.cnf removed successfully *" || echo "* Error when deleting openssl-intermediate-ca.cnf *"
+[[ -f "cert-reqs/region-req.cnf" ]]    && rm cert-reqs/region-req.cnf && echo "* cert-reqs/region-req.cnf removed successfully *" || echo "* Error when deleting cert-reqs/region-req.cnf *"

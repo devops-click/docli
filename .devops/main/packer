@@ -10,16 +10,24 @@ set -euo pipefail
 #:: `packer (option) [ARGUMENTS]` [-h|--help]
 #:: ## DESCRIPTION
 #:: This program has the following functionalies:
-#:: `packer aws build ent co-euc1 hashicorp-consul-amzn2-amd.json` -> Build Packer on AWS - Enterprise Environment for co-euc1
+#:: `packer aws build ent do-euc1 hashicorp-consul-amzn2-amd.json` -> Build Packer on AWS - Enterprise Environment for do-euc1
 eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 eval $DOCLI_DEBUG && echo "++ Entered packer ++"
 eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 
-packer_version="1.0"
+packer_version="1.1"
 packer_file_name="$(basename "$0")"
 packer_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 packer_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 packer_current_dir="$(pwd)"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=packer
+DOCLI_MODULE_TYPE=main
+DOCLI_MODULE_VERSION=$packer_version
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Read variables from environment
 current_key=$(basename $PWD)
@@ -52,7 +60,7 @@ packer_print_usage() {
   echo
   echo "packer (option) [ARGUMENTS] [-h|--help]"
   echo
-  echo "Example: packer build aws ent co-euc1 hashicorp-nomad-amzn2-amd.json"
+  echo "Example: packer build aws ent do-use1 hashicorp-nomad-amzn2-amd.json"
   echo
   print_options
   exit 1
@@ -63,10 +71,10 @@ echo "args_help=${args_help:-}"
 [[ ${args_help:-} == "$packer_file_name" ]] && packer_print_usage
 
 packer_command=$1
-cloud=$2
-environ=$3
-awsprofile="$4-$environ"
-confdir="$4-$environ"
+packer_cloud=$2
+packer_env=$3
+awsprofile="$4-$packer_env"
+packer_confdir="$4-$packer_env"
 packer_script=$5
 
 # Force user to use Packer dir...
@@ -80,8 +88,8 @@ VALID_COMMANDS=("build")
 VALID_ENVIRONMENTS=("dev" "qas" "stg" "prd" "sec" "ent" "val" "fin")
 REQUIRED_PACKER_VERSION="v$packer_version"
 FILE_OR_DIR_CHECK=(
-    $DOCLI/scripts/set-bash-colors-tput.sh
-    $DOCLI/envs
+    $DOCLI/scripts/docli_colors_tput
+    $DOCLI/.docli_envs
     $DOCLI/.envs_override
     $DOCLI/bin
 )
@@ -124,10 +132,10 @@ else
 fi
 
 # Set variables for each cloud
-if [[ $cloud == "aws" ]]; then
+if [[ $packer_cloud == "aws" ]]; then
     echo "** Loading AWS specific vars..."
 fi
-if [[ $cloud == "azure" ]]; then
+if [[ $packer_cloud == "azure" ]]; then
     echo "** Loading Azure specific vars..."
 fi
 
@@ -146,7 +154,7 @@ if [ "$OS" != "Darwin" ] && [ "$OS" != "Linux" ]; then
 fi
 
 # Validate the provided cloud provider
-if ! contains "$cloud" "${VALID_PROVIDERS[@]}"; then
+if ! contains "$packer_cloud" "${VALID_PROVIDERS[@]}"; then
     echo "Error: Invalid cloud provider."
     help
     exit 1
@@ -160,7 +168,7 @@ if ! contains "$packer_command" "${VALID_COMMANDS[@]}"; then
 fi
 
 # Validate the provided environment
-if ! contains "$environ" "${VALID_ENVIRONMENTS[@]}"; then
+if ! contains "$packer_env" "${VALID_ENVIRONMENTS[@]}"; then
     echo "Error: Invalid environment."
     help
     exit 1
@@ -176,7 +184,7 @@ else
 fi
 
 banner() {
-    echo -e "\n${BOLD}${TEXT_BLUE}** Running Packer Script for $cloud on $environ **\n${END}"
+    echo -e "\n${BOLD}${TEXT_BLUE}** Running Packer Script for $packer_cloud on $packer_env **\n${END}"
 }
 
 # Function to display help information
@@ -207,7 +215,7 @@ catch() {
 # Remove script created files
 cleanup() {
     echo -e "${TEXT_MAGENTA}** Cleaning Packer temporary and state files${TEXT_BLUE}"
-    rm -rf $prefix_path/files/packer-temp/*
+    rm -rf files/packer-temp/setup-auth.sh
     echo "${END}"
 }
 
@@ -231,10 +239,10 @@ packer_version_check () {
 
 lock_environments() {
     echo "${TEXT_GREEN}** Validating any Environment Hard Lock${END}"
-    banner1="** !${TEXT_RED} !! WARNING !! ${BOLD}Running Packer on $environ${END} !\n==>${TEXT_RED} AMI's are normally created on ${BOLD}enterprise environment (ent)${END}${TEXT_RED} and shared between accounts${END} ! <=="
-    [[ $environ != "ent" ]] \
+    banner1="** !${TEXT_RED} !! WARNING !! ${BOLD}Running Packer on $packer_env${END} !\n==>${TEXT_RED} AMI's are normally created on ${BOLD}enterprise environment (ent)${END}${TEXT_RED} and shared between accounts${END} ! <=="
+    [[ $packer_env != "ent" ]] \
     && echo -e $banner1 \
-    && read -p "${TEXT_RED}If you really want to do that, press ${BOLD}enter${END}${TEXT_RED} to continue and ${BOLD}build $packer_script on => $environ <==${END}${TEXT_RED}. (Or Control+C to abort)${END}" \
+    && read -p "${TEXT_RED}If you really want to do that, press ${BOLD}enter${END}${TEXT_RED} to continue and ${BOLD}build $packer_script on => $packer_env <==${END}${TEXT_RED}. (Or Control+C to abort)${END}" \
     || :
     echo -e "${TEXT_GREEN}** Lock check: ${BOLD}OK ${END}"
 }
@@ -273,7 +281,7 @@ op_doc_get_setup_auth(){
     if [[ $op_doc_setup_auth_list == *"aws-setup-auth"* ]]; then
         echo "** 1Password document $op_doc_setup_auth_list found! Using it..."
         rm -rf files/packer-temp/setup-auth.sh
-        op document get aws-setup-auth --vault='DevOps' --out-file files/packer-temp/setup-auth.sh && chmod 755 /opt/packer-temp/setup-auth.sh || echo "ERROR: Could not get $op_doc_setup_auth_list from 1Password!"
+        op document get aws-setup-auth --vault='DevOps' --out-file files/packer-temp/setup-auth.sh && chmod 755 files/packer-temp/setup-auth.sh || echo "ERROR: Could not get $op_doc_setup_auth_list from 1Password!"
     else
         echo "ERROR: Could not get $op_doc_setup_auth_list from 1Password!"
     fi
@@ -285,15 +293,18 @@ run_packer() {
     local command=$packer_command
     case "$command" in
         build)
-            echo "Running Packer with profile: $awsprofile"
-            [[ $cloud == "aws" ]] && echo "** Initiating Packer for $packer_script" \
+            echo -e "\n** Running Packer with $packer_cloud and profile: $awsprofile **"
+            [[ $packer_cloud == "aws" ]] && echo "** Initiating Packer for $packer_script" \
+            && packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
+
+            [[ $packer_cloud == "aws-vault" ]] && echo "** Initiating Packer for $packer_script" \
             && aws-vault exec "$awsprofile" -- packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
 
-            [[ $cloud == "azure" ]] && echo "** Initiating Packer for $packer_script" \
+            [[ $packer_cloud == "azure" ]] && echo "** Initiating Packer for $packer_script" \
             && packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
             ;;
         *)
-            echo "Invalid packer command"
+            echo -e "\nERROR: Invalid packer command\n"
             return 1
             ;;
     esac
@@ -303,12 +314,11 @@ run_packer() {
 run_packer_main() {
     # trap 'catch $? $LINENO' EXIT
     banner
-    if [[ $cloud == "aws" ]]; then
+    if [[ $packer_cloud == "aws" ]]; then
         packer_version_check
         lock_environments
-        # exit 0
     fi
-    if [[ $cloud == "azure" ]]; then
+    if [[ $packer_cloud == "azure" ]]; then
         packer_version_check
         lock_environments
     fi

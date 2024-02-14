@@ -20,14 +20,14 @@ root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 root_current_dir="$(pwd)"
 
 # ENV file
-root_env_file="$root_script_dir/.devops/.env"
+root_env_file="$root_script_dir/.docli_envs"
 
 # Receives or not the directory from script sourcing it.
 source_script_dir=${1:-not_available}
 # Return the root directory depth for every script in docli. Ex: ../../..
 root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
 
-# source $root_script_dir/.devops/functions/bash_base_get_arguments
+# source $root_script_dir/functions/bash_base_get_arguments
 # set -- $(parse_arguments "$@")
 # #########################
 # # args_debug=0
@@ -45,31 +45,31 @@ eval $DOCLI_DEBUG && echo "++ Entered .docli (main source) ++"
 eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 
 # echo "==> .docli -> source bash_basic_functions"
-# source $root_script_dir/.devops/functions/bash_basic_functions
+# source $root_script_dir/functions/bash_basic_functions
 
-eval $DOCLI_DEBUG && echo "******* .docli - before setting DOCLI_PROJECT_ROOT ********"
+eval $DOCLI_DEBUG && echo "* INFO: .docli - before setting DOCLI_PROJECT_ROOT *"
 eval $DOCLI_DEBUG && echo $DOCLI_VERBOSE
 eval $DOCLI_DEBUG && echo $DOCLI_DEBUG
-eval $DOCLI_DEBUG && echo "***************"
+eval $DOCLI_DEBUG && echo "================"
 echo
 ## INITIAL CHECKUPS AND LOADS
 # Check if DOCLI_PROJECT_ROOT is already set
 if [[ -n "${DOCLI_PROJECT_ROOT:-}" ]]; then
   eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT already set. Using: $DOCLI_PROJECT_ROOT **"
 else
-# Load the .env file from the directory
+# Load the .docli_envs file from the directory
   if [[ -f "$root_env_file" ]]; then
-    # Extract the value of DOCLI_PROJECT_ROOT from .env file
+    # Extract the value of DOCLI_PROJECT_ROOT from .docli_envs file
     export DOCLI_PROJECT_ROOT=$(grep -E '^DOCLI_PROJECT_ROOT=' "$root_env_file" | cut -d '=' -f 2-)
     # Check and confirm it's set after extraction
     if [[ -n "${DOCLI_PROJECT_ROOT}" ]]; then
       eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT set to: $DOCLI_PROJECT_ROOT **"
     else
-      echo "** ERROR: Unable to set DOCLI_PROJECT_ROOT from .env file. **"
+      echo "** ERROR: Unable to set DOCLI_PROJECT_ROOT from .docli_envs file. **"
       exit 1
     fi
   else
-    echo "** ERROR: .env file not found at $root_env_file **"
+    echo "** ERROR: .docli_envs file not found at $root_env_file **"
     exit 1
   fi
 fi

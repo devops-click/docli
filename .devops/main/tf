@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                            Run Terraform Script
+#:: ## Usage
+#:: `docli tf` [-h|--help] (help)
+#:: ## Variables Summary
+#:: tf_version         - Version of the current script.
+#:: tf_file_name       - Returns script name. (ex: tf)
+#:: tf_file_name_upper - Returns script name in UPPERCASE. (ex: tf)
+#:: tf_script_dir      - Returns this script current directory (ex: ../terraform/aws/deploy/eks), not the one sourcing/calling it.
+#:: tf_current_dir     - Returns the directory where script has been called from. Used to output information to current directory.
+###############################################################################
+
+tf_version="1.0"
+tf_file_name="$(basename "$0")"
+tf_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+tf_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+tf_current_dir="$(pwd)"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=tf
+DOCLI_MODULE_TYPE=main
+DOCLI_MODULE_VERSION=$tf_version
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+#:: ## SYNOPSIS
+#:: `script.sh` [-h|--help]
+#:: ## DESCRIPTION
+#:: This script prints "Hello, World!" to the standard output.
+#:: ```bash                                                    #dltbr
+#:: ,--------------------------------------------------------, #dltbr
+#:: |  ____              ___                  _ _      _     | #dltbr
+#:: | |  _ \  _____   __/ _ \ _ __  ___   ___| (_) ___| | __ | #dltbr
+#:: | | | | |/ _ \ \ / / | | | '_ \/ __| / __| | |/ __| |/ / | #dltbr
+#:: | | |_| |  __/\ V /| |_| | |_) \__ \| (__| | | (__|   <  | #dltbr
+#:: | |____/ \___| \_/  \___/| .__/|___(_)___|_|_|\___|_|\_\ | #dltbr
+#:: |                        |_|                             | #dltbr
+#:: '--------------------------------------------------------' #dltbr
+#:: ```                                                        #dltbr
+
+# source $tf_script_dir/../../.docli $tf_script_dir
+source $tf_script_dir/../../.docli
+
+tf_print_usage() {
+  echo
+  banner
+  echo "  $tf_file_name_upper TF v$tf_version"
+  echo "'--------------------------------------------------------'"
+  echo
+  echo "Usage: $0 <aws_profile> [OPTIONS]"
+  echo
+  echo "tf do-use1-ent    -> xxx"
+  echo "tf <aws_profile>  -> yyy. (For more info how to configure go to https://devops.click/)"
+  echo
+  print_options
+  exit 1
+}
+
+# Load Help
+[[ ${args_help:-} == "tf" ]] && tf_print_usage
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+echo -e "\n**** Running $tf_file_name_upper script ****\n"
+
+# export DOCLI_VERBOSE="[[ 0 == 1 ]]"
+
+echo "USE $DOCLI_PROJECT_ROOT!!! EX:"
+[[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && cat $DOCLI_PROJECT_ROOT/.docli_envs
+
+# source_docli
+
+# echo source_all_docli...
+# source_all_docli $tf_script_dir $root_script_dir
+
+# echo source_all_docli_ignore_root...
+# source_all_docli_ignore_root $tf_script_dir $root_script_dir
+
+# echo source_first_docli...
+# source_first_docli $tf_script_dir $root_script_dir
+
+runtfzao() {
+    echo "Mais eh isso mremu?"
+}
+
+# TODO: URGENT!!! SOURCING OK!!!
+# 2 - NOW need to start putting stuff in here.
+
+echo "####### FINISH ########"

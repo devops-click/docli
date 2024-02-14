@@ -1,0 +1,31 @@
+#!/bin/bash
+# Usage: ./translate_google.sh README.md en-US
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_translate_google_api
+DOCLI_MODULE_TYPE=scripts
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Check for input arguments
+if [ -z "$1" ]; then
+    echo "Please provide the path to the markdown file."
+    exit 1
+fi
+
+if [ -z "$2" ]; then
+    echo "Please specify a target language (e.g., 'en-US')."
+    exit 1
+fi
+
+SRC_FILE="$1"
+FILE_NAME="${SRC_FILE%.*}" # Extracts filename without extension
+TARGET_LANG="$2"
+OUTPUT_FILE="${FILE_NAME}-${TARGET_LANG}.md"
+
+# Translate the file
+gcloud translate translate-text --q="$(cat $SRC_FILE)" --target-language="${TARGET_LANG: -2}" --format=text > "$OUTPUT_FILE"
+
+echo "Translation completed: $OUTPUT_FILE"

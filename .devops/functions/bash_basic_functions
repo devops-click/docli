@@ -13,7 +13,16 @@
 # eval $DOCLI_DEBUG && echo "++ Entered bash_basic_functions ++"
 # eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 
-v="0.2"
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_basic_functions
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.5
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+# Disabled to don't interphere in docli --version and --version-short results
+# echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
 
 banner() {
   local version="${1:-}"
@@ -25,7 +34,7 @@ banner() {
   echo "| | |_| |  __/\ V /| |_| | |_) \__ \| (__| | | (__|   <  |" #dltbr
   echo "| |____/ \___| \_/  \___/| .__/|___(_)___|_|_|\___|_|\_\ |" #dltbr
   echo "|                        |_|                             |" #dltbr
-  echo "|                                          docli v$docli_version |"
+  echo "|                                          docli v$DOCLI_MODULE_VERSION |"
   echo "|--------------------------------------------------------|" #dltbr
   echo "|   https://DevOps.click - DevOps taken seriously >:)    |" #dltbr
   echo "'--------------------------------------------------------'" #dltbr
@@ -35,14 +44,38 @@ banner() {
 
 print_options() {
   echo "Options:"
-  echo "  -v, --verbose [true|false]   Turn on verbose"
-  echo "  -d, --debug [true|false]     Turn on DEBUG mode"
-  echo "  -i, --ignore-questions       Ignore questions (always yes)"
-  echo "  -s, --silent                 Silent for CI/CD pipelines"
-  echo "  -h, --help                   Show this help message"
-  echo "  --version                    Show DevOps.Click CLI version"
-  echo "  --version-short              Show only version number of DevOps.Click CLI"
+  echo "  -v,  --verbose [true|false]               Turn on verbose"
+  echo "  -d,  --debug [true|false]                 Turn on DEBUG mode"
+  echo "  -i,  --ignore-questions                   Ignore questions (always yes)"
+  echo "  -s,  --silent                             Silent for CI/CD pipelines"
+  echo "  -h,  --help                               Show this help message"
+  echo "  -e,  --envs                               Show DevOps.Click CLI loaded envs"
+  echo "  -u,  --update                             Update DevOps.Click CLI to latest version"
+  echo "  -um, --update-minimal                     Update DevOps.Click CLI binaries and configs only (no package updates)"
+  echo "  -v,  --version                            Show DevOps.Click CLI version"
+  echo "  -vs, --version-short                      Show only version number of DevOps.Click CLI"
+  echo "  -upg,--upgrade                            Fully upgrade DevOps.Click CLI (cannot skip)"
   exit 1
+}
+
+#:: #
+#:: ## Usage example:
+#:: ``
+declare -a args=()
+# Check if the variable is set and if not, set it to its default value
+: "${DOCLI_ARGS_VERBOSE:=0}"
+: "${DOCLI_ARGS_DEBUG:=0}"
+: "${args_ignore_questions:=0}"
+: "${args_silent:=0}"
+
+: "${DOCLI_VERBOSE:=}"
+: "${DOCLI_DEBUG:=}"
+
+load_vars() {
+  # Validations to activate modes:
+  DOCLI_VERBOSE="[[ $DOCLI_ARGS_VERBOSE == 1 || $DOCLI_ARGS_DEBUG == 1 ]]"
+  DOCLI_DEBUG="[[ $DOCLI_ARGS_DEBUG == 1 ]]"
+  scape=x
 }
 
 #:: # Function to calculate MD5 hash of a file and store into a variable
@@ -52,6 +85,190 @@ calculate_md5() {
   md5sum "$1" | awk '{ print $1 }'
 }
 
+### THIS IS NOT the --version function!!!
+#:: # Function to check DOCLI Version and execute an update if needed
+#:: # disabled if DOCLI_UPDATES=false found
+#:: ## Usage example:
+#:: `check_docli_version`
+check_docli_version() {
+  # Check if DOCLI_UPDATES variable exists and it is set to false, otherwise, proceed to update.
+  DOCLI_UPDATES="${DOCLI_UPDATES:-true}"
+  if [ "$DOCLI_UPDATES" != "false" ]; then
+    echo "* INFO: DOCLI_UPDATES is true. checking for if any update is needed... *"
+    docli_current_version=$(docli --version-short)
+    # docli_newest_version=$(curl -ksv https://...) # TODO: Create check with GitHub deployment versions
+    docli_newest_version=$(docli --version-short)
+    if [[ $docli_current_version == $docli_newest_version ]]; then
+      echo "* INFO: Running version of DOCLI is already up-to-date ($docli_newest_version) *"
+    else
+      docli update
+    fi
+  else
+    echo "* WARN: DOCLI_UPDATES is set to false, skipping any updates... *"
+  fi
+}
+
+#:: # Function to clean needed vars that may be set by processes
+#:: ## Usage example:
+#:: `docli_params_load`
+docli_params_load() {
+  ## ACCEPTS ONLY option as parameter without -|--
+  ###########################################
+  # NEW INPUT VARS
+  ############################################
+  ### DEFAULTS TO ENTERPRISE
+
+  export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
+
+  # Define a whitelist of allowed values if DOCLI_PARAM_OPTIONS does not exist
+  if [[ -z $DOCLI_PARAM_OPTIONS ]]; then
+    DOCLI_PARAM_OPTIONS=("apply" "apply_force" "destroy" "destroy_force" "build")
+  fi
+
+  # Initialize an array to store non-flag arguments
+  DOCLI_PARAM_OPTION=()
+
+  # Iterate through all arguments
+  for arg in "$@"; do
+    # Check if the argument does not start with - or --
+    if [[ ! $arg =~ ^- ]]; then
+      # Check if the argument is in the allowed values list
+      if [[ " ${DOCLI_PARAM_OPTIONS[@]} " =~ " $arg " ]]; then
+        # Append the argument to the array
+        DOCLI_PARAM_OPTION+=("$arg")
+      else
+        echo "* Invalid DOCLI_PARAM_OPTION: $arg *"
+        echo "* You MUST provide a valid Option! *"
+        exit 0
+      fi
+    fi
+  done
+  # Print the non-flag arguments
+  echo "* Valid DOCLI_PARAM_OPTION: ${DOCLI_PARAM_OPTION[@]:-}"
+
+  ## Get only the first valid option:
+  export DOCLI_PARAM_OPTION=${DOCLI_PARAM_OPTION[0]:-${DOCLI_PARAM_OPTION:-apply}}
+
+  : "${DOCLI_PARAM_FORCE:=false}}"
+  : "${DOCLI_PARAM_FUNNY_MODE:=false}}"
+  : "${DOCLI_PARAM_DEBUG:=false}}"
+  : "${DOCLI_PARAM_VERBOSE:=false}}"
+  : "${DOCLI_PARAM_SILENCE:=false}}"
+  : "${DOCLI_PARAM_SSO:=false}}"
+  : "${DOCLI_PARAM_CON_TYPE:=""}}"
+  : "${DOCLI_PARAM_CLIENT:=$DOCLI_PROJECT_CLIENT}}"
+  # : "${DOCLI_PARAM_ENV:=$DOCLI_PROJECT_ENTERPRISE_ENV}}"
+  : "${DOCLI_PARAM_ENV:=""}}"
+  # : "${DOCLI_PARAM_REGION:=$DOCLI_PROJECT_ENTERPRISE_SRG}}"
+  : "${DOCLI_PARAM_REGION:=""}}"
+  : "${DOCLI_PARAM_CLOUD:=aws}}"
+  : "${DOCLI_PARAM_REMOTE_STATE:=s3}}"
+  : "${DOCLI_PARAM_SHORT_REGION:=$DOCLI_PROJECT_ENTERPRISE_SRG}}"
+
+  # Used in specific modules
+  : "${DOCLI_PARAM_BITB_REPO:=}}"
+
+  # Iterate over all arguments
+  # ONLY SET WHEN PARAMETER IS SPECIFIED...
+  while [[ "$#" -gt 0 ]]; do
+    case $1 in
+      # --profile=*)
+      #   setup_select_profile="${1#*=}"
+      #   # selected_profiles+=("${arg#*=}")
+      #   ;;
+      -f|--force)
+        export DOCLI_PARAM_FORCE=true
+        if [[ -z $DOCLI_PARAM_OPTION ]] || [[ $DOCLI_PARAM_OPTION == "" ]]; then
+          echo -e "\n* ERROR: Can't specify -f|--force without specifying an option! *\n"
+          exit 1
+        fi
+        echo opt_DOCLI_PARAM_FORCE=$DOCLI_PARAM_FORCE
+        ;;
+      -fun|--funny-mode)
+        export DOCLI_PARAM_FUNNY_MODE=true
+        echo opt_DOCLI_PARAM_FUNNY_MODE=$DOCLI_PARAM_FUNNY_MODE
+        ;;
+      -d|--debug)
+        export DOCLI_PARAM_DEBUG=true
+        echo opt_DOCLI_PARAM_DEBUG=$DOCLI_PARAM_DEBUG
+        ;;
+      -v|--verbose)
+        export DOCLI_PARAM_VERBOSE=true
+        echo opt_DOCLI_PARAM_VERBOSE=$DOCLI_PARAM_VERBOSE
+        ;;
+      -s|--silence)
+        export DOCLI_PARAM_SILENCE=true
+        echo opt_DOCLI_PARAM_SILENCE=$DOCLI_PARAM_SILENCE
+        ;;
+      -con=*|--connection=*)
+        export DOCLI_PARAM_CON_TYPE="${1#*=}"
+        echo opt_DOCLI_PARAM_CON_TYPE=$DOCLI_PARAM_CON_TYPE
+        ;;
+      -sso|--sso)
+        export DOCLI_PARAM_SSO=true
+        export DOCLI_PARAM_CON_TYPE="sso"
+        echo opt_DOCLI_PARAM_SSO=$DOCLI_PARAM_SSO
+        ;;
+      -c=*|--client=*)
+        export DOCLI_PARAM_CLIENT="${1#*=}"
+        echo opt_DOCLI_PARAM_CLIENT=$DOCLI_PARAM_CLIENT
+        ;;
+      -e=*|--env=*)
+        export DOCLI_PARAM_ENV="${1#*=}"
+        echo opt_DOCLI_PARAM_ENV=$DOCLI_PARAM_ENV
+        ;;
+      -r=*|--region=*)
+        export DOCLI_PARAM_REGION="${1#*=}"
+        echo opt_DOCLI_PARAM_REGION=$DOCLI_PARAM_REGION
+        ;;
+      -cld=*|--cloud=*)
+        export DOCLI_PARAM_CLOUD="${1#*=}"
+        echo opt_DOCLI_PARAM_CLOUD=$DOCLI_PARAM_CLOUD
+        ;;
+      -rs=*|--remote-state=*)
+        export DOCLI_PARAM_REMOTE_STATE="${1#*=}"
+        echo opt_DOCLI_PARAM_REMOTE_STATE=$DOCLI_PARAM_REMOTE_STATE
+        ;;
+      -sr=*|--short-region=*)
+        export DOCLI_PARAM_SHORT_REGION="${1#*=}"
+        echo opt_DOCLI_PARAM_SHORT_REGION=$DOCLI_PARAM_SHORT_REGION
+        ;;
+
+      -bbr=*|--bitbucket-repository=*)
+        export DOCLI_PARAM_BITB_REPO="${1#*=}"
+        echo opt_DOCLI_PARAM_BITB_REPO=$DOCLI_PARAM_BITB_REPO
+        ;;
+
+      *)
+        # Assign the first non-flag argument to option
+        if [[ -z $DOCLI_PARAM_OPTION ]]; then
+          DOCLI_PARAM_OPTION=$1
+        fi
+        ;;
+    esac
+    shift
+  done
+
+  ## When no parameter passed. Using System Variables only in case of ./runtf
+  # if [[ $DOCLI_PARAM_FORCE == true ]]; then
+  #   export DOCLI_PARAM_FORCE=true
+  # fi
+
+  if [[ $DOCLI_PARAM_CLOUD == "" ]]; then
+    export DOCLI_PARAM_CLOUD=aws
+  fi
+
+  if [[ $DOCLI_PARAM_CON_TYPE == "sso" ]]; then
+    export DOCLI_PARAM_SSO=true
+  elif [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+    export DOCLI_PARAM_SSO=false
+  else
+    export DOCLI_PARAM_CON_TYPE=""
+    export DOCLI_PARAM_SSO=false
+  fi
+}
+
+
 #:: # Function to clean needed vars that may be set by processes
 #:: ## Usage example:
 #:: `clean_vars`
@@ -60,6 +277,46 @@ clean_vars() {
   unset AWS_DEFAULT_PROFILE
   unset AWS_REGION
   unset AWS_DEFAULT_REGION
+}
+
+#:: # Check duplicated entries in file
+#:: ## Usage example:
+#:: `check_duplicates "$file"`
+check_duplicates() {
+  local file="$1"
+
+  if [ ! -f "$file" ]; then
+    echo "Error: The specified file does not exist."
+    return 1
+  fi
+
+  # Sort the lines in the file
+  sorted_file="$(sort "$file")"
+
+  # Use uniq to identify and count duplicate lines
+  duplicates="$(uniq -d <<< "$sorted_file")"
+
+  # Print the duplicate lines
+  if [ -n "$duplicates" ]; then
+    echo "Duplicate lines in $file:"
+    echo "$duplicates"
+  else
+    echo "No duplicate lines found in $file."
+  fi
+}
+
+#:: # Check execution folder FORCING USER TO RUN FROM INSIDE THE SCRIPT FOLDER
+#:: ## Usage example:
+#:: `check_execution_folder`
+# Function to check if script is called from the correct directory
+function check_directory() {
+    local expected_dir="$1"
+    local current_dir="$(pwd)"
+
+    if [ "$current_dir" != "$expected_dir" ]; then
+        echo "ERROR: Please run this script from '$expected_dir' directory."
+        exit 1
+    fi
 }
 
 #:: # Check file existence
@@ -104,28 +361,38 @@ convert_to_lowercase() {
   echo "$modified_string"
 }
 
+#:: # Convert the value to uppercase
+#:: ## Usage example:
+#:: `result=$(convert_to_uppercase "$input")`
+convert_to_uppercase() {
+  local input_string="$1"
+  local modified_string=$(echo "$input_string" | tr '[:lower:]' '[:upper:]')
+  echo "$modified_string"
+}
+
 #:: # Function redirect help output
 #:: ## Usage example:
 #:: help_x=$(help_index "$docli_command")
 #:: echo "$help_x"  # Output: bash_op
 help_index() {
   case "${1:-}" in
-    "sso") echo ".main/sso";;
-    "tf") echo ".main/tf";;
-    "op") echo ".functions/bash_op";;
-    "sys") echo ".main/sys";;
-    "docli") echo "docli";;
-    *) echo "${1:-}";;
+    "sso") echo "main/sso";;
+    "tf") echo "main/tf";;
+    "op") echo "functions/bash_op";;
+    "sys") echo "main/sys";;
+    "docli") echo "bin/docli";;
+    *) echo "${1:-bin/docli}";;
   esac
 }
 
 #:: # Function to convert region to short_region
 #:: ## Usage example:
 #:: short_region=$(region_to_short_region "$region")
-#:: echo "$short_region"  # Output: euc1
+#:: echo "$short_region"  # Output: use1
 region_to_short_region() {
   case "$1" in
     "eu-central-1") echo "euc1";;
+    "us-east-1") echo "use1";;
     "us-east-2") echo "use2";;
     "ap-southeast-2") echo "apse2";;
     "sa-east-1") echo "sae1";;
@@ -146,6 +413,7 @@ shift_array() {
 short_region_to_region() {
   case "$1" in
     "euc1") echo "eu-central-1";;
+    "use1") echo "us-east-1";;
     "use2") echo "us-east-2";;
     "apse2") echo "ap-southeast-2";;
     "sae1") echo "sa-east-1";;
@@ -163,6 +431,7 @@ region_to_custom_tenant() {
     # Check for regions first
     case "$input_value" in
         "eu-central-1") echo "dc-eu";;
+        "us-east-1") echo "dc-us";;
         "us-east-2") echo "dc-us";;
         "sa-east-1") echo "dc-sa";;
         "ap-southeast-2") echo "dc-au";;
@@ -170,6 +439,7 @@ region_to_custom_tenant() {
             # If not found in regions, check short_regions
             case "$input_value" in
                 "euc1") echo "dc-eu";;
+                "use1") echo "dc-us";;
                 "use2") echo "dc-us";;
                 "sea1") echo "dc-sa";;   # This seems to be a typo in your mapping. I assume it should correspond to sa-east-1
                 "apse2") echo "dc-au";;
@@ -263,4 +533,32 @@ ask_to_proceed() {
       * ) echo "Please answer with y or n.";;
     esac
   done
+}
+
+#:: # Function to return full OS name
+#:: ## Usage example:
+#:: `full_os_name=$(get_full_os_name "$os_short")`
+get_full_os_name() {
+  case "$1" in
+    al2023) echo "Amazon Linux 2023" ;;
+    al2022) echo "Amazon Linux 2022" ;;
+    amzn2) echo "Amazon Linux 2" ;;
+    ubnt23) echo "Ubuntu 23.x" ;;
+    ubnt22) echo "Ubuntu 22.x" ;;
+    ubnt20) echo "Ubuntu 20.x" ;;
+    ubnt18) echo "Ubuntu 18.x" ;;
+    ubnt16) echo "Ubuntu 16.x" ;;
+    *) echo "Unknown OS" ;;
+  esac
+}
+
+#:: # Function to return full architecture name
+#:: ## Usage example:
+#:: `full_arch_name=$(get_full_arch_name "$os_arch")`
+get_full_arch_name() {
+  case "$1" in
+    arm) echo "arm64" ;;
+    amd) echo "x86_64" ;;
+    *) echo "Unknown Architecture" ;;
+  esac
 }

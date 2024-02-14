@@ -22,6 +22,14 @@ sso_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 sso_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 sso_current_dir="$(pwd)"
 
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=sso
+DOCLI_MODULE_TYPE=main
+DOCLI_MODULE_VERSION=$sso_version
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
 sso_option=${1:-}      # always the company-short_region-environment (ex: xx-euc1-ent)
 sso_option2=${2:-}     # If mfa -> MFA TOKEN | If eks -> EKS_ASSIGN = true
 
@@ -63,10 +71,10 @@ check_aws_profile() {
     sso_print_usage
   elif ! grep -q "$1" ~/.aws/config; then
     echo "** ERROR: profile $1 name is required **"
-    return 1
+    return 0
   else
     export AWS_PROFILE="$1"
-    echo "** $AWS_PROFILE profile found on ~/.aws/config **"
+    echo "*-* $AWS_PROFILE profile found on ~/.aws/config **"
   fi
 }
 
@@ -116,7 +124,7 @@ sso_clean() {
 }
 
 sso_login() {
-  aws sso login --sso-session clearops-sso
+  aws sso login --sso-session $DOCLI_PROJECT_SSO_SESSION
 }
 
 # TODO: Make this work with MFA (If possible) to get a longer session life
@@ -130,9 +138,9 @@ sso_login_mfa() {
 
   aws sts get-session-token \
   --duration-seconds 129600 \
-  --serial-number "mfa1p" \
+  --serial-number "$DOCLI_PROJECT_MFA_DEVICE" \
   --token-code "$token_code" \
-  --profile co-euc1-ent-sso-start \
+  --profile "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso" \
   --debug
 }
 
@@ -145,7 +153,8 @@ eks_login() {
   export AWS_PROFILE=$cust_awsprofile
 
   while true; do
-    aws eks update-kubeconfig --name dc-eu-eks-$sso_env-$sso_short_region-v01 --alias $sso_env
+    # TODO: Assign function to auto-get tenant for $DOCLI_PROJECT_CURRENT_TENANT
+    aws eks update-kubeconfig --name $DOCLI_PROJECT_CURRENT_TENANT-eks-$sso_env-$sso_short_region-v01 --alias $sso_env
     if [[ $? -eq 0 ]]; then
       echo "Successfully updated kubeconfig."
       break
@@ -157,7 +166,7 @@ eks_login() {
 }
 
 sso() {
-  input=${1:-}
+  input="${1:-${DOCLI_PROJECT_SSO_SESSION:-}}"
   [[ $input == "clean" ]] && sso_clean && exit 0 || echo ""
   sso_client="${input%%-*}"
   sso_env="${input##*-}"
@@ -176,18 +185,17 @@ sso() {
     echo "** Already connected to AWS SSO using profile '$sso_profile' on account '$check_aws_con_profile' **"
     export AWS_PROFILE="${sso_profile}-start"
     [[ $sso_short_region == "euc1" ]] && export AWS_REGION="eu-central-1" # TODO: Do this dinamically, with convert function.
-    # [[ $sso_eks_assign == true ]] && aws eks update-kubeconfig --name dc-eu-eks-$sso_env-$sso_short_region-v01 --alias $sso_env || echo "** EKS Cluster dc-eu-eks-$sso_env-$sso_short_region-v01 NOT found! ***"
-    [[ $sso_eks_assign == true ]] && eks_login "dc-eu-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}"
-    echo
+    # [[ $sso_eks_assign == true ]] && aws eks update-kubeconfig --name $DOCLI_PROJECT_CURRENT_TENANT-eks-$sso_env-$sso_short_region-v01 --alias $sso_env || echo "** EKS Cluster $DOCLI_PROJECT_CURRENT_TENANT-eks-$sso_env-$sso_short_region-v01 NOT found! ***"
+    [[ $sso_eks_assign == true ]] && eks_login "$DOCLI_PROJECT_CURRENT_TENANT-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}" || echo "** Could not execute eks login **"
   else
     echo "** Not connected to AWS SSO using profile '$sso_profile' **"
     echo "** Connecting... **"
     sso_clean
 
-    aws sso login --sso-session clearops-sso
+    aws sso login --sso-session $DOCLI_PROJECT_SSO_SESSION
     export AWS_PROFILE="${sso_profile}-start"
     [[ $sso_short_region == "euc1" ]] && export AWS_REGION="eu-central-1" # TODO: Do this dinamically, with convert function.
-    [[ $sso_eks_assign == true ]] && eks_login "dc-eu-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}"
+    [[ $sso_eks_assign == true ]] && eks_login "$DOCLI_PROJECT_CURRENT_TENANT-eks-${sso_env}-${sso_short_region}-v01" "${sso_env}" "${AWS_PROFILE}"
     check_aws_con
     [[ $check_aws_con > 0 ]] && echo -e "** SSO Connected! **\n" || echo -e "** ERROR: Could not connect to $sso_profile SSO. Please review your settings. **\n"
   fi

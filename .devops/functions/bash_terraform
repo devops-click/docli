@@ -1,0 +1,404 @@
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                         docli runtf -> bash_terraform
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                             RUN TERRAFORM SCRIPT                            |
+#-----------------------------------------------------------------------------'
+# Component of the Default Generic Terraform Run Script designed to be called from any sub-terraform-stacks
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_terraform
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+export aws_session_ttl=1h
+export awsvault_command="AWS_CHAINED_SESSION_TOKEN_TTL=$aws_session_ttl aws-vault exec $awsprofile --debug --duration $aws_session_ttl"
+# export awsvault_command="AWS_PROFILE=do-euc1-val-child aws-vault exec $awsprofile --debug --duration $aws_session_ttl"
+export AWS_CHAINED_SESSION_TOKEN_TTL=1h
+# export AWS_PROFILE=do-euc1-val-child
+
+### AWS EXCLUSIVE
+# Check if S3 Bucket is created, if not, create it
+create_bucket_if_not_exist() {
+  echo "** Checking for S3 Bucket ${REVERSE}$bucket${END}, if it does not exist we will create it..."
+  if [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+    v1=$(eval "$awsvault_command" -- aws s3 ls --region ${tf_region} | awk '{print $3}' | grep $bucket || v1="notfound")
+  else
+    # set AWS_PROFILE="$awsprofile-sso"
+    # export AWS_DEFAULT_PROFILE="$awsprofile-sso"
+    export AWS_PROFILE="$awsprofile-sso"
+    # set AWS_SDK_LOAD_CONFIG=1
+    if [[ $DOCLI_PARAM_SSO == true ]]; then
+      v1=$(AWS_PROFILE=$awsprofile-sso aws s3 ls --region ${tf_region} --profile $awsprofile-sso | awk '{print $3}' | grep $bucket || v1="notfound")
+    else
+      v1=$(AWS_PROFILE=$awsprofile-sso aws s3 ls --region ${tf_region} | awk '{print $3}' | grep $bucket || v1="notfound")
+    fi
+  fi
+  echo -e "${TEXT_BLUE}** Actual value used in terraform validate:${BOLD} $v1${END}"
+
+  if [[ $v1 == $bucket ]]; then
+      echo "${TEXT_GREEN}** S3 Bucket $bucket existence:${BOLD} OK ${END}"
+  else
+    echo -e "${BOLD}${TEXT_RED}S3 Bucket: $bucket NOT FOUND! Creating...${END}"
+    echo -e "${TEXT_RED}!! Attention !! You are about to create a new resource on AWS !${END}"
+    read -p "${TEXT_RED}Press enter to continue and ${BOLD}create S3 Bucket $bucket${END}${TEXT_RED}. (Or Control+C to abort)${END}"
+    if [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+      [[ $tf_region != "us-east-1" ]] && eval "$awsvault_command" -- aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --create-bucket-configuration LocationConstraint=${tf_region} --no-cli-pager
+      [[ $tf_region == "us-east-1" ]] && eval "$awsvault_command" -- aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --no-cli-pager
+      eval "$awsvault_command" -- aws s3api put-bucket-encryption --bucket ${bucket} --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+    else
+      if [[ $DOCLI_PARAM_SSO == true ]]; then
+        [[ $tf_region != "us-east-1" ]] && aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --create-bucket-configuration LocationConstraint=${tf_region} --no-cli-pager --profile $awsprofile-sso
+        [[ $tf_region == "us-east-1" ]] && aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --no-cli-pager --profile $awsprofile-sso
+        aws s3api put-bucket-encryption --bucket ${bucket} --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}' --profile $awsprofile-sso
+      else
+        [[ $tf_region != "us-east-1" ]] && AWS_PROFILE=$awsprofile-sso aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --create-bucket-configuration LocationConstraint=${tf_region} --no-cli-pager
+        [[ $tf_region == "us-east-1" ]] && AWS_PROFILE=$awsprofile-sso aws s3api create-bucket --acl private --bucket ${bucket} --region ${tf_region} --no-cli-pager
+        AWS_PROFILE=$awsprofile-sso aws s3api put-bucket-encryption --bucket ${bucket} --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
+      fi
+    fi
+    echo -e "${BOLD}${TEXT_GREEN}S3 Bucket: $bucket Created sucessfully!${END}\n"
+    sleep 5
+  fi
+}
+
+### AWS EXCLUSIVE
+# Check if DynamoDB Terraform Lock Table is created, if not, create it
+create_dynamodb_if_not_exist() {
+    echo "** Checking for DynamoDB table ${REVERSE}$dynamodb_table${END}, if it does not exist we will create it..."
+    # Check if table exists
+    if [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+      eval "$awsvault_command" -- aws dynamodb describe-table --table-name $dynamodb_table --region $region > /dev/null 2>&1 && exit_status=0 || exit_status=1
+    else
+        if [[ $DOCLI_PARAM_SSO == true ]]; then
+            aws dynamodb describe-table --table-name $dynamodb_table --region $region --profile $awsprofile-sso > /dev/null 2>&1 && exit_status=0 || exit_status=1
+        else
+            AWS_PROFILE=$awsprofile-sso aws dynamodb describe-table --table-name $dynamodb_table --region $region > /dev/null 2>&1 && exit_status=0 || exit_status=1
+        fi
+    fi
+    if [ $exit_status -eq 0 ]; then
+        echo -e "${TEXT_GREEN}** Table $dynamodb_table existence:${BOLD} OK ${END}"
+    else
+        echo -e "${BOLD}${TEXT_RED}Table $dynamodb_table NOT FOUND! Creating...${END}"
+        echo -e "${TEXT_RED}!! Attention !! You are about to create a new resource on AWS !${END}"
+        read -p "${TEXT_RED}Press enter to continue and ${BOLD}create DynamoDB Table $dynamodb_table${END}${TEXT_RED}. (Or Control+C to abort)${END}"
+        # Create table
+        if [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+            eval "$awsvault_command" -- aws dynamodb create-table --region $region --cli-input-json "$(cat <<EOF
+{
+    "TableName": "$dynamodb_table",
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+        {"AttributeName": "LockID", "KeyType": "HASH"}
+    ],
+    "AttributeDefinitions": [
+        {"AttributeName": "LockID", "AttributeType": "S"}
+    ]
+}
+EOF
+)"
+        else
+            if [[ $DOCLI_PARAM_SSO == true ]]; then
+                aws dynamodb create-table --region $region --profile $awsprofile-sso --cli-input-json "$(cat <<EOF
+{
+    "TableName": "$dynamodb_table",
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+        {"AttributeName": "LockID", "KeyType": "HASH"}
+    ],
+    "AttributeDefinitions": [
+        {"AttributeName": "LockID", "AttributeType": "S"}
+    ]
+}
+EOF
+)"
+            else
+                AWS_PROFILE=$awsprofile-sso aws dynamodb create-table --region $region --cli-input-json "$(cat <<EOF
+{
+    "TableName": "$dynamodb_table",
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+        {"AttributeName": "LockID", "KeyType": "HASH"}
+    ],
+    "AttributeDefinitions": [
+        {"AttributeName": "LockID", "AttributeType": "S"}
+    ]
+}
+EOF
+)"
+            fi
+        fi
+        echo "Table $dynamodb_table created"
+    fi
+}
+
+# Get current dir name as key for remote-state (key/desc...)
+set_remote_state_key() {
+    echo -e "${TEXT_BLUE}** Setting TF Remote State Key...${END}"
+    case $current_key in
+        terraform|terraform-stack)
+            current_key=common
+            ;;
+        *)
+            current_key="$current_key"
+            ;;
+    esac
+    echo -e "${TEXT_GREEN}** TF Remote State Key set to:${BOLD} $current_key${END}\n"
+}
+
+# Check Terraform Version
+terraform_version_check () {
+    # Check terraform version
+    TF_VERSION=$(terraform version -json | jq -r '.terraform_version')
+    if [ "$TF_VERSION" != "$REQUIRED_TF_VERSION" ]; then
+        echo "${TEXT_RED}${BOLD}Error: Required Terraform version is $REQUIRED_TF_VERSION, but you have $TF_VERSION${END}"
+        exit 1
+    fi
+    echo -e "${TEXT_GREEN}** Terraform Version ${REQUIRED_TF_VERSION} check: ${BOLD}OK ${END}"
+}
+
+# Validate Terraform Files before running any operation
+terraform_validate() {
+    # Print validation message in green
+    echo -e "${TEXT_GREEN}** Validating Terraform configuration and files${END}"
+
+    # Run terraform validate and store the exit code and output - Wrap this function to run outside program, so CATCH does not enter...
+    (
+        set +e
+
+        terraform_validate_output=$(terraform validate -json 2>&1 | /usr/bin/tee /tmp/terraform-validate.log)
+        terraform_validate_exit_code=$?
+
+        # Check the exit code to determine if validation was successful
+        if [[ $terraform_validate_exit_code -ne 0 ]] || [[ "$terraform_validate_output" == *"\"valid\": false"* ]]; then
+            # Print error message in red and exit with status code 1
+            echo -e "\n${TEXT_RED}${BOLD}Error: Terraform configuration not valid!${END}${TEXT_RED}"
+
+            # Print JSON output from terraform validate with jq for better formatting
+            echo "$terraform_validate_output" | jq || :
+
+            # Print human-readable error message from terraform validate -no-color
+            echo -e "\n${TEXT_RED}Error details:${END}"
+            terraform validate -no-color >&2 || :
+
+            # Exit with status code 1
+            echo "${END}"
+            exit 1
+        else
+            # Print success message in green
+            echo -e "${TEXT_GREEN}${BOLD}Terraform validation passed!${END}"
+        fi
+    )
+
+}
+
+# Run Terraform INFO
+terraform_info() {
+    echo "${BOLD}${TEXT_YELLOW}** Running Terraform with the following variables: **${END}${TEXT_YELLOW}"
+    echo "terraform.workspace=$tf_workspace"
+    echo "key=${current_key}/terraform.tfstate"
+    echo -e "** finished running terraform_info...${END}\n"
+}
+
+# Function to run terraform command
+run_terraform() {
+
+  [[ ! -f /tmp/terraform.log ]] && touch /tmp/terraform.log
+
+  if [[ $DOCLI_PARAM_CON_TYPE == "sso" ]]; then
+    tf_command="terraform"
+  elif [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
+    # tf_command="AWS_CHAINED_SESSION_TOKEN_TTL=15m aws-vault exec $awsprofile --duration 15m -- terraform"
+    tf_command="$awsvault_command -- terraform"
+
+    # Validate aws-vault credentials - DEBUG
+    echo
+    eval "$awsvault_command" -- env | grep AWS
+    aws-vault list | grep $awsprofile
+    echo
+
+  else
+    echo "Invalid cloud environment: $DOCLI_PARAM_CLOUD"
+    exit 1
+  fi
+
+  if [ -z "$DOCLI_PARAM_CLOUD" ]; then
+    if [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
+      cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+    fi
+  else
+    cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+  fi
+
+  # cmd_bitbucket_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+
+  ## Append strings to cmd_args
+  [[ $DOCLI_PARAM_CLOUD == bitbucket ]] && [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]]              && cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-workspace.tfvars\"" && echo "* $DOCLI/.private/.bitb-workspace.tfvars bitbucket variable loaded..."
+  [[ $DOCLI_PARAM_CLOUD == bitbucket ]] && [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]] && [[ $current_key == "repository-variables" ]]                               && cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars\"" echo "* $DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars bitbucket variable loaded..."
+
+  local command=$tf_opt
+  case "$command" in
+    apply)
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      # export TF_LOG=”DEBUG”
+      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log
+      # echo "option=$tf_opt" > /tmp/terraform.log
+      # echo "aws_profile=$awsprofile" >> /tmp/terraform.log
+      ;;
+    apply_unlock)
+      tf_opt=${tf_opt//_unlock/}
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log || echo "Unable to acquire state lock. Retrying with -lock=false..."
+      if grep -q "Error acquiring the state lock" /tmp/terraform.log; then
+        eval "$tf_command $tf_opt $cmd_args" -no-color -lock=false 2>&1 | tee /tmp/terraform.log
+      fi
+      ;;
+    apply_force)
+      echo $tf_opt
+      tf_opt=${tf_opt//_force/}
+      echo $tf_opt
+      echo "Running 'terraform $tf_opt ${BOLD}WITH -auto-approve${END}' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args -auto-approve" 2>&1 | tee /tmp/terraform.log
+      ;;
+    destroy)
+      echo "Running 'terraform DESTROY' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log
+      ;;
+    destroy_force)
+      tf_opt=${tf_opt//_force/}
+      echo "Running 'terraform DESTROY ${BOLD}WITH -auto-approve${END}' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -auto-approve -no-color 2>&1 | tee /tmp/terraform.log
+      ;;
+    plan)
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -out=tf.plan -no-color #-lock=false #  -no-color is need to disable symbols on logs
+      ;;
+    plan_destroy)
+      tf_opt=${tf_opt//_destroy/}
+      echo "Running 'terraform plan -DESTROY' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args"  -out=tf.plan -no-color -destroy
+      ;;
+    show)
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt" "tf.plan" -no-color
+      ;;
+    apply_plan)
+      tf_opt=${tf_opt//_plan/}
+      echo "Running 'terraform apply plan' with profile: $awsprofile"
+      eval "$tf_command $tf_opt" "tf.plan" -no-color
+      ;;
+    refresh)
+      echo "Running 'terraform plan -refresh-only' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -refresh-only -no-color
+      ;;
+    state_list)
+      tf_opt="state list"
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt"
+      ;;
+    state_pull)
+      tf_opt="state pull"
+      echo "Running 'terraform $tf_opt > ${tf_confdir}.tfstate' with profile: $awsprofile"
+      eval "$tf_command $tf_opt" > $tf_confdir.tfstate
+      ;;
+    state_show)
+      tf_opt="state show"
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" ${tf_input_7:-not_available}
+      ;;
+    import)
+      tf_opt="import"
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args ${tf_input_7:-not_available} ${tf_input_7:-not_available}" # TODO: TF IMPORT - Make it work. Order now is correct: terraform <option> <global_variables> <ADDR> <ID>, but still returning error.
+      ;;
+    providers)
+      # tf_opt="providers"
+      echo "Running 'terraform $tf_opt > ${tf_confdir}.tfstate' with profile: $awsprofile"
+      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log
+      ;;
+    output_base64)
+      echo "Running 'terraform output -json' with profile: $awsprofile"
+      tf_opt=${tf_opt//_base64/}
+      # Capture the Terraform output
+      # eval "$tf_command $tf_opt iam_user_info $cmd_args" | base64 --decode | gpg --decrypt
+      # data.local_file.pgp_key
+      # eval "$tf_command $tf_opt $cmd_args -auto-approve"
+      # echo "Running 'terraform state pull > ${tf_confdir}.tfstate' with profile: $awsprofile"
+      # eval "$tf_command $tf_opt" > $tf_confdir.tfstate
+      # Extract the "iam_user_info" object from the Terraform output
+
+      echo "** tf output part... "
+      terraform_output=$(eval "$tf_command $tf_opt -json")
+      # eval "$tf_command $tf_opt -json" > myout.json
+      # echo "** echo: $terraform_output"
+      echo "** iam_user_info part... "
+
+      # # Extract the "iam_user_info" object from the Terraform output
+      # iam_user_info=$(echo "$terraform_output" | jq -r '.iam_user_info')
+
+      # # Loop through each item in the "iam_user_info" object
+      # echo "$iam_user_info" | jq -r 'to_entries[] | .key + "=" + (.value | tojson)' | while IFS="=" read -r key value; do
+      # # Check if the key contains "pgp_key" or "keybase_secret_key_decrypt_command"
+      # if [[ $value == *"pgp_key"* ]] || [[ $value == *"keybase_secret_key_decrypt_command"* ]]; then
+      #     # Extract the command or encrypted value from the JSON
+      #     command_or_value=$(echo "$value" | jq -r '.')
+
+      #     # Check if the command or value is not null
+      #     if [[ $command_or_value != "null" ]]; then
+      #     # Replace "keybase pgp decrypt" with "gpg --decrypt"
+      #     command_or_value=$(echo "$command_or_value" | sed -e 's/keybase pgp decrypt/gpg --decrypt/')
+
+      #     # Execute the command or decryption and save the result to a variable
+      #     result=$(eval "$command_or_value")
+
+      #     # Write the result to a file
+      #     echo "$result" > "$key.txt"
+      #     fi
+      # fi
+      # done
+
+      # Extract the "iam_user_info" object from the Terraform output
+      iam_user_info=$(echo "$terraform_output" | jq -r '.iam_user_info.value."svc-bitbucket-ops-config"')
+
+      # Check if the "iam_user_info" object is not null
+      if [[ "$iam_user_info" != "null" ]]; then
+      # Extract the encrypted secret key and secret key from the "iam_user_info" object
+      iam_access_key_encrypted_secret=$(echo "$iam_user_info" | jq -r '.iam_access_key_encrypted_secret')
+      # iam_access_key_secret=$(echo "$iam_user_info" | jq -r '.iam_access_key_secret')
+
+      # Print the values of the encrypted secret key and secret key
+      echo "Encrypted Secret Key: $iam_access_key_encrypted_secret"
+      # echo "Secret Key: $iam_access_key_secret"
+
+        # Check if the encrypted secret key and secret key are not empty
+        if [[ -n "$iam_access_key_encrypted_secret" ]]; then
+        # if [[ -n "$iam_access_key_encrypted_secret" ]] && [[ -n "$iam_access_key_secret" ]]; then
+          # Decrypt the encrypted secret key using base64 and save it to a file
+          echo "$iam_access_key_encrypted_secret" | base64 --decode | gpg --decrypt > iam_access_key_encrypted_secret.txt
+
+          # Save the secret key to a file
+          # echo "$iam_access_key_secret" > iam_access_key_secret.txt
+          cat iam_access_key_encrypted_secret.txt
+          rm iam_access_key_encrypted_secret.txt
+
+          echo "Decryption completed successfully."
+        else
+          echo "Encrypted secret key or secret key is empty."
+        fi
+
+      else
+        echo "iam_user_info is null or empty."
+      fi
+      # done
+      ;;
+    *)
+      echo "Invalid terraform command"
+      return 1
+      ;;
+  esac
+}

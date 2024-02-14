@@ -6,6 +6,14 @@ set -euo pipefail
 #                           docli Bash System Operations
 ###############################################################################
 
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=sys
+DOCLI_MODULE_TYPE=main
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
 sys_print_usage() {
     echo
     banner

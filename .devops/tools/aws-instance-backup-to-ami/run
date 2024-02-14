@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Replace these variables with your specific values
+instance_id="$1"
+ami_name="$2"
+aws_profile="$3"
+current_date=$(date +'%Y-%m-%d at %H:%M:%S')
+description="$ami_name - EC2 Instance $instance_id backup on $current_date"
+
+# Create an AMI from the EC2 instance
+aws ec2 create-image --instance-id "$instance_id" --name "$ami_name" --description "$description" --profile $aws_profile --no-reboot
+
+# Check the status of the AMI creation process
+# This will provide you with the AMI ID once the process is completed

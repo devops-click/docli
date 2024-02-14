@@ -1,0 +1,127 @@
+#!/bin/bash
+set -euo pipefail
+
+source $DOCLI_PROJECT_ROOT/.docli_envs
+
+# Check for existence of DOCLI_OWN_NAME and DOCLI_OWN_EMAIL variables
+if [[ -z "$DOCLI_OWN_NAME" ]]; then
+  read -p "Please enter your full name: " full_name
+else
+  full_name="$DOCLI_OWN_NAME"
+fi
+
+if [[ -z "$DOCLI_OWN_EMAIL" ]]; then
+  read -p "Please enter your email address: " user_email
+else
+  user_email="$DOCLI_OWN_EMAIL"
+fi
+
+# Remove @domain from e-mails
+user_name="${user_email%%@*}"
+
+# mkdir -p $DOCLI/CA/clientsROOT
+mkdir -p $DOCLI/CA/clientsINTERMEDIATE
+
+# client_root_dir="$DOCLI/CA/clientsROOT"
+client_root_dir="$DOCLI/CA/clientsINTERMEDIATE"
+timestamp=$(date +%s)
+current_date=$(date)
+client_cert_user=$(whoami)
+consul_server="consul-server-$DOCLI_PROJECT_ENTERPRISE_DC_NAME.$DOCLI_ENTERPRISE_DC_SRG.$DOCLI_ENTERPRISE_DC_ENV.$SSL_PRODUCT_DOMAIN"
+
+[[ ! -f $client_root_dir/gen_client_cert.log ]] && touch $client_root_dir/gen_client_cert.log
+echo "" >> $client_root_dir/gen_client_cert.log
+echo "#------------------- $current_date -------------------#" >> $client_root_dir/gen_client_cert.log
+echo "** Certification Generation Log **" >> $client_root_dir/gen_client_cert.log
+echo "timestamp:        $timestamp" >> $client_root_dir/gen_client_cert.log
+echo "client_cert_user: $client_cert_user" >> $client_root_dir/gen_client_cert.log
+
+echo "Client Certificate: Generates Client Private Key"
+[[ ! -f $client_root_dir/$user_name.key ]] && /usr/bin/openssl genpkey -algorithm RSA -out $client_root_dir/$user_name.key
+
+echo "Client Certificate: Create a certificate signing request (CSR) for the client key: [ENTERPRISE]"
+/usr/bin/openssl req -new -key $client_root_dir/$user_name.key -out $client_root_dir/$user_name.csr -subj "/C=$SSL_COUNTRY/ST=$SSL_STATE/L=$SSL_LOCALITY/O=$SSL_COMPANY/OU=$SSL_OU/OU=ent/CN=$full_name ($user_email)"
+
+echo "Client Certificate: Sign the CSR with the CA:"
+/usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days 1825
+# /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/rootCA/certs/ca.cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days 1825
+# /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days 1825
+
+# MACOS ONLY
+# Find and delete the associated key
+# key_hash=$(security find-key -c "$full_name ($user_email)" ~/Library/Keychains/login.keychain-db | awk '/keychain:/{print $4}')
+# if [ ! -z "$key_hash" ]; then
+#   sudo security delete-key -Z "$key_hash" ~/Library/Keychains/login.keychain-db
+# fi
+
+# # Find and delete associated keys
+# security find-key -c "$full_name ($user_email)" ~/Library/Keychains/login.keychain-db | awk '/keychain:/{print $4}' | while read -r key_hash; do
+#   if [ ! -z "$key_hash" ]; then
+#     echo "* Deleting Key from Hash: $key_hash *"
+#     sudo security delete-key -Z "$key_hash" ~/Library/Keychains/login.keychain-db || echo "* ERROR: Could not delete private key (hash: $key_hash) *"
+#   fi
+# done
+
+############# CLEANUP #############
+# Delete the certificate AND private key (Adding -Z path does not work)
+echo "MacOS: Delete existing key and certificate from keychain before continue"
+security delete-identity -t -c "$full_name ($user_email)" || echo "* INFO: $full_name ($user_email) not found! *"
+
+# # Delete the certificate only
+# echo "MacOS: Delete existing key and certificate from keychain before continue"
+# sudo security find-certificate -c "$full_name ($user_email)" -a -Z ~/Library/Keychains/login.keychain-db | \
+# awk '/SHA-1 hash:/{system("sudo security delete-certificate -Z "$3" ~/Library/Keychains/login.keychain-db")}' || echo "* INFO: $full_name ($user_email) not found! *"
+
+############# IMPORT #############
+# sudo security import $client_root_dir/$user_name.p12 -k ~/Library/Keychains/login.keychain-db
+sudo security import $client_root_dir/$user_name.key -k ~/Library/Keychains/login.keychain-db || echo "* Key already exists *"
+sudo security import $client_root_dir/$user_name.crt -k ~/Library/Keychains/login.keychain-db || echo "* Certificate already exists *"
+
+ls -larth $client_root_dir/
+
+# Create a PKCS12 certificate
+openssl pkcs12 -export -in $client_root_dir/$user_name.crt -inkey $client_root_dir/$user_name.key -out $client_root_dir/$user_name.p12 -name "$full_name ($user_email)" -passout pass:
+
+## MUST BE LIBRESSL TO IMPORT ##
+# echo "MacOS: Import the PKCS#12 file into your macOS keychain:"
+
+ls -larth $client_root_dir
+
+echo
+
+## FIREFOX
+# Find Firefox profiles and import the certificate
+while read -r profile; do
+  # Clean actual Firefox certificates
+  echo "* Own Client Certificate -> Removing $client_root_dir/$user_name.crt from Firefox Profiles *"
+  certutil -D -n "$full_name ($user_email)" -d "sql:$profile" || echo "* $full_name ($user_email) does not exist *"
+
+  # Import PCKS12
+  echo "Importing certificate into Firefox profile in directory: $profile"
+  pk12util -i $client_root_dir/$user_name.p12 -d "$profile" -W ''
+
+  # List if all Keys were cleaned
+  echo -e "\n======================================================================================"
+  echo -e "*                          LISTING ALL FIREFOX CERTIFICATES                          *"
+  echo -e "======================================================================================"
+  certutil -L -d "sql:$profile"
+  echo -e "\n======================================================================================\n"
+done < <(find $HOME/.mozilla/firefox/ $HOME/.mozilla/firefox/*/ "$HOME/Library/Application Support/Firefox/Profiles" -maxdepth 1 -name '*.default*' -type d)
+
+###################################
+#### Mutual TLS Authentication ####
+###################################
+
+# Browser-based Authentication:
+# If you're trying to access the Consul UI, some browsers like Chrome and Safari will automatically prompt you to choose a client certificate for mutual TLS authentication.
+
+# Testing/Using it via curl:
+echo "* TEST: curl using --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem *"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo "* ERROR: Could not validate certificate using cacert *"
+echo "* TEST: curl using --capath $DOCLI/CA/c_rehash *"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --capath $DOCLI/CA/c_rehash https://$consul_server:8501/ui/ || echo "* ERROR: Could not validate certificate using capath *"
+
+zip $HOME/Downloads/$user_name.zip $client_root_dir/$user_name.key $client_root_dir/$user_name.crt $client_root_dir/$user_name.p12
+# TODO: do a process to send user zip to devops@domain.com or in a slack channel.
+
+# rm -rf $client_root_dir/*

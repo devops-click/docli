@@ -16,34 +16,64 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.1"
+setup_version="1.2"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 setup_current_dir="$(pwd)"
+PATH="$DOCLI/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=setup
+DOCLI_MODULE_TYPE=main
+DOCLI_MODULE_VERSION=$setup_version
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+os_var=$(uname)
+os_var_lower="$(echo "$os_var" | tr '[:upper:]' '[:lower:]')"
+ops_profile=""
+
+source $DOCLI/functions/bash_basic_functions
 
 [[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
 [[ -f "$setup_script_dir/../../.docli_envs" ]] && source $setup_script_dir/../../.docli_envs
 [[ -f "$setup_current_dir/.docli_envs" ]] && source $setup_current_dir/.docli_envs
-[[ -z ${DOCLI} ]] && echo "** .docli_envs found! using it's values when applicable **" || export DOCLI="$HOME/.devops"
+[[ -z ${DOCLI} ]] && export DOCLI="$HOME/devops" || echo "** .docli_envs found! using it's values when applicable **"
+
+# Fetch the latest version number using Python to scrape the Elasticsearch downloads page
+latest_version=$(curl -fsSL https://www.elastic.co/downloads/elasticsearch | python3 -c "import sys, re; print(re.search(r'elasticsearch-(\d+\.\d+\.\d+)', sys.stdin.read()).group(1))")
 
 # Get current macuser to be used
 setup_username=$(whoami)
 # Get Architecture
 setup_arch_name="$(uname -m)"
 # All available functions to load/skip
-setup_function_names=(
+setup_macos_function_names=(
 check_and_create_dirs
 files_check_and_creation
 private_envs_file
-setup_elasticsearch
 setup_macos_system_config
+setup_macos_system_config_sudoers
 setup_homebrew_and_packages
+setup_variables_and_sources
+setup_java
 setup_omzsh
 setup_aws_tools
 setup_terraform
-setup_variables_and_sources
+setup_elasticsearch
 setup_mac_terminal_touchid
+setup_mac_vscode_extensions
+setup_custom_routines
+)
+setup_amzn2_function_names=(
+check_and_create_dirs
+files_check_and_creation
+private_envs_file
+setup_linux_packages
+setup_elasticsearch
+setup_variables_and_sources
 setup_custom_routines
 )
 setup_files_to_check=(
@@ -74,13 +104,25 @@ macos_help() {
   echo "Usage: $0 [OPTIONS]"
   echo "Options:"
   echo "  --profile=PROFILE     Single profile. Profiles are:"
-  for prof in "${setup_ops_profiles[@]}"; do
-    echo "                        - $prof"
-  done
-  echo "  --skip=FUNCTIONS      Comma-separated list of functions to skip. Functions are:"
-  for func in "${setup_function_names[@]}"; do
-    echo "                        - $func"
-  done
+  if [[ "$os_var" == "Darwin" ]]; then
+    for prof in "${setup_ops_profiles[@]}"; do
+      echo "                        - $prof"
+    done
+    echo "  --skip=FUNCTIONS      Comma-separated list of functions to skip. Functions are:"
+    for func in "${setup_macos_function_names[@]}"; do
+      echo "                        - $func"
+    done
+  elif [[ "$os_var" == "Linux" ]]; then
+    for prof in "${setup_ops_profiles[@]}"; do
+      echo "                        - $prof"
+    done
+    echo "  --skip=FUNCTIONS      Comma-separated list of functions to skip. Functions are:"
+    for func in "${setup_amzn2_function_names[@]}"; do
+      echo "                        - $func"
+    done
+  else
+    echo " OS NOT DETECTED... Aborting..."
+  fi
   echo "  --help                Show this help message."
   echo
   echo "Example:"
@@ -99,10 +141,18 @@ runnning_as_root() {
 
 # Identify architecture
 which_architecture() {
-  if [ "$setup_arch_name" == "x86_64" ]; then
+  if [[ "$os_var" == "Darwin" && "$setup_arch_name" == "x86_64" ]]; then
     arch="darwin-x86_64"
-  elif [ "$setup_arch_name" == "arm64" ]; then
+    arch_3l="darwin_amd64"
+  elif [[ "$os_var" == "Darwin" && "$setup_arch_name" == "arm64" ]] || [[ "$os_var" == "Darwin" && "$setup_arch_name" == "aarch64" ]] ; then
     arch="darwin-aarch64"
+    arch_3l="darwin_arm64"
+  elif [[ "$os_var" == "Linux" && "$setup_arch_name" == "x86_64" ]]; then
+    arch="linux-x86_64"
+    arch_3l="linux_amd64"
+  elif [[ "$os_var" == "Linux" && "$setup_arch_name" == "arm64" ]] || [[ "$os_var" == "Linux" && "$setup_arch_name" == "aarch64" ]] ; then
+    arch="linux-aarch64"
+    arch_3l="linux_arm64"
   else
     echo "Unknown architecture"
     exit 1
@@ -166,6 +216,84 @@ add_line_to_file() {
   fi
 }
 
+#:: ### Update or insert line in a specific file.
+#:: - Automatically add new line if it needs to insert anything in the end of the file
+#:: - Can prepend newline (position 3)
+#:: - Can also append :$PATH to the end of the file (position 4)
+#:: - Can specify a specific variable with wildcard to substitute the entire line (position 5)
+upsert_line_to_file() {
+  eval $DOCLI_DEBUG && echo "++ function upsert_line_to_file"
+  local line="$1"
+  local file="$2"
+  local prepend_newline="${3:-false}"
+  local append_path="${4:-false}"
+  local check_var="${5:-}"
+
+  # Function to preprocess the line if it's not empty
+  preprocess_line() {
+    # eval $DOCLI_DEBUG && echo "++ function preprocess_line" # do not enable outputs in here.
+    if [ -n "$1" ]; then
+      echo "$(echo "$1" | sed 's/\//\\\//g')"
+    fi
+  }
+
+  # Add a newline if the file exists and does not end with a newline
+  [ -f "$file" ] && [ "$(tail -c 1 "$file"; echo x)" != $'\nx' ] && echo "" >> "$file"
+
+  # Preprocess the line
+  line_treated=$(preprocess_line "$line")
+  check_var_treated=$(preprocess_line "$check_var")
+
+  eval $DOCLI_DEBUG && echo "++ file=$file"
+  eval $DOCLI_DEBUG && echo "++ line=$line"
+  eval $DOCLI_DEBUG && echo "++ line_treated=$line_treated"
+  eval $DOCLI_DEBUG && echo "++ check_var=$check_var"
+  eval $DOCLI_DEBUG && echo "++ check_var_treated=$check_var_treated"
+  eval $DOCLI_DEBUG && echo "++ prepend_newline=$prepend_newline"
+  eval $DOCLI_DEBUG && echo "++ append_path=$append_path"
+
+  # $check_var exists and it is not empty
+  if [ -n "$check_var" ]; then
+    eval $DOCLI_DEBUG && echo "++ check_var especified"
+    # NOT FOUND - ADD NEW
+    if ! grep -Eq ".*$check_var.*" "$file"; then
+      eval $DOCLI_DEBUG && echo "++ check_var especified -> check_var_treated NOT FOUND"
+      [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+      if [ "$append_path" == "true" ]; then
+        eval $DOCLI_DEBUG && echo "++ check_var especified -> check_var_treated NOT FOUND -> append_path = true"
+        echo "${line}:\$PATH" >> "$file"
+      else
+        eval $DOCLI_DEBUG && echo "++ check_var especified -> check_var_treated NOT FOUND -> else"
+        echo "$line" >> "$file"
+      fi
+    fi
+    # FOUND - UPSERT
+    if grep -Eq ".*$check_var.*" "$file"; then
+      if [ "$append_path" == "true" ]; then
+        eval $DOCLI_DEBUG && echo "++ check_var especified -> check_var_treated FOUND -> append_path = true"
+        sed -i '' "/$check_var_treated/ s/.*/$line_treated:\$PATH/" "$file"
+      else
+        eval $DOCLI_DEBUG && echo "++ check_var especified -> check_var_treated FOUND -> check_var_treated found -> else"
+        sed -i '' "/$check_var_treated/ s/.*/$line_treated/" "$file"
+      fi
+    fi
+  # $check_var does NOT exist
+  else
+    eval $DOCLI_DEBUG && echo "++ check_var NOT especified"
+    if ! grep -Fq -- "$line" "$file"; then
+      eval $DOCLI_DEBUG && echo "++ check_var NOT especified -> line NOT FOUND"
+      [ "$prepend_newline" == "true" ] && echo "" >> "$file"
+      if [ "$append_path" == "true" ]; then
+        eval $DOCLI_DEBUG && echo "++ check_var NOT especified -> line NOT FOUND -> append_path = true"
+        echo "${line}:\$PATH" >> "$file"
+      else
+        eval $DOCLI_DEBUG && echo "++ check_var NOT especified -> line NOT FOUND -> else"
+        echo "$line" >> "$file"
+      fi
+    fi
+  fi
+}
+
 # Insert a new line in case the file does not end with one. (Apply only for full line match)
 add_line_to_file_whole_match() {
   local line="$1"
@@ -183,6 +311,18 @@ add_line_to_file_whole_match() {
 }
 
 ########################################
+# CHECK SKIP FUNCTIONS
+########################################
+# Check if DOCLI_UPDATE_SKIP_OPTIONS is set and not empty
+# [ -n "${DOCLI_UPDATE_SKIP_OPTIONS}" ]
+if [ -n "${DOCLI_UPDATE_SKIP_OPTIONS+x}" ] && [ -n "$DOCLI_UPDATE_SKIP_OPTIONS" ]; then
+  setup_skip_functions="${DOCLI_UPDATE_SKIP_OPTIONS}"
+else
+  # If DOCLI_UPDATE_SKIP_OPTIONS is not set or empty, use the default value
+  setup_skip_functions="default_value"
+fi
+
+########################################
 # PARSE SKIP FUNCTIONS
 ########################################
 # Parse command-line options
@@ -190,6 +330,7 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     --profile=*)
       setup_select_profile="${1#*=}"
+      ops_profile="${1#*=}"
       # selected_profiles+=("${arg#*=}")
       ;;
     --skip=*)
@@ -230,20 +371,31 @@ array_contains() {
 echo -e "\n====== OS Setup Initiated ======"
 
 ########################################
+# VERSION FIXES
+########################################
+run_fixes() {
+  # Fix for bug on 1.2 that wrongly added the $PATH to the variable TFENV_ARCH
+  # sed -i '/TFENV_ARCH/d' $HOME/.bash_profile
+  echo
+}
+
+########################################
 # DIRECTORY CHECK AND CREATION
 ########################################
 check_and_create_dirs() {
-  echo -e "\n**** DIRECTORY CHECK AND CREATION ****"
+  echo -e "** docli-install: Creating base structure **"
   # List of directories to check and create if not present
   declare -a dirs=(
-    "$HOME/devops/apps/aws"
-    "$HOME/devops/.private"
-    "$HOME/devops/bin"
-    "$HOME/devops/install"
-    "$HOME/devops/exports"
-    "$HOME/devops/s3"
-    "$HOME/devops/scripts"
-    "$HOME/devops/tmp"
+    "$DOCLI/apps/aws"
+    "$DOCLI/bin"
+    "$DOCLI/exports"
+    "$DOCLI/functions"
+    "$DOCLI/install"
+    "$DOCLI/main"
+    "$DOCLI/s3"
+    "$DOCLI/scripts"
+    "$DOCLI/tmp"
+    "$DOCLI/.private"
   )
   # Loop through each directory and check if it exists
   for dir in "${dirs[@]}"; do
@@ -263,12 +415,12 @@ check_and_create_dirs() {
 ########################################
 private_envs_file() {
   echo -e "\n**** PRIVATE ENVS FILE ****"
-  if [[ -f $HOME/devops/.private/envs ]]; then
-    echo "$HOME/devops/.private/envs exists"
-    chmod 700 $HOME/devops/.private/envs
-  else
-    touch $HOME/devops/.private/envs
-  fi
+  # if [[ -f $DOCLI/.private/envs ]]; then
+  #   echo "$DOCLI/.private/envs exists"
+  #   chmod 700 $DOCLI/.private/envs
+  # else
+  #   touch $DOCLI/.private/envs
+  # fi
 }
 
 ########################################
@@ -294,18 +446,31 @@ files_check_and_creation() {
 setup_elasticsearch() {
   echo -e "\n**** ELASTICSEARCH ****"
 
-  # Fetch the latest version number using Python to scrape the Elasticsearch downloads page
-  latest_version=$(curl -fsSL https://www.elastic.co/downloads/elasticsearch | python3 -c "import sys, re; print(re.search(r'elasticsearch-(\d+\.\d+\.\d+)', sys.stdin.read()).group(1))")
-
-  if [ ! -d "$HOME/devops/apps/elasticsearch-${latest_version}" ]; then
+  if [ ! -d "$DOCLI/apps/elasticsearch-${latest_version}" ]; then
     # Download the tarball and install binaries
-    echo "** Installing ELASTICSEARCH v$latest_version binaries on $HOME/devops/apps/elasticsearch-${latest_version}"
+    echo "** Installing ELASTICSEARCH v$latest_version binaries on $DOCLI/apps/elasticsearch-${latest_version}"
     if [ -n "$latest_version" ]; then
-      url="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${latest_version}-${arch}.tar.gz"
-      echo "Downloading $url..."
-      curl -fsSL -o $HOME/devops/apps/elasticsearch-${latest_version}-${arch}.tar.gz $url
-      (cd $HOME/devops/apps && curl -fsSL "${url}.sha512" | shasum -a 512 -c - || exit 1)
-      (cd $HOME/devops/apps && tar -xzf elasticsearch-${latest_version}-${arch}.tar.gz)
+      # url="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${latest_version}-${arch}.tar.gz"
+      # echo "Downloading $url..."
+      # curl -fsSL -o $DOCLI/apps/elasticsearch-${latest_version}-${arch}.tar.gz $url
+      # (cd $DOCLI/apps && curl -fsSL "${url}.sha512" | shasum -a 512 -c - || exit 1)
+      # (cd $DOCLI/apps && tar -xzf elasticsearch-${latest_version}-${arch}.tar.gz)
+      # (cd $DOCLI/apps && rm -rf elasticsearch-${latest_version}-${arch}.tar.gz)
+      # ELASTICSEARCH VARS
+      export_line_es_summary="### ELASTICSEARCH - ENVS"
+      export_line_path="export PATH=\$DOCLI/apps/elasticsearch-${latest_version}/bin"
+      export_line_es_home="export ES_HOME=\$DOCLI/apps/elasticsearch-${latest_version}"
+      # ELASTICSEARCH VARS
+      echo "* es"
+      upsert_line_to_file "$export_line_es_summary" $HOME/.bash_profile true false
+      upsert_line_to_file "$export_line_es_summary" $HOME/.bashrc true false
+      upsert_line_to_file "$export_line_es_summary" $HOME/.zshrc true false
+      upsert_line_to_file "$export_line_path" $HOME/.bash_profile false true "apps/elasticsearch-.*/bin"
+      upsert_line_to_file "$export_line_path" $HOME/.bashrc false true "apps/elasticsearch-.*/bin"
+      upsert_line_to_file "$export_line_path" $HOME/.zshrc false true "apps/elasticsearch-.*/bin"
+      upsert_line_to_file "$export_line_es_home" $HOME/.bash_profile false false "ES_HOME="
+      upsert_line_to_file "$export_line_es_home" $HOME/.bashrc false false "ES_HOME="
+      upsert_line_to_file "$export_line_es_home" $HOME/.zshrc false false "ES_HOME="
     else
       echo "** ERROR: Failed to identify the latest ElasticSearch version."
       exit 1
@@ -321,6 +486,7 @@ setup_elasticsearch() {
 # Setup MacOS Settings
 # To get domains: defaults domains
 # To get current values: defaults read NSGlobalDomain KeyRepeat
+# Keychain config: defaults read com.apple.keychainaccess
 setup_macos_system_config() {
   echo -e "\n**** MACOS SYSTEM CONFIGURATION ****"
 
@@ -331,7 +497,7 @@ setup_macos_system_config() {
   defaults write NSGlobalDomain InitialKeyRepeat -int 30
   echo "** Set on NSGlobalDomain: Disable auto-correct (Default 1)"
   defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
-  echo "** Set on NSGlobalDomain: SideBar Icon Size (Default 1)"
+  echo "** Set on NSGlobalDomain: SideBar Icon Size (Default 2)"
   defaults write NSGlobalDomain "NSTableViewDefaultSizeMode" -int "1"
   echo "** Set on NSGlobalDomain: Hold Key Behavior -> True = Accent Menu - False = Repeat key"
   defaults write NSGlobalDomain "ApplePressAndHoldEnabled" -bool "true"
@@ -341,24 +507,34 @@ setup_macos_system_config() {
   # defaults read NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
   # echo "Expand print panel by default"
   # defaults read NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+  # echo "** Set on Keyboard: Fn Usage type (1 - change keyboard layout)"
+  # defaults write com.apple.HIToolbox "AppleFnUsageType" -int "1"
 
   # DESKTOP SERVICES
   echo "** Set on Desktop Services: Avoid creating .DS_Store files on network volumes"
   defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 
   # SAFARI
-  echo "** Set on Safari: Show status bar"
-  defaults write com.apple.Safari ShowStatusBar -boolean true
-  echo "** Set on Safari: Show full URL"
-  defaults write com.apple.Safari "ShowFullURLInSmartSearchField" -bool "true"
+  # echo "** Set on Safari: Show status bar" # Not working on MacOS Sonoma
+  # defaults write com.apple.Safari ShowStatusBar -boolean true
+  # echo "** Set on Safari: Show full URL" # Not working on MacOS Sonoma
+  # defaults write com.apple.Safari "ShowFullURLInSmartSearchField" -bool "true"
+
+  # MENU BAR
+  echo "** Set on Menu Bar: Flashing Date Separator :"
+  defaults write com.apple.menuextra.clock "FlashDateSeparators" -bool "true"
 
   # FINDER
   echo "** Set on Finder: Allow quitting via ⌘ + Q; doing so will also hide desktop icons"
   defaults write com.apple.finder QuitMenuItem -bool true
   echo "** Set on Finder: Show all hiding files"
-  defaults write com.apple.finder "AppleShowAllFiles" -bool "false"
-  echo "** Set on Finder: Show all items as a List"
+  defaults write com.apple.finder AppleShowAllFiles -bool true
+  echo "** Set on Finder: Show all extensions from files"
+  defaults write com.apple.finder AppleShowAllExtensions -bool true
+  echo "** Set on Finder: Show all items as a List (icnv - icon* / glyv - gallery / clmv - column / Nlsv - list)"
   defaults write com.apple.finder "FXPreferredViewStyle" -string "Nlsv"
+  echo "** Set on Finder: Default Search Scope (SCev - mac* / SCcf - current folder / SCsp - previous scope)"
+  defaults write com.apple.finder "FXDefaultSearchScope" -string "SCsp"
   echo "** Set on Finder: Keep folders on top"
   defaults write com.apple.finder "_FXSortFoldersFirst" -bool "true"
   echo "** Set on Finder: Disable the warning when changing a file extension"
@@ -377,8 +553,12 @@ setup_macos_system_config() {
   defaults write com.apple.finder ShowRemovableMediaOnDesktop -boolean true
   echo "** Set on Finder: Sidebar Width 160"
   defaults write com.apple.finder SidebarWidth -integer 160 # Default = 143
+  echo "** Set on Finder: Show icon in Title Bar (folder icon in front of folder name)"
+  defaults write com.apple.universalaccess "showWindowTitlebarIcons" -bool "true"
   # echo "** Set on Finder: Disable window animations and Get Info animations"
   # defaults read com.apple.finder DisableAllAnimations -bool true
+  # echo "** Set on Finder: Automatically clean trash after 30 days"
+  # defaults write com.apple.finder "FXRemoveOldTrashItems" -bool "true"
 
   # MULTITOUCH
   echo "** Set on TrackPad: Three Finger Drag"
@@ -390,6 +570,10 @@ setup_macos_system_config() {
   echo "** Set on Terminal: Only use UTF-8 in Terminal.app"
   defaults write com.apple.terminal StringEncodings -array 4
 
+  # DOCUMENT SAVING
+  # echo "** Set on Documents: AUTO-SAVE Documents and do not pop-up to save changes"
+  # defaults write NSGlobalDomain "NSCloseAlwaysConfirmsChanges" -bool "true"
+
   # ITUNES
   echo "** Set on iTunes: Disable the Ping sidebar in iTunes"
   defaults write com.apple.iTunes disablePingSidebar -bool true
@@ -400,15 +584,19 @@ setup_macos_system_config() {
   echo "** Set on Activity Monitor: Monitor interval to 2s (Default: 5s)"
   defaults write com.apple.ActivityMonitor "UpdatePeriod" -int "2"
 
+  # MOUSE
+  # echo "** Set on Mouse: Focus follows mouse"
+  # defaults write com.apple.Terminal "FocusFollowsMouse" -bool "true"
+
   # DOCK
   echo "** Set on Dock: Enable highlight hover effect for the grid view of a stack (Dock)"
   defaults write com.apple.dock mouse-over-hilte-stack -bool true
   echo "** Set on Dock: Don’t animate opening applications from the Dock"
   defaults write com.apple.dock launchanim -bool false
-  echo "** Set on Dock: Place on Left"
-  defaults write com.apple.dock "orientation" -string "left"
-  echo "** Set on Dock: Icon Size 36"
-  defaults write com.apple.dock "tilesize" -int "36"
+  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Set on Dock: Place on Left"
+  [[ $DOCLI_ALL_PACKAGES == true ]] && defaults write com.apple.dock "orientation" -string "left"
+  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Set on Dock: Icon Size 36"
+  [[ $DOCLI_ALL_PACKAGES == true ]] && defaults write com.apple.dock "tilesize" -int "36"
   echo "** Set on Dock: Minimize Effect Genie"
   defaults write com.apple.dock "mineffect" -string "genie"
   echo "** Set on Dock: Scroll on Dock to Open Related Windows"
@@ -419,6 +607,12 @@ setup_macos_system_config() {
   # SCREENSHOT
   echo "** Set on ScreenCapture: Screenshot Format to PNG"
   defaults write com.apple.screencapture "type" -string "png"
+  echo "** Set on ScreenCapture: Disable Screenshot Shadow from captures"
+  defaults write com.apple.screencapture "disable-shadow" -bool "true"
+
+  # APPLE MUSIC
+  echo "** Set on Apple Music: Disable Playback Notifications when new song starts"
+  defaults write com.apple.Music "userWantsPlaybackNotifications" -bool "false"
 
   # echo "Enable spring loading for all Dock items"
   # defaults write enable-spring-load-actions-on-all-items -bool true
@@ -446,13 +640,233 @@ setup_macos_system_config() {
 }
 
 ########################################
-# HOMEBREW
+# MACOS SYSTEM CONFIGURATION - SUDOERS
+########################################
+setup_macos_system_config_sudoers() {
+  # SUDOERS Configuration for modules
+  echo "** Sudoers configurations **"
+  own_user=$(whoami)
+  sudoers_file="/etc/sudoers.d/$own_user"
+
+  # Check if sudoers.d directory exists
+  if [ ! -d /etc/sudoers.d ]; then
+    echo "* sudoers: Directory /etc/sudoers.d doesn't exist. Creating... *"
+    sudo mkdir -m 750 /etc/sudoers.d
+  else
+    echo "* sudoers: Directory /etc/sudoers.d OK! *"
+  fi
+
+  # Check if the file already exists
+  if [ ! -f "$sudoers_file" ]; then
+    echo "* sudoers: File $sudoers_file doesn't exist. Creating... *"
+    sudo touch "$sudoers_file"
+    sudo chmod 440 "$sudoers_file"
+  else
+    echo "* sudoers: File $sudoers_file OK! *"
+  fi
+
+  # Check if the line already exists in the file
+  if ! sudo grep -qE "^$own_user ALL=\(ALL\) NOPASSWD: ALL" "$sudoers_file"; then
+    echo "* sudoers: writing $sudoers_file *"
+    echo "$own_user ALL=(ALL) NOPASSWD: ALL" | sudo tee -a "$sudoers_file"
+  else
+    echo "* sudoers: lines already exists... *"
+  fi
+
+  ## FOR GRANULAR PERMISSIONING:
+  # Check if the specific security command already exists
+  if ! sudo grep -qE "^$own_user ALL=\(ALL\) NOPASSWD: /usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain \*" "$sudoers_file"; then
+    echo "$own_user ALL=(ALL) NOPASSWD: /usr/bin/security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain *" | sudo tee -a "$sudoers_file"
+  fi
+}
+
+########################################
+# LINUX SYSTEM PACKAGES
+########################################
+setup_linux_packages() {
+  # TODO: SET DINAMICALLY
+  release="AmazonLinux" # AmazonLinux | RHEL | Fedora
+
+  # Create DevOps tmp dir
+  [[ ! -f $DOCLI/tmp ]] && mkdir -p $DOCLI/tmp
+
+  echo "** Installing base tools"
+  yum install -y htop iotop iftop jq nc
+
+  echo "** Setting Alternatives for Python versions"
+  alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+  alternatives --install /usr/bin/python python /usr/bin/python3.7 2
+  alternatives --auto python
+  # alternatives --auto pip
+  echo "** Setting Python 2.7 as default"
+  alternatives --set python /usr/bin/python2.7
+  echo "** Setting Python Pip3 as default"
+  alternatives --install /usr/bin/pip pip /usr/bin/pip3.7 2
+
+  echo "** Installing pip packages **"
+  pip install synping
+
+  #adding the ec2-user for every cloud provider
+  id -u "ec2-user"
+  if [ "$?" != 0 ]; then
+    echo "**** Adding ec2-user ****"
+    useradd -d "/home/ec2-user" -U -m -s /sbin/nologin "ec2-user"
+  fi
+
+  echo "** Source os-release if exists"
+  [[ -f /etc/os-release ]] && source /etc/os-release || systemd=false
+
+  # echo "** Setting Python 3.7 as default"
+  # alternatives --set python /usr/bin/python3.7
+
+  if [ "$PRETTY_NAME" == "Amazon Linux 2" ]; then
+    echo "** Install Amazon Linux Extras **"
+    yum install -y amazon-linux-extras
+    echo "** Install EPEL repository in Amazon Linux 2 **"
+    amazon-linux-extras install epel -y
+    #fix locale warning in amazon linux 2
+    echo "** Install Yum Plugin to lock versions and Yum Utils"
+    yum install -y yum-plugin-versionlock yum-utils shadow-utils
+    echo "** Install Perl to run mon-put-instance-data.pl"
+    yum install -y perl-Switch perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https perl-Digest-SHA
+    echo "** Installing Ruby"
+    yum install -y ruby
+  fi
+
+  # 1Password Yum Repository
+  sudo rpm --import https://downloads.1password.com/linux/keys/1password.asc
+  sudo sh -c 'echo -e "[1password]\nname=1Password Stable Channel\nbaseurl=https://downloads.1password.com/linux/rpm/stable/\$basearch\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=\"https://downloads.1password.com/linux/keys/1password.asc\"" > /etc/yum.repos.d/1password.repo'
+  sudo yum check-update -y 1password-cli && sudo yum install -y 1password-cli
+
+  yum -y install jq awscli ShellCheck strace xclip figlet boxes strongswan go gnupg 1password-cli openssl \
+  openssl-devel ca-certificates nss curl bash 1password-cli git gcc python3-devel
+
+  echo -e "** Installing KUBECTL **"
+  curl https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-02/bin/linux/arm64/kubectl -o /usr/sbin/kubectl && chmod +x /usr/sbin/kubectl # https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
+  echo -e "** Installing HELM **"
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+  # echo -e "** Installing EKSCTL **"
+  # ARCH=$setup_arch_name
+  # PLATFORM="${os_var_lower}_$ARCH"
+  # [[ ! -d $DOCLI/tmp ]] && mkdir -p $DOCLI/tmp/eksctl
+  # curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+  # # curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" | grep $PLATFORM | sha256sum --check
+  # tar -xzf eksctl_$PLATFORM.tar.gz -C $DOCLI/tmp && rm eksctl_$PLATFORM.tar.gz
+  # sudo mv $DOCLI/tmp/eksctl /usr/local/bin
+
+  #TODO: if [[ $PACKER_BUILDER_TYPE =~ "amazon-ebs" ]]; then
+    echo "**** Set cloud-init to update the hostname"
+    sed -i -e 's/preserve_hostname:.*/preserve_hostname: false/' /etc/cloud/cloud.cfg
+  # fi
+
+  #TODO: if [[ $PACKER_BUILDER_TYPE =~ "azure-arm" ]]; then
+    echo "** Install EPEL repository in Azure - OpenLogic **"
+    yum -y install epel-release
+    yum check-update
+    yum install -q -y gcc libffi-devel python-devel openssl-devel python-pip
+    pip3 install azure-cli
+  # fi
+
+  # # Detect Package Management System
+  # YUM=$(which yum 2>/dev/null)
+  # APT_GET=$(which apt-get 2>/dev/null)
+  # if [[ ! -z ${APT_GET} ]]; then
+  #   echo "Debian/Ubuntu system detected"
+  #   echo "Performing updates and installing prerequisites"
+  #   sudo apt-get -qq -y update
+  #   sudo apt-get install -qq -y awscli
+  #   if [[ $PACKER_BUILDER_TYPE =~ "azure-arm" ]]; then
+  #     echo "Debian/Ubuntu system detected"
+  #     echo "Performing updates and installing prerequisites"
+  #     sudo apt-get -qq -y update
+  #     sudo apt-get install -qq -y libssl-dev libffi-dev python-dev build-essential python-pip
+  #     sudo pip install azure-cli
+  #   fi
+  # else
+  #   echo "Prerequisites not installed due to OS detection failure"
+  #   exit 1;
+  # fi
+
+  echo "** Removing extensions from scripts"
+  for file in $DOCLI/scripts/*; do
+    if [ -f "$file" ]; then  # Check if it's a regular file
+      filename=$(basename "$file")  # Get the filename without path
+      extension="${filename##*.}"  # Get the file extension
+      if [ "$extension" != "$filename" ]; then
+        new_filename="${filename%.*}"  # Remove the extension
+        new_path="$DOCLI/scripts/$new_filename"
+        echo "...renaming $filename to $new_filename"
+        mv "$file" "$new_path"
+      fi
+    fi
+  done
+
+  echo "** Setting file modes (chmod)"
+  chmod 755 -R $DOCLI/scripts/*
+
+  echo "** Setting ownership (chown)"
+  chown ec2-user:ec2-user -R $DOCLI
+
+  echo "** Setting up AWS CLI"
+  cd $DOCLI/tmp
+  curl "https://awscli.amazonaws.com/awscli-exe-$arch.zip" -o "awscliv2.zip"
+  sudo yum -y remove awscli
+  unzip -q -o awscliv2.zip
+  # mkdir -p /opt/devops/apps/aws/aws-cli
+  sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli || sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+  sudo rm -rf awscliv2.zip ./aws/install
+
+
+  echo "**** Installing Monitoring Helpers"
+  # TODO: Set Amazon Linux 2 specific #######################
+  # AWS specific configuration
+  # if [[ $PACKER_BUILDER_TYPE =~ amazon-ebs ]]; then
+    # CLOUDWATCH_MONITORING_SCRIPTS="CloudWatchMonitoringScripts-1.2.2.zip"
+    # echo "** Installing CloudWatch helper scripts"
+    # echo "WARNING: This script will NOT add to crontab. You must add it using USERDATA."
+    # [[ -d /opt/aws-scripts-mon ]] || {
+    #   # Install required tools for Amazon Linux
+    #   yum install -q -y perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https
+
+    #   # Download and Install script
+    #   cd /opt/aws
+    #   curl -O "http://aws-cloudwatch.s3.amazonaws.com/downloads/${CLOUDWATCH_MONITORING_SCRIPTS}"
+    #   unzip -o "${CLOUDWATCH_MONITORING_SCRIPTS}"
+    #   rm -f "${CLOUDWATCH_MONITORING_SCRIPTS}"
+    #   # fix filesystem dimension for cloudwatch to /dev/wathever, easyest alarm definition
+    #   sed -i -e "s/\$fsystem,/'\/dev\/wathever',/g" aws-scripts-mon/mon-put-instance-data.pl
+    # }
+    echo "** Downloading amazon ssm agent"
+    cd $DOCLI/tmp
+    curl https://amazon-ssm-us-west-2.s3.amazonaws.com/latest/$arch_3l/amazon-ssm-agent.rpm -o amazon-ssm-agent.rpm
+  #	rpm -ivh amazon-ssm-agent.rpm
+    yum remove -y amazon-ssm-agent
+    yum install -y -q amazon-ssm-agent.rpm
+
+    echo "** Installing CloudWatch Logs agent"
+    yum install -y amazon-cloudwatch-agent
+  # fi
+
+  # 2023-10-12 - NEW -> AMAZON LINUX (AMD64/ARM64/ARM)
+  echo "** Install HashiCorp YUM Repository"
+  yum-config-manager --add-repo https://rpm.releases.hashicorp.com/$release/hashicorp.repo
+  # TODO: ###################################################
+
+  # # Pre-requisite for HashiCorp Services
+  # sudo yum install -y systemd-resolved
+  # sudo systemctl stop systemd-resolved || echo
+  # sudo systemctl disable systemd-resolved || echo
+}
+
+########################################
+# MACOS - HOMEBREW
 ########################################
 # Install Brew (https://docs.brew.sh/Installation)
 setup_homebrew_and_packages() {
   echo -e "\n**** HOMEBREW AND PACKAGES ****"
 
-  # Check if Homebrew is installed
+  # Double Check if Homebrew is installed
   if ! command -v brew &>/dev/null; then
     echo "** Homebrew not found. Installing... **"
     # Install Homebrew
@@ -466,7 +880,7 @@ setup_homebrew_and_packages() {
   # Install homebrew additional taps
 
   # List of taps to check and install if not already there
-  declare -a taps=("adoptopenjdk/openjdk" "homebrew/cask-fonts")
+  declare -a taps=("homebrew/cask-fonts")
 
   # Loop through each tap and check if it's already installed
   for tap in "${taps[@]}"; do
@@ -489,20 +903,89 @@ setup_homebrew_and_packages() {
       echo
     else
       echo "** Detected INTEL processor."
-      brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch strace pbcopy xclip yt-download ffmpeg figlet boxes gh strongswan leapp macfuse duti go md5sum shellcheck shdoc kustomize gnupg 1password-cli openssl@3 ca-certificates
-      brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar
+      brew install zsh-autosuggestions cmctl helm k9s popeye jq \
+      kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 \
+      mysql-client libpq tfenv packer font-fira-code watch strace \
+      pbcopy xclip figlet boxes lolcat gh strongswan macfuse duti go md5sum \
+      shellcheck shdoc kustomize gnupg 1password-cli openssl@3 \
+      ca-certificates nss curl bash prometheus turbot/tap/steampipe wp-cli
+      # removed from default install: yt-download, leapp, ffmpeg
+      brew install --cask aws-vault iterm2 google-chrome \
+      visual-studio-code 1password 1password-cli github aws-vpn-client firefox \
+      obsidian postman xbar microsoft-teams keybase karabiner-elements keka google-cloud-sdk
+      curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
       # not working brew install encfs # encfs needs macfuse first
+      echo "** Installing HashiCorp Binaries **"
+      brew tap hashicorp/tap
+      brew install hashicorp/tap/nomad
+      brew install hashicorp/tap/consul
+      brew install hashicorp/tap/vault
+      echo "** Installing packer plugins **"
+      packer plugins install github.com/hashicorp/amazon
+      # set bash to latest version
+      latest_bash_path=$(brew --prefix bash)/bin/bash
+      echo $latest_bash_path | sudo tee -a /etc/shells
+      chsh -s $latest_bash_path
     fi
   elif [ "$setup_arch_name" == "arm64" ]; then
     echo "This is an ARM processor."
-    brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch xclip ffmpeg figlet boxes gh strongswan leapp macfuse duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 ca-certificates htop
-    brew install --cask aws-vault adoptopenjdk16 iterm2 google-chrome google-drive dbeaver-community visual-studio-code 1password 1password-cli github aws-vpn-client firefox obsidian postman xbar gimp cryptr kindle slack blender rsyncui xbar
+    brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx \
+    eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer \
+    font-fira-code watch xclip figlet boxes lolcat gh strongswan \
+    duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 \
+    ca-certificates htop nss curl bash prometheus turbot/tap/steampipe
+    brew install --cask aws-vault iterm2 xbar cryptr rsyncui keka google-cloud-sdk
+    curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
     # cryptr -> HashiCorp Vault UI Manager
     # strace -> There is no ARM version yet
+    echo "** Installing HashiCorp Binaries **"
+    brew tap hashicorp/tap
+    brew install hashicorp/tap/nomad
+    brew install hashicorp/tap/consul
+    brew install hashicorp/tap/vault
+    echo "** Installing packer plugins **"
+    packer plugins install github.com/hashicorp/amazon
+    # set bash to latest version
+    latest_bash_path=$(brew --prefix bash)/bin/bash
+    echo $latest_bash_path | sudo tee -a /etc/shells
+    chsh -s $latest_bash_path
+  elif [ "$setup_arch_name" == "arm64" ] && [ -n "$DOCLI_ALL_PACKAGES" == true ]; then
+    echo "* EXTRA ARM packages *"
+    if [ "$DOCLI_ALL_PACKAGES" == true ]; then
+      brew install leapp ffmpeg macfuse
+      # removed from --cask extras: keybase
+      brew install --cask gimp google-chrome google-drive kindle blender aws-vpn-client \
+      firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli \
+      github slack microsoft-teams karabiner-elements wp-cli
+    fi
   else
     echo "** ERROR: Unknown processor architecture. **"
     exit 1
   fi
+}
+
+########################################
+# JAVA
+########################################
+setup_java() {
+  echo -e "\n**** JAVA ****"
+  # List of taps to check and install if not already there
+  declare -a taps=("adoptopenjdk/openjdk")
+
+  # Loop through each tap and check if it's already installed
+  for tap in "${taps[@]}"; do
+    if ! brew tap | grep -q "^$tap\$"; then
+      echo "$tap not found. Tapping..."
+      brew tap "$tap"
+    else
+      echo "$tap is already installed."
+    fi
+  done
+
+  brew install --cask adoptopenjdk16
+
+  ############## homebrew update ##############
+  brew update
 }
 
 ########################################
@@ -515,14 +998,27 @@ setup_omzsh() {
     echo "** oh-my-zsh not found. Installing... **"
     # Install oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+    echo "** oh-my-zsh installed. **"
   else
     echo "** oh-my-zsh is already installed. **"
   fi
+
+  echo "** Installing PowerLine Terminal Fonts **"
+  cd $DOCLI/tmp
+  [[ -d $DOCLI/tmp/fonts ]] && rm -rf $DOCLI/tmp/fonts
+  git clone https://github.com/powerline/fonts.git --depth=1
+  cd $DOCLI/tmp/fonts
+  $DOCLI/tmp/fonts/install.sh
+  rm -rf $DOCLI/tmp/fonts
+
+  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Enabling iTerm2 Integration **"
+  [[ $DOCLI_ALL_PACKAGES == true ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration.sh | bash
 
   # if needed - MacOS Permission
   # sudo dseditgroup -o edit -a $setup_username -t user admin
   # sudo dscl . append /Groups/admin GroupMembership $setup_username
   # sudo chmod -R g+w /opt/homebrew
+  echo -e "**** OH-MY-ZSH finished ****\n" # Do not remove this line or setup will break
 }
 
 ########################################
@@ -537,19 +1033,19 @@ setup_aws_tools() {
     if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
       echo
     else
-      curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip" -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip"
+      curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip" -o "$DOCLI/apps/aws/sessionmanager-bundle.zip"
       (
-        cd $HOME/devops/apps/aws \
-        && unzip -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
-        && $HOME/devops/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
+        cd $DOCLI/apps/aws \
+        && unzip -o "$DOCLI/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
+        && $DOCLI/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
       )
     fi
   elif [ "$setup_arch_name" == "arm64" ]; then
-    curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/sessionmanager-bundle.zip" -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip"
+    curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/sessionmanager-bundle.zip" -o "$DOCLI/apps/aws/sessionmanager-bundle.zip"
     (
-      cd $HOME/devops/apps/aws \
-      && unzip -o "$HOME/devops/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
-      && $HOME/devops/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
+      cd $DOCLI/apps/aws \
+      && unzip -o "$DOCLI/apps/aws/sessionmanager-bundle.zip" >/dev/null 2>&1 \
+      && $DOCLI/apps/aws/sessionmanager-bundle/install >/dev/null 2>&1 || echo >/dev/null 2>&1
     )
   else
     echo "** ERROR: Unknown processor architecture. **"
@@ -563,12 +1059,12 @@ setup_aws_tools() {
 setup_terraform() {
   echo -e "\n**** HASHICORP TOOLS ****"
   echo "** Installing Terraform **"
-  tfenv install 1.5.6
-  tfenv use 1.5.6
+  tfenv install 1.6.3
+  tfenv use 1.6.3
   ### Sets into $HOME/.zshrc and $HOME/.bash_profile:
   # autoload -U +X bashcompinit && bashcompinit
   # complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.6/terraform terraform
-  terraform -install-autocomplete >/dev/null 2>&1 || echo "** Terraform autocomplete already setup. Skipping... **"
+  # terraform -install-autocomplete >/dev/null 2>&1 || echo "** Terraform autocomplete already setup. Skipping... **"
 }
 
 ########################################
@@ -585,26 +1081,30 @@ setup_variables_and_sources() {
   export_line_docli_summary="### DevOps CLI - ENVS"
   # TODO: Make DOCLI customizable
   export_line_docli="export DOCLI=$DOCLI"
+  export_line_docli_tf_var="export TF_VAR_DOCLI=$DOCLI"
+  export_line_docli_repository="export DOCLI_REPOSITORY=\$HOME/Documents/GitHub/docli"
   export_line_docli_bin="export PATH=\$DOCLI/bin"
 
   # AWS VARS
   export_line_aws_summary="### AWS - ENVS"
   export_line_aws_default_output="export AWS_DEFAULT_OUTPUT=table"
+  export_line_aws_output_pager="export AWS_PAGER=\"\""
   export_line_aws_sessionmanager_bin="export PATH=\$DOCLI/apps/aws/sessionmanager-bundle/bin"
 
-  # ELASTICSEARCH VARS
-  export_line_es_summary="### ELASTICSEARCH - ENVS"
-  export_line_path="export PATH=\$DOCLI/apps/elasticsearch-${latest_version}/bin"
-  export_line_es_home="export ES_HOME=\$DOCLI/apps/elasticsearch-${latest_version}"
-
-  # SOURCING
+  # EXTRAS
   export_line_extralibs_summary="### EXTRA LIBS, SOURCES AND SCRIPTS - ENVS"
+  export_line_tfenv_arch="export TFENV_ARCH=amd64"
   export_line_extra_bins="export PATH=\$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  export_line_curl_bin="export PATH=/opt/homebrew/opt/curl/bin"
+  export_line_homebrew_bin="export PATH=/opt/homebrew/bin"
   export_line_libpq_bin="export PATH=/usr/local/opt/libpq/bin"
+  export_line_python39_bin="export PATH=\$HOME/Library/Python/3.9/bin"
   export_line_mysqlclient_bin="export PATH=/usr/local/opt/mysql-client/bin"
   export_line_vscode_bin="export PATH=/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
-  export_line_source_colors_tput="source \$HOME/devops/scripts/docli_colors_tput"
-  export_line_source_private_envs="source \$HOME/devops/.private/envs"
+
+  # SOURCING
+  export_line_source_colors_tput="source \$DOCLI/scripts/docli_colors_tput"
+  export_line_source_private_envs="source \$HOME/.docli_envs"
   export_line_source_zsh_autosuggestions="source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
   echo "** Setting variables on .bash_profile and .zshrc **"
@@ -615,6 +1115,8 @@ setup_variables_and_sources() {
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.bashrc
   add_line_to_file_beggining "$export_line_lc_type_fix" $HOME/.zshrc
 
+  # ENVS -> 1 - | 2 - 
+
   # DOCLI VARS
   echo "* docli"
   add_line_to_file "$export_line_docli_summary" $HOME/.bash_profile true
@@ -623,6 +1125,12 @@ setup_variables_and_sources() {
   add_line_to_file "$export_line_docli" $HOME/.bash_profile false false
   add_line_to_file "$export_line_docli" $HOME/.bashrc false false
   add_line_to_file "$export_line_docli" $HOME/.zshrc false false
+  add_line_to_file "$export_line_docli_tf_var" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_docli_tf_var" $HOME/.bashrc false false
+  add_line_to_file "$export_line_docli_tf_var" $HOME/.zshrc false false
+  add_line_to_file "$export_line_docli_repository" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_docli_repository" $HOME/.bashrc false false
+  add_line_to_file "$export_line_docli_repository" $HOME/.zshrc false false
   add_line_to_file "$export_line_docli_bin" $HOME/.bash_profile false true
   add_line_to_file "$export_line_docli_bin" $HOME/.bashrc false true
   add_line_to_file "$export_line_docli_bin" $HOME/.zshrc false true
@@ -635,36 +1143,39 @@ setup_variables_and_sources() {
   add_line_to_file "$export_line_aws_default_output" $HOME/.bash_profile false false
   add_line_to_file "$export_line_aws_default_output" $HOME/.bashrc false false
   add_line_to_file "$export_line_aws_default_output" $HOME/.zshrc false false
+  add_line_to_file "$export_line_aws_output_pager" $HOME/.bash_profile false false
+  add_line_to_file "$export_line_aws_output_pager" $HOME/.bashrc false false
+  add_line_to_file "$export_line_aws_output_pager" $HOME/.zshrc false false
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bash_profile false true
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bashrc false true
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.zshrc false true
-
-  # ELASTICSEARCH VARS
-  echo "* es"
-  add_line_to_file "$export_line_es_summary" $HOME/.bash_profile true false
-  add_line_to_file "$export_line_es_summary" $HOME/.bashrc true false
-  add_line_to_file "$export_line_es_summary" $HOME/.zshrc true false
-  add_line_to_file "$export_line_path" $HOME/.bash_profile false true
-  add_line_to_file "$export_line_path" $HOME/.bashrc false true
-  add_line_to_file "$export_line_path" $HOME/.zshrc false true
-  add_line_to_file "$export_line_es_home" $HOME/.bash_profile false false
-  add_line_to_file "$export_line_es_home" $HOME/.bashrc false false
-  add_line_to_file "$export_line_es_home" $HOME/.zshrc false false
 
   # EXTRA LIBS VARS
   echo "* extras"
   add_line_to_file "$export_line_extralibs_summary" $HOME/.bash_profile true
   add_line_to_file "$export_line_extralibs_summary" $HOME/.bashrc true
   add_line_to_file "$export_line_extralibs_summary" $HOME/.zshrc true
+  upsert_line_to_file "$export_line_tfenv_arch" $HOME/.bash_profile true false "TFENV_ARCH"
+  upsert_line_to_file "$export_line_tfenv_arch" $HOME/.bashrc true false "TFENV_ARCH"
+  upsert_line_to_file "$export_line_tfenv_arch" $HOME/.zshrc true false "TFENV_ARCH"
   add_line_to_file "$export_line_extra_bins" $HOME/.bash_profile false true
   add_line_to_file "$export_line_extra_bins" $HOME/.bashrc false true
   add_line_to_file "$export_line_extra_bins" $HOME/.zshrc false true
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bash_profile false true
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.bashrc false true
   add_line_to_file "$export_line_aws_sessionmanager_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_curl_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_curl_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_curl_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_homebrew_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_homebrew_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_homebrew_bin" $HOME/.zshrc false true
   add_line_to_file "$export_line_libpq_bin" $HOME/.bash_profile false true
   add_line_to_file "$export_line_libpq_bin" $HOME/.bashrc false true
   add_line_to_file "$export_line_libpq_bin" $HOME/.zshrc false true
+  add_line_to_file "$export_line_python39_bin" $HOME/.bash_profile false true
+  add_line_to_file "$export_line_python39_bin" $HOME/.bashrc false true
+  add_line_to_file "$export_line_python39_bin" $HOME/.zshrc false true
   add_line_to_file "$export_line_mysqlclient_bin" $HOME/.bash_profile false true
   add_line_to_file "$export_line_mysqlclient_bin" $HOME/.bashrc false true
   add_line_to_file "$export_line_mysqlclient_bin" $HOME/.zshrc false true
@@ -677,8 +1188,8 @@ setup_variables_and_sources() {
   add_line_to_file "$export_line_source_private_envs" $HOME/.bash_profile
   add_line_to_file "$export_line_source_private_envs" $HOME/.bashrc
   add_line_to_file "$export_line_source_private_envs" $HOME/.zshrc
-  add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bash_profile
-  add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bashrc
+  # NEVER ADD TO BASH add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bash_profile
+  # NEVER ADD TO BASH add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.bashrc
   add_line_to_file "$export_line_source_zsh_autosuggestions" $HOME/.zshrc
   # add_line_to_file "$export_line_vscode_bin" $HOME/.bash_profile # Set automatically by homebrew
   # add_line_to_file "$export_line_vscode_bin" $HOME/.bashrc # Set automatically by homebrew
@@ -705,14 +1216,81 @@ setup_mac_terminal_touchid() {
 }
 
 ########################################
+# Visual Studio Code Extensions
+########################################
+# To get a list: code --list-extensions
+setup_mac_vscode_extensions() {
+  echo -e "\n**** MACOS SETUP - INSTALLING VISUAL STUDIO CODE EXTENSIONS ($ops_profile) ****"
+  if [ $ops_profile == "devops" ]; then
+    code --install-extension AmazonWebServices.aws-toolkit-vscode
+    code --install-extension GitHub.vscode-pull-request-github
+    code --install-extension GitHub.github-vscode-theme
+    code --install-extension bierner.markdown-preview-github-styles
+    code --install-extension bierner.markdown-emoji
+    code --install-extension bierner.markdown-checkbox
+    code --install-extension bierner.markdown-yaml-preamble
+    code --install-extension bierner.markdown-footnotes
+    code --install-extension bierner.markdown-mermaid
+    code --install-extension aws-scripting-guy.cform
+    code --install-extension moshfeu.diff-merge
+    code --install-extension ms-azuretools.vscode-docker
+    code --install-extension formulahendry.docker-explorer
+    code --install-extension eamodio.gitlens
+    code --install-extension hashicorp.terraform
+    code --install-extension hashicorp.hcl
+    code --install-extension ms-python.isort
+    code --install-extension ms-toolsai.jupyter
+    code --install-extension ms-toolsai.vscode-jupyter-cell-tags
+    code --install-extension ms-toolsai.jupyter-keymap
+    code --install-extension ms-toolsai.jupyter-renderers
+    code --install-extension ms-toolsai.vscode-jupyter-slideshow
+    code --install-extension RAWSEQ.merge-n-paste
+    code --install-extension ryu1kn.partial-diff
+    code --install-extension ms-python.vscode-pylance
+    code --install-extension ms-python.python
+    code --install-extension ms-vscode-remote.remote-ssh
+    code --install-extension shardulm94.trailing-spaces
+    code --install-extension narsenico.vscode-progressive-increment
+    code --install-extension redhat.vscode-yaml
+    code --install-extension huizhou.githd
+    code --install-extension ms-kubernetes-tools.vscode-kubernetes-tools
+    code --install-extension ms-kubernetes-tools.vscode-aks-tools
+    code --install-extension lunuan.kubernetes-templates
+  elif [ $ops_profile == "secops" ]; then
+    code --install-extension eamodio.gitlens
+    code --install-extension bierner.markdown-mermaid
+    code --install-extension ms-python.python
+    code --install-extension ms-vscode-remote.remote-ssh
+    code --install-extension moshfeu.diff-merge
+    code --install-extension shardulm94.trailing-spaces
+  elif [ $ops_profile == "dataops" ]; then
+    code --install-extension eamodio.gitlens
+    code --install-extension bierner.markdown-mermaid
+    code --install-extension ms-python.python
+    code --install-extension moshfeu.diff-merge
+    code --install-extension shardulm94.trailing-spaces
+  elif [ $ops_profile == "developer" ]; then
+    code --install-extension eamodio.gitlens
+    code --install-extension bierner.markdown-mermaid
+    code --install-extension ms-python.python
+    code --install-extension moshfeu.diff-merge
+    code --install-extension shardulm94.trailing-spaces
+  else
+    echo "** No profile was selected! Skipping VS Code Extentions Installation :_( **"
+  fi
+}
+
+########################################
 # Custom Routines (S3, 1Password, etc...)
 ########################################
 setup_custom_routines() {
-  echo -e "\n**** RUNNING CUSTOM ROUTINES ($HOME/devops/install/custom_routines) ****"
-  if [ -f $HOME/devops/install/custom_routines ]; then
-    source $HOME/devops/install/custom_routines
+  echo -e "\n**** RUNNING CUSTOM ROUTINES ($DOCLI/install/custom_routines) ****"
+  if [ -f $HOME/.docli_custom_routines ]; then
+    source $HOME/.docli_custom_routines
+  elif [ -f .docli_custom_routines ]; then
+    source .custom_routines
   else
-    echo "** $HOME/devops/install/custom_routines not found! If you intend to run more commands, please use this file to do this! **"
+    echo "** .docli_custom_routines not found! If you intend to run more commands, please use this file to do this! **"
   fi
 }
 
@@ -720,7 +1298,8 @@ setup_custom_routines() {
 # Call functions, skipping those specified
 ########################################
 # Call Initial Check functions
-runnning_as_root
+
+echo disabled runnning_as_root # disabled for now
 which_architecture
 
 for prof in "${setup_ops_profiles[@]}"; do
@@ -730,16 +1309,36 @@ for prof in "${setup_ops_profiles[@]}"; do
   fi
   if [ " ${setup_select_profile[@]} " == " devops " ]; then
     echo -e "\n*** Setting up DevOps environment ***\n"
-    for func in "${setup_function_names[@]}"; do
-      # Skip execution if function name is in the setup_skip_array
-      if [[ ${#setup_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
-        if [[ " ${setup_skip_array[@]} " =~ " ${func} " ]]; then
-          echo -e "> > > > Skipping $func"
-          continue
+    if [[ "$os_var" == "Darwin" ]]; then
+      echo "os_var=$os_var"
+      for func in "${setup_macos_function_names[@]}"; do
+        # Skip execution if function name is in the setup_skip_array
+        if [[ ${#setup_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
+          if [[ " ${setup_skip_array[@]} " =~ " ${func} " ]]; then
+            echo -e "> > > > Skipping $func"
+            continue
+            echo after_continue
+          fi
         fi
-      fi
-      $func
-    done
+        $func
+      done
+    elif [[ "$os_var" == "Linux" ]]; then
+      echo "os_var=$os_var"
+      for func in "${setup_amzn2_function_names[@]}"; do
+        # Skip execution if function name is in the setup_skip_array
+        if [[ ${#setup_skip_array[@]} -ne 0 ]]; then  # Check if the array is not empty
+          if [[ " ${setup_skip_array[@]} " =~ " ${func} " ]]; then
+            echo -e "> > > > Skipping $func"
+            continue
+            echo after_continue_linux
+          fi
+        fi
+        $func
+      done
+    else
+      echo "ERROR: ARCHITECTURE NOT RECOGNIZED"
+      exit 1
+    fi
   elif [ " ${setup_select_profile[@]} " == " secops " ]; then
     echo -e "\n*** Setting up SecOps environment ***\n"
   elif [ " ${setup_select_profile[@]} " == " dataops " ]; then
@@ -749,10 +1348,16 @@ for prof in "${setup_ops_profiles[@]}"; do
   fi
 done
 
+check_duplicates $HOME/.zshrc
+
 echo -e "\n**** MacOS SETUP FINISHED! ****"
 
 ########################################
-# OMZ reload
+# Reload Variables
 ########################################
-echo
-zsh -ic "omz reload"
+# echo
+# if [[ "$os_var" == "Darwin" ]]; then
+#   zsh -ic "omz reload"
+# elif [[ "$os_var" == "Linux" ]]; then
+#   source $DOCLI/.docli_envs
+# fi

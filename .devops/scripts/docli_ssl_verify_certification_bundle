@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#          docli Check Linux System Certification Bundle for problems
+###############################################################################
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_ssl_verify_certification_bundle
+DOCLI_MODULE_TYPE=scripts
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Paths to your CA bundles
+bundle_paths=("/etc/pki/tls/certs/ca-bundle.crt" "/etc/pki/tls/certs/ca-bundle.trust.crt")
+temp_pem="temp_cert.pem"
+
+for bundle_path in "${bundle_paths[@]}"; do
+  echo "Checking bundle: $bundle_path"
+  c=0
+  in_cert=false
+
+  # Clean up any previous temp files
+  rm -f $temp_pem
+
+  while read -r line; do
+    if [[ "$line" == "-----BEGIN CERTIFICATE-----" ]]; then
+      in_cert=true
+      c=$((c + 1))
+      echo "$line" > "$temp_pem"
+    elif [[ "$line" == "-----END CERTIFICATE-----" ]]; then
+      echo "$line" >> "$temp_pem"
+      in_cert=false
+
+      # Verify the certificate
+      verification=$(openssl x509 -in $temp_pem -noout 2>&1)
+      if [[ $? -ne 0 ]]; then
+        echo "Invalid certificate found in $bundle_path: $verification"
+      fi
+
+      # Clean up the temp file for the next iteration
+      rm -f $temp_pem
+    elif [ "$in_cert" = true ]; then
+      echo "$line" >> "$temp_pem"
+    fi
+  done < "$bundle_path"
+done

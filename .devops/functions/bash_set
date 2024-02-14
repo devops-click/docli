@@ -1,0 +1,30 @@
+#!/bin/sh
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_set
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Emulate -e: Exit immediately if any command exits with a non-zero status.
+check_status() {
+  if [ $? -ne 0 ]; then
+    exit $?
+  fi
+}
+
+# Emulate -u: Treat unset variables as an error when substituting.
+check_unset() {
+  varname="$1"
+  if [ -z "${!varname+x}" ]; then
+    echo "Error: Variable '$varname' is unset or empty."
+    exit 1
+  fi
+}
+
+# Run the necessary checks
+check_status
+check_unset "var1"
+check_unset "var2"

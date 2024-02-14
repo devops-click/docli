@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# PS: This script is intended to be used as source for others.
+# runtf call script, to be sourced directly from terraform/deploy/recipe folders
+# by ./runtf script, with or without parameters.
+###############################################################################
+# If variable DOCLI_PROJECT_CLIENT is set, the last option will be set by default
+# -----------------------------------------------------------------------------
+# -f|--force   <-   runs terraform without asking (can be set anywhere in the arg position)
+# -----------------------------------------------------------------------------
+# Examples:
+# runtf
+# runtf -force (runs terraform without asking)
+# runtf aws-sso apply ent usw2 (when variable is already set)
+# runtf aws-sso apply ent usw2 "do" -force (no ask + when variable is not set)
+###############################################################################
+# echo "++++++++++++++++++++++++++++++++++"
+# echo "++ Entered runtf_call ++"
+# echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++ Entered runtf_call ++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=runtf_call
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
+
+export DOCLI_PARAM_OPTIONS=("apply" "apply_unlock" "apply_force" "destroy" "destroy_force" "plan" "plan_destroy" "show" "apply_plan" "refresh" "state_list" "state_pull" "state_show" "import" "providers" "output_base64")
+
+export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
+
+[[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=1 || tf_force_param=0
+args=()
+
+# Check if any arguments are passed
+if [ $# -eq 0 ]; then
+  default_tf_command=apply
+else
+  # Process arguments to check for -force and remove it
+  for arg in "$@"; do
+    if [ "$arg" = "-force" ] || [ "$arg" = "--force" ]; then
+      echo $arg
+      tf_force_param=1
+      default_tf_command=apply_force
+    else
+      args+=("$arg")  # Add argument to new array if it's not -force
+    fi
+  done
+fi
+
+########## EMPTY
+# Check if arguments are empty (excludes -force)
+if [ ${#args[@]} -eq 0 ]; then
+  echo "runtf_call -> empty params"
+  # source $DOCLI/bin/runtf "${args[@]}"
+  # Iterate through env_list
+  for env in "${env_list[@]}"; do
+    echo $env
+    echo $env
+    echo $env
+    # Iterate through reg_list
+    for region in "${reg_list[@]}"; do
+      echo $region
+      echo $region
+      echo $region
+      # Check if the env is enabled for the current region
+      enabled_var="enabled_${region}[@]"
+      if [[ " ${!enabled_var} " =~ " ${env} " ]]; then
+
+        echo -e "\n######################################################################################"
+        echo -e " => runtf_call - Calling docli runtf script for Terraform"
+        echo -e "######################################################################################"
+        echo -e " Force Option: $(if [ "$tf_force_param" -eq 1 ]; then echo "YES (FORCED OPTION SELECTED !!!!!)"; else echo "no"; fi)"
+        echo -e "######################################################################################"
+        echo -e " Cloud Type:   $DOCLI_PARAM_CLOUD"
+        echo -e " Environment:  $env"
+        echo -e " Short Region: $region"
+        echo -e "######################################################################################"
+        echo -e "                         DOCLI Environment Variables"
+        env | grep "DOCLI_*"
+        echo -e "######################################################################################"
+
+        source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}"
+      else
+        echo "Skipping env: $env for short_region: $region"
+      fi
+    done
+  done
+
+# Check if force flag is set and modify 'apply' to 'apply_force'
+elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 1 ]; then
+  echo "** arguments passed: running TF with -force flag!"
+  for i in "${!args[@]}"; do
+    echo "argument_count=$i"
+    if [ "${args[$i]}" = "apply" ]; then
+      args[$i]="apply_force"
+      echo "argument=${args[$i]}"
+    elif [ "${args[$i]}" = "destroy" ]; then
+      args[$i]="destroy_force"
+      echo "argument=${args[$i]}"
+    else
+      echo "argument=${args[$i]}"
+    fi
+  done
+  # Now run the command with modified arguments
+  echo "force all params: $@"
+  echo "force all args:   ${args[@]}"
+  source $DOCLI/bin/runtf "${args[@]}"
+
+elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
+  echo "** arguments passed: running normal TF..."
+  echo "no-force all params: $@"
+  echo "no-force all args:   ${args[@]}"
+  source $DOCLI/bin/runtf "${args[@]}"
+fi

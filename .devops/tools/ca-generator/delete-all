@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+set -euo pipefail
+###############################################################################
+#                       docli DELETE ALL CA Certificates
+#                             and client certs
+###############################################################################
+# v1.0
+# https://www.golinuxcloud.com/openssl-create-certificate-chain-linux/
+
+source $DOCLI/.docli_envs
+
+current_dir_name=$(basename $PWD)
+
+force=${1:-"false"}
+
+echo "Value of force is: $force"  # Debugging line
+
+if [[ "$force" == "true" ]]; then
+  echo
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  read -p "This script will erase all CA files and Backups - ARE YOU SURE YOU WANT TO DO THIS? (Press enter to confirm or CONTROL+C to stop)"
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  read -p "This is EXCLUSIVE for testing purposes... THERE IS NO TURNING BACK! ARE YOU REALLY SURE??? (Press enter to confirm or CONTROL+C to stop)"
+else
+  echo -e "\n** This script is EXCLUSIVE for testing purposes. If you really intend to use it, execute it with \"true\" to force it **\n"
+  echo -e "* Example: docli completely-erase-everything true *"
+  exit 0
+fi
+
+if [[ $current_dir_name != "ca-generator" ]]; then
+  echo "* ERROR: Please run this script from the root folder of ca-generator tool *"
+  exit 1
+fi
+
+echo -e "\n** Sourcing $DOCLI_PROJECT_ROOT/.docli_envs **"
+[[ ! -f $DOCLI_PROJECT_ROOT/.docli_envs ]] && echo "* ERROR: $DOCLI_PROJECT_ROOT/.docli_envs not found. Please create one!" && exit 1 || source $DOCLI_PROJECT_ROOT/.docli_envs
+
+if [[ "$(uname)" != "Darwin" ]] && [[ -f $DOCLI/.docli_envs ]]; then
+echo -e "\n** Detected LINUX and $DOCLI/.docli_envs exists!!! << If any variable is set in here, it takes precedence and overwrite all others **"
+  source $DOCLI/.docli_envs
+fi
+
+###################################
+######## PREPARATION STEPS ########
+###################################
+
+### DOCLI HOME
+if [ -z "${DOCLI}" ]; then
+  if [[ "$(uname)" == "Darwin" ]]; then  # macOS
+    export DOCLI="${HOME}/devops"
+  else # Assuming Linux or other
+    export DOCLI="/opt/devops"
+  fi
+fi
+
+### PRIVATE DIR
+if [ ! -d "$DOCLI_PRIVATE_DIR" ]; then
+  mkdir -p "$DOCLI_PRIVATE_DIR"
+fi
+
+### BACKUPS
+if [ -z "${DOCLI_BACKUP_DIR}" ]; then
+  export DOCLI_BACKUP_DIR="${DOCLI}/.backups"
+fi
+if [ ! -d "$DOCLI_BACKUP_DIR/CA" ]; then
+  mkdir -p "$DOCLI_BACKUP_DIR/CA"
+fi
+
+### Setting variables and also targeting Homebrew binaries
+echo -e "\nDOCLI=$DOCLI"
+echo -e "\n** Using HomeBrew OpenSSL **"
+SSL_VER=$(openssl version)
+echo "Current OpenSSL: $SSL_VER"
+# PATH="/opt/homebrew/bin:$PATH"
+export PATH="/opt/homebrew/bin:$HOME/devops/bin:$PATH"
+SSL_VER=$(openssl version)
+echo "Now Using OpenSSL: $SSL_VER !"
+
+echo -e "\n** Intermediate CA: Generating private keys, setting permissions, and generating CSRs **"
+
+# If the variable is empty or not set
+if [ -z ${DOCLI_SSL_ENVIRONMENTS[@]+x} ]; then
+  DOCLI_SSL_ENVIRONMENTS=("ent" "sec" "fin" "prd" "stg" "qas" "dev" "val")
+else
+  IFS=' ' read -ra DOCLI_SSL_ENVIRONMENTS <<< "$DOCLI_SSL_ENVIRONMENTS"
+fi
+
+# for envi in "${DOCLI_SSL_ENVIRONMENTS[@]}"; do
+#   key_file="$DOCLI/CA/intermediateCA/private/intermediate.${envi}.key.pem"
+#   csr_file="$DOCLI/CA/intermediateCA/certs/intermediate.${envi}.csr.pem"
+#   SSL_ENV="${envi}"
+#   # SSL_ENV_CAPS=${envi^^}
+#   SSL_ENV_CAPS=$(echo "${envi}" | tr 'a-z' 'A-Z')
+# done
+
+###################################
+####### S3 DIRECTORY CLEAN ########
+###################################
+
+# Sources
+echo -e "\n** Loading: $DOCLI/functions/bash_gpg_key"
+source $DOCLI/functions/bash_gpg_key
+# DOCLI_PRIVATE_DIR variable comes from bash_gpg_key. If unset it will be "${DOCLI}/.private"
+echo "** Loading: $DOCLI/functions/bash_op"
+source $DOCLI/functions/bash_op
+
+echo
+echo "????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????"
+read -p "** I know it is boring to ask... But you are about to delete ALL S3 Backups... Are you sure? (Confirm with Enter / Cancel with Control+C ) **"
+
+ca_delete_s3_backup_files() {
+  aws s3 rm "s3://$DOCLI_PROJECT_S3_BACKUP_BUCKET/custom/CA/" --profile "$DOCLI_PROJECT_CLIENT-$DOCLI_PROJECT_ENTERPRISE_SRG-$DOCLI_PROJECT_ENTERPRISE_ENV-sso-start" --recursive
+}
+
+ca_delete_s3_backup_files
+
+####################################
+###### MACOS KEYCHAIN REMOVAL ######
+####################################
+
+# If the variable is empty or not set
+if [ -z "${DOCLI_CERT_LIST+x}" ]; then
+  DOCLI_CERT_LIST=("Root CA" "ENT Intermediate CA" "FIN Intermediate CA" "SEC Intermediate CA" "PRD Intermediate CA" "STG Intermediate CA" "QAS Intermediate CA" "DEV Intermediate CA" "VAL Intermediate CA" "*.$DOCLI_PROJECT_ENTERPRISE_SRG.$DOCLI_PROJECT_ENTERPRISE_ENV.$SSL_PRODUCT_DOMAIN")
+else
+  IFS=';' read -ra DOCLI_CERT_LIST <<< "$DOCLI_CERT_LIST"
+fi
+
+# Loop through each CN and remove the cert from the System keychain when created by "security add-trusted-cert" command
+for cn in "${DOCLI_CERT_LIST[@]}"; do
+  echo -e "\n* Cleaning $cn from /Library/Keychains/System.keychain *"
+  sudo security delete-certificate -c "$cn" /Library/Keychains/System.keychain || echo "* INFO: $cn not found! *"
+done
+
+# Find and delete the certificate from the system keychain when created by "security import" command:
+for cn in "${DOCLI_CERT_LIST[@]}"; do
+  echo "* Cleaning $cn from /Library/Keychains/System.keychain *"
+  sudo security find-certificate -c "$cn" -a -Z /Library/Keychains/System.keychain | \
+  awk '/SHA-1 hash:/{system("sudo security delete-certificate -Z "$3" /Library/Keychains/System.keychain")}' || echo "* INFO: $cn not found! *"
+
+  # Repeat for the login keychain if needed
+  echo "* Cleaning $cn from ~/Library/Keychains/login.keychain-db *"
+  security find-certificate -c "$cn" -a -Z ~/Library/Keychains/login.keychain-db | \
+  awk '/SHA-1 hash:/{system("security delete-certificate -Z "$3" ~/Library/Keychains/login.keychain-db")}' || echo "* INFO: $cn not found! *"
+done
+
+#######################################
+###### MACOS CLIENT CERT REMOVAL ######
+#######################################
+
+# Check for existence of docli_full_name and docli_user_email variables
+if [[ -z "$DOCLI_OWN_NAME" ]]; then
+  read -p "Please enter your full name: " full_name
+else
+  full_name="$DOCLI_OWN_NAME"
+fi
+
+if [[ -z "$DOCLI_OWN_EMAIL" ]]; then
+  read -p "Please enter your email address: " user_email
+else
+  user_email="$DOCLI_OWN_EMAIL"
+fi
+
+# Remove @domain from e-mails
+user_name="${user_email%%@*}"
+
+## MUST BE LIBRESSL TO IMPORT ##
+echo "MacOS: Import the PKCS#12 file into your macOS keychain:"
+sudo security find-certificate -c "$full_name ($user_email)" -a -Z ~/Library/Keychains/login.keychain-db | \
+awk '/SHA-1 hash:/{system("sudo security delete-certificate -Z "$3" ~/Library/Keychains/login.keychain-db")}' || echo "* INFO: $full_name ($user_email) not found! *"
+
+###################################
+###### MACOS FIREFOX REMOVAL ######
+###################################
+
+# Define the path to the CA chain bundle
+ca_intermediate_path="$DOCLI/CA/intermediateCA/certs"
+
+# Install certutil if it's not installed (platform-specific)
+if ! command -v certutil &> /dev/null; then
+  echo "certutil not found. Installing..."
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Amazon Linux or Ubuntu
+    . /etc/os-release
+    case "$ID" in
+      ubuntu)
+        sudo apt-get update
+        sudo apt-get install -y libnss3-tools
+        ;;
+      amzn)
+        sudo yum install -y nss-tools
+        ;;
+    esac
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # MacOS
+    brew install nss
+  else
+    echo "Unknown OS. Exiting."
+    exit 1
+  fi
+fi
+
+# Find Firefox profiles and delete the certificates
+while read -r profile; do
+  # Clean actual Firefox certificates
+  echo "* ROOT CA -> Removing $DOCLI/CA/rootCA/certs/ca.cert.pem from Firefox Profiles *"
+  certutil -D -n "$DOCLI_PROJECT_COMPANY Root CA" -d "sql:$profile" || echo "* $DOCLI_PROJECT_COMPANY Root CA does not exist *"
+  for cert in $ca_intermediate_path/intermediate.*.cert.pem; do
+    wildcard_value=$(basename "$cert" | sed -E 's/intermediate\.([^.]+)\.cert\.pem/\1/')
+    echo "* INTERMEDIATE CA -> Removing $cert from Firefox Profiles *"
+    wildcard_value_upper=$(echo "$wildcard_value" | tr '[:lower:]' '[:upper:]')
+    cert_name="$DOCLI_PROJECT_COMPANY $wildcard_value_upper CA"  # Combine with the wildcard value
+    certutil -D -n "$cert_name" -d "sql:$profile" || echo "* $cert_name does not exist *"
+  done
+
+  # List if all Keys were cleaned
+  echo -e "\n======================================================================================"
+  echo -e "*                          LISTING ALL FIREFOX CERTIFICATES                          *"
+  echo -e "======================================================================================"
+  certutil -L -d "sql:$profile"
+  echo -e "\n======================================================================================\n"
+done < <(find $HOME/.mozilla/firefox/ $HOME/.mozilla/firefox/*/ "$HOME/Library/Application Support/Firefox/Profiles" -maxdepth 1 -name '*.default*' -type d)
+
+echo -e "\n** Removing CA directory $DOCLI/CA **\n"
+[[ -d $DOCLI/CA ]] && rm -rf $DOCLI/CA || echo "* ERROR: Could not delete $DOCLI/CA *"
+
+echo -e "\n** Removing CA Backup directory $DOCLI/.backups/CA **\n"
+[[ -d $DOCLI/.backups/CA ]] && rm -rf $DOCLI/.backups/CA || echo "* ERROR: Could not delete $DOCLI/.backups/CA *"
+
+echo -e "\n** Done Cleaning certificates **\n"

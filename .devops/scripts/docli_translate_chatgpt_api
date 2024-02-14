@@ -1,0 +1,47 @@
+#!/bin/bash
+# Usage: ./translate_openai.sh README.md English
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_translate_chatgpt_api
+DOCLI_MODULE_TYPE=scripts
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+
+# Check for input arguments
+if [[ -z "$1" ]]; then
+    echo "Please provide the path to the markdown file."
+    exit 1
+fi
+
+if [[ -z "$2" ]]; then
+    echo "Please provide the target language (e.g., 'English')."
+    exit 1
+fi
+
+SRC_FILE="$1"
+FILE_NAME="${SRC_FILE%.*}" # Extracts filename without extension
+TARGET_LANGUAGE="$2"
+OUTPUT_FILE="${FILE_NAME}-${TARGET_LANGUAGE}.md"
+
+TEXT_TO_TRANSLATE="$(cat $SRC_FILE)"
+
+# Using curl to call the OpenAI API
+TRANSLATION=$(curl -s -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -d "{
+        \"messages\": [
+            {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},
+            {\"role\": \"user\", \"content\": \"Translate the following text to $TARGET_LANGUAGE: $TEXT_TO_TRANSLATE.\"}
+        ]
+    }" \
+    https://api.openai.com/v1/engines/davinci-codex/completions \
+    | jq -r '.choices[0].message.content' 2>/dev/null)
+
+echo "$TRANSLATION" > "$OUTPUT_FILE"
+
+echo "Translation completed: $OUTPUT_FILE"

@@ -1,0 +1,96 @@
+#!/bin/bash
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_colors_tput
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Value	Color
+# 0	    Black
+# 1	    Red
+# 2	    Green
+# 3	    Yellow
+# 4	    Blue
+# 5	    Magenta
+# 6	    Cyan
+# 7	    White
+# 8	    Not used
+# 9	    Reset to default color
+
+# # Capname	    Description
+# bold	        Start bold text
+# smul	        Start underlined text
+# rmul	        End underlined text
+# rev	        Start reverse video
+# blink	        Start blinking text
+# invis	        Start invisible text
+# smso	        Start “standout” mode
+# rmso	        End “standout” mode
+# sgr0	        Turn off all attributes
+# setaf <value>	Set foreground color
+# setab <value>	Set background color
+
+# #Clearing the Screen
+# Capname	Description
+# smcup	Save screen contents
+# rmcup	Restore screen contents
+# el	    Clear from the cursor to the end of the line
+# el1	    Clear from the cursor to the beginning of the line
+# ed	    Clear from the cursor to the end of the screen
+# clear	    Clear the entire screen and home the cursor
+
+# # tput_colors - Demonstrate color combinations
+# for fg_color in {0..7}; do
+#     set_foreground=$(eval "$TPUTC setaf $fg_color")
+#     for bg_color in {0..7}; do
+#         set_background=$(eval "$TPUTC setab $bg_color")
+#         echo -n $set_background$set_foreground
+#         printf ' F:%s B:%s ' $fg_color $bg_color
+#     done
+#     echo $(eval "$TPUTC sgr0")
+# done
+
+BLACK="0"
+RED="1"
+GREEN="2"
+YELLOW="3"
+BLUE="4"
+MAGENTA="5"
+CYAN="6"
+WHITE="7"
+
+# Disable TPUT for BitBucket Pipelines and other terminals without tty
+# [[ ${TERM}=="" || ${TERM}=="dumb" ]] && TPUTC='tput -T xterm-256color'
+[[ ${TERM}=="" || ${TERM}=="dumb" ]] && TPUTC='echo "" #' || TPUTC='tput'
+
+BOLD=$(eval "$TPUTC bold")
+UNDERLINE=$(eval "$TPUTC smul")
+REVERSE=$(eval "$TPUTC rev")
+BLINK=$(eval "$TPUTC blink")
+INVISIBLE=$(eval "$TPUTC invis")
+STANDOUT=$(eval "$TPUTC smso")
+STANDOUTEND=$(eval "$TPUTC rmso")
+END=$(eval "$TPUTC sgr0")
+
+TEXT_BLACK=$(eval "$TPUTC setaf ${BLACK}")
+TEXT_RED=$(eval "$TPUTC setaf ${RED}")
+TEXT_GREEN=$(eval "$TPUTC setaf ${GREEN}")
+TEXT_YELLOW=$(eval "$TPUTC setaf ${YELLOW}")
+TEXT_BLUE=$(eval "$TPUTC setaf ${BLUE}")
+TEXT_MAGENTA=$(eval "$TPUTC setaf ${MAGENTA}")
+TEXT_CYAN=$(eval "$TPUTC setaf ${CYAN}")
+TEXT_WHITE=$(eval "$TPUTC setaf ${WHITE}")
+
+BG_BLACK=$(eval "$TPUTC setab ${BLACK}")
+BG_RED=$(eval "$TPUTC setab ${RED}")
+BG_GREEN=$(eval "$TPUTC setab ${GREEN}")
+BG_YELLOW=$(eval "$TPUTC setab ${YELLOW}")
+BG_BLUE=$(eval "$TPUTC setab ${BLUE}")
+BG_MAGENTA=$(eval "$TPUTC setab ${MAGENTA}")
+BG_CYAN=$(eval "$TPUTC setab ${CYAN}")
+BG_WHITE=$(eval "$TPUTC setab ${WHITE}")
+
+# echo -e "${TEXT_GREEN}** BASH Colors TPUT loaded! **${END}"

@@ -1,0 +1,182 @@
+#!/bin/bash
+# gpg -K to list all keys
+### running "any gpg command" will create:
+# /Users/$USER/.gnupg
+# /Users/$USER/.gnupg/trustdb.gpg
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_gpg_key
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+PATH="$DOCLI/bin:$PATH"
+[[ -d /opt/homebrew/bin ]] && PATH="/opt/homebrew/bin:$PATH" || echo >/dev/null
+
+# Get the directory of the script.sh file
+gpg_key_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+#:: ### This part of the code check for the existence of private dir to be used on imports
+#:: - If directory does not exist, it will be created.
+#:: - It also checks for the existence of a already-set DOCLI_PRIVATE_DIR variable. If not, it sets default
+if [ -z "${DOCLI_PRIVATE_DIR}" ]; then
+  export DOCLI_PRIVATE_DIR="${DOCLI}/.private"
+fi
+if [ ! -d "$DOCLI_PRIVATE_DIR" ]; then
+  echo "** Private Directory does not exist. Creating $DOCLI_PRIVATE_DIR... **"
+  mkdir -p "$DOCLI_PRIVATE_DIR"
+  echo "** Directory created. **"
+fi
+
+vars_gpg_keys() {
+  echo "** Creating GPG Key Vars **"
+  gpg_keys_private_dir=$DOCLI_PRIVATE_DIR
+  echo $gpg_keys_private_dir
+
+  # Set path/template_file
+  gpg_tpl_file_tpl=gpg.template
+  gpg_template_file=$gpg_keys_private_dir/$gpg_tpl_file_tpl
+}
+
+# Create the GPG Key
+create_gpg_key() {
+  echo "** Setting GPG template variables..."
+  gpg_tpl_name=$1
+  gpg_tpl_comments=$2
+  gpg_tpl_email=$3
+  gpg_tpl_expiration=$4
+  gpg_tpl_file_name=$5
+
+  echo "**** Creating GPG keys ****"
+
+  vars_gpg_keys
+
+  # create_gpg_template
+
+  echo "**** Executing gen-key ****"
+  export GPG_TTY=$(tty)
+    gpg --gen-key --batch <<EOF
+Key-Type: RSA
+Key-Length: 2048
+Subkey-Type: RSA
+Name-Real: $gpg_tpl_name
+Name-Comment: $gpg_tpl_comments
+Name-Email: $gpg_tpl_email
+Expire-Date: $gpg_tpl_expiration
+# Passphrase: '' # BUG... Enabling this will not allow passphrase to work as empty or with value
+EOF
+
+  # echo '' | gpg --pinentry-mode loopback --change-passphrase "$gpg_tpl_email"
+  # gpg --batch --yes --pinentry-mode loopback --output "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.gpg" --export "$gpg_tpl_email"
+  # gpg --batch --yes --pinentry-mode loopback --output "$gpg_keys_private_dir/.priv-$gpg_tpl_file_name.gpg" --export-secret-keys "$gpg_tpl_email"
+
+  ## PUBLIC
+  [[ -f "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.gpg" ]] && rm "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.gpg" && echo "** generating pub-$gpg_tpl_file_name.gpg..." || echo "** generating pub-$gpg_tpl_file_name.gpg..."
+  gpg --batch --output "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.gpg" --export "$gpg_tpl_email" || echo "** Failed to generate pub-$gpg_tpl_file_name.gpg!"
+  [[ -f "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.key" ]] && rm "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.key" && echo "** generating pub-$gpg_tpl_file_name.key..." || echo "** generating pub-$gpg_tpl_file_name.key..."
+  gpg --batch --armor --output "$gpg_keys_private_dir/.pub-$gpg_tpl_file_name.key" --export "$gpg_tpl_email" || echo "** Failed to generate pub-$gpg_tpl_file_name.key!"
+
+  ## PRIVATE
+  [[ -f "$gpg_keys_private_dir/.priv-$gpg_tpl_file_name.gpg" ]] && rm "$gpg_keys_private_dir/.priv-$gpg_tpl_file_name.gpg" && echo "** generating priv-$gpg_tpl_file_name.gpg..." || echo "** generating priv-$gpg_tpl_file_name.gpg..."
+  gpg --export-secret-keys $gpg_tpl_email > $gpg_keys_private_dir/.priv-$gpg_tpl_file_name.gpg || echo "** Failed to generate priv-$gpg_tpl_file_name.gpg!"
+  [[ -f "$gpg_keys_private_dir/.priv-$gpg_tpl_file_name.key" ]] && rm "$gpg_keys_private_dir/.priv-$gpg_tpl_file_name.key" && echo "** generating priv-$gpg_tpl_file_name.key..." || echo "** generating priv-$gpg_tpl_file_name.key..."
+  gpg --export-secret-keys --armor $gpg_tpl_email > $gpg_keys_private_dir/.priv-$gpg_tpl_file_name.key || echo "** Failed to generate priv-$gpg_tpl_file_name.key!"
+
+  # Used in validation only - Should be kept disabled
+  # cat $gpg_keys_private_dir/.pub-$gpg_tpl_file_name.gpg
+  # cat $gpg_keys_private_dir/.pub-$gpg_tpl_file_name.key
+  # cat $gpg_keys_private_dir/.priv-$gpg_tpl_file_name.gpg
+  # cat $gpg_keys_private_dir/.priv-$gpg_tpl_file_name.key
+
+  ls -larth $gpg_keys_private_dir | grep gpg
+
+  echo -e "\n*********************** All done! ***********************"
+  echo "** Your gpg key file is: .priv-$gpg_tpl_file_name.gpg"
+  echo "** Your gpg key file is: .pub-$gpg_tpl_file_name.gpg"
+  echo "** Your gpg armor key file is: .priv-$gpg_tpl_file_name.key"
+  echo "** Your gpg armor key file is: .pub-$gpg_tpl_file_name.key"
+}
+
+# Create the Base64 GPG Key
+create_gpg_key_base64() {
+  echo "** Setting GPG Base64 template variables..."
+  gpg_tpl_name=$1
+  gpg_tpl_comments=$2
+  gpg_tpl_email=$3
+  gpg_tpl_expiration=$4
+  gpg_tpl_file_name=$5
+
+  echo "**** Creating GPG keys BASE64 ****"
+
+  vars_gpg_keys
+
+  # create_gpg_template
+
+  echo "**** Executing gen-key ****"
+  export GPG_TTY=$(tty)
+    gpg --gen-key --batch <<EOF
+Key-Type: RSA
+Key-Length: 4096
+Subkey-Type: RSA
+Name-Real: $gpg_tpl_name
+Name-Comment: $gpg_tpl_comments
+Name-Email: $gpg_tpl_email
+Expire-Date: $gpg_tpl_expiration
+EOF
+
+  # read -p "** Genkey runned successful... Proceed with PRIV key export? Press ENTER to continue."
+  echo "** generating pub-$gpg_tpl_file_name..."
+  gpg --passphrase '' --export $gpg_tpl_email | base64 > $gpg_keys_private_dir/.pub-$gpg_tpl_file_name # CANT BE ARMORED FOR TERRAFORM
+
+  # read -p "** Genkey runned successful... Proceed with PUB key export? Press ENTER to continue."
+  echo "** generating priv-$gpg_tpl_file_name..."
+  gpg --passphrase '' --export-secret-keys $gpg_tpl_email | base64 > $gpg_keys_private_dir/.priv-$gpg_tpl_file_name || echo "** Failed to generate priv-$gpg_tpl_file_name!" | exit 0 # CANT BE ARMORED FOR TERRAFORM
+
+  echo -e "\n*********************** All done! ***********************"
+  echo "** Your gpg key file is: .priv-$gpg_tpl_file_name"
+  echo "** Your gpg key file is: .pub-$gpg_tpl_file_name"
+}
+
+gpg_import_priv_keys() {
+  local env_var=$1
+  source $DOCLI/functions/bash_op
+  op_check_connection
+  vars_gpg_keys
+  echo "** getting $env_var gpg keys..."
+  rm "$gpg_keys_private_dir/.pub-gpg-key-aws-$env_var.gpg" || echo "** getting pub gpg key..."
+  op_get_document "pub-gpg-key-aws-$env_var.gpg" "DevOps" "$gpg_keys_private_dir/.pub-gpg-key-aws-$env_var.gpg"
+  rm "$gpg_keys_private_dir/.priv-gpg-key-aws-$env_var.gpg" || echo "** getting priv gpg key..."
+  op_get_document "priv-gpg-key-aws-$env_var.gpg" "DevOps" "$gpg_keys_private_dir/.priv-gpg-key-aws-$env_var.gpg"
+  echo "** importing priv $env_var gpg key..."
+  gpg --import "$gpg_keys_private_dir/.priv-gpg-key-aws-$env_var.gpg"
+  echo "** $env_var GPG Keys Imported!"
+}
+
+gpg_remove_all_local_keys() {
+  gpg_tpl_file_name=$1
+  vars_gpg_keys
+  echo "** deleting all local gpg keys..."
+  echo "please run manually"
+  ksh -c 'for i in `gpg --with-colons --fingerprint | grep "^fpr" | cut -d: -f10`; do gpg --batch --delete-secret-keys --yes "$i" || echo nok; done'
+  ksh -c 'for i in `gpg --with-colons --fingerprint | grep "^fpr" | cut -d: -f10`; do gpg --batch --delete-keys --yes "$i" || echo nok; done'
+  rm $gpg_keys_private_dir/.priv-$gpg_tpl_file_name || echo "** file .priv-$gpg_tpl_file_name not found. continuing..."
+  rm $gpg_keys_private_dir/.pub-$gpg_tpl_file_name || echo "** file .pub-$gpg_tpl_file_name not found. continuing..."
+}
+
+gpg_remove_specific_local_keys() {
+  export GPG_TTY=$(tty)
+  local gpg_keyname=$1
+  local uppercase_gpg_keyname=$(echo "$gpg_keyname" | tr '[:lower:]' '[:upper:]')
+  echo "** deleting $uppercase_gpg_keyname gpg keys..."
+  bash -c "for i in \$(gpg --with-colons --fingerprint \"$uppercase_gpg_keyname\" | grep '^fpr' | cut -d: -f10); do gpg --batch --delete-secret-keys --yes \"\$i\" || echo \"** \$i deleted...\"; done" 2>&1
+  bash -c "for i in \$(gpg --with-colons --fingerprint \"$uppercase_gpg_keyname\" | grep '^fpr' | cut -d: -f10); do gpg --batch --delete-keys --yes \"\$i\" || echo \"** \$i deleted...\"; done" 2>&1
+  echo "** deleted $uppercase_gpg_keyname gpg keys!"
+}
+
+# # Delete the GPG Key
+# delete_gpg_template() {
+#     echo "** Deleting template file $gpg_template_file..."
+#     rm $gpg_template_file || echo "** file $gpg_template_file not found. continuing..."
+# }

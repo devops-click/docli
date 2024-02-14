@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# Script to update the docli
+###############################################################################
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_update
+DOCLI_MODULE_TYPE=scripts
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# TODO: Do complete cli update
+
+# For now, helping in sync stuff
+cp $HOME/.oh-my-zsh/themes/devops.click.zsh-theme $HOME/Documents/GitHub/docli/resources/omz-zsh/themes/

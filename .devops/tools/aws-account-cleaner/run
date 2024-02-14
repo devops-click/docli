@@ -1,0 +1,71 @@
+#!/bin/bash
+set -euo pipefail
+###############################################################################
+#                       docli AWS CLEAN MULTIREGION RESOURCES
+###############################################################################
+# v1.0s
+MACHINE_PROFILE_name=$1
+number_of_days_to_keep="${2:-3}" # Defaults to 3
+regions=("eu-central-1" "us-east-2" "sa-east-1" "ap-southeast-2")
+
+remove_images_and_snapshots() {
+  # Step 1: Find and list the AMIs to delete (excluding the latest one)
+  # amis_to_delete=$(aws ec2 describe-images --region $region --owners self --filters "Name=tag:application,Values=$MACHINE_PROFILE_name" --query 'Images | sort_by(@, &CreationDate) | [0:-1]' --output json)
+  ### amis_to_delete=$(aws ec2 describe-images --region $region --owners self --filters "Name=tag:application,Values=$MACHINE_PROFILE_name" --query 'Images | sort_by(@, &CreationDate) | [-1:0]' --output json)
+
+  # Step 1: Find and list the AMIs to delete (excluding the 3 latest ones)
+  # amis_to_delete=$(aws ec2 describe-images --region $region --owners self --filters "Name=tag:application,Values=$MACHINE_PROFILE_name" --query 'Images | sort_by(@, &CreationDate) | [0:-1]' --output json)
+  amis_to_delete=$(aws ec2 describe-images --region $region --owners self --filters "Name=tag:application,Values=$MACHINE_PROFILE_name" --output json | jq ".Images | sort_by(.CreationDate) | .[:-$number_of_days_to_keep]")
+  # amis_to_delete=$(aws ec2 describe-images --region $region --owners self --filters "Name=tag:application,Values=$MACHINE_PROFILE_name" --query 'Images | sort_by(@, &CreationDate) | [0:-3]' --output json | jq '.[].ImageId' || echo "")
+  if [ -z "$amis_to_delete" ] || [ "$amis_to_delete" == "[]" ]; then
+    echo "ERROR: No ami's were found for $MACHINE_PROFILE_name on $regions"
+  else
+    # Step 2: Loop through the list of AMIs and their associated snapshots
+    for ami in $(echo "${amis_to_delete}" | jq -r '.[].ImageId'); do
+      # Deregister the AMI
+      echo "DEREGISTER: --image-id $ami"
+      aws ec2 deregister-image --region $region --image-id "$ami"
+
+      # Find and list the snapshots associated with the AMI
+      snapshots=$(aws ec2 describe-snapshots --region $region --owner-ids self --filters "Name=description,Values=*$ami*" --query 'Snapshots[].SnapshotId' --output json)
+      # Check if any unattached volumes were found
+      if [ "$amis_to_delete" == "[]" ] || [ -z "$snapshots" ] || [ "$snapshots" == "[]" ]; then
+        echo "No snapshots for $ami were found."
+      else
+        # Loop through the snapshots and delete them
+        for snapshot in $(echo "${snapshots}" | jq -r '.[]'); do
+          echo "DELETE: --snapshot-id $snapshot"
+          aws ec2 delete-snapshot --region $region --snapshot-id "$snapshot"
+        done
+      fi
+    done
+  fi
+}
+
+remove_unattached_ebs_disks() {
+  # List unattached EBS volumes with the specified tag
+  volume_ids=$(aws ec2 describe-volumes --region $region --filters "Name=tag-key,Values=ebs-attach-tag" "Name=tag-value,Values=$MACHINE_PROFILE_name" --query 'Volumes[?Attachments[0]==null].VolumeId' --output json | jq -r '.[]')
+
+  # Check if any unattached volumes were found
+  if [ -z "$volume_ids" ]; then
+    echo "No unattached EBS volumes with the tag 'ebs-attach-tag=consul' found."
+  else
+    # Loop through the unattached volume IDs and delete each one
+    for volume_id in $volume_ids; do
+      echo "Deleting unattached EBS volume: $volume_id"
+      # aws ec2 delete-volume --region $region --volume-id "$volume_id"
+    done
+  fi
+}
+
+# Iterate through each region
+for region in "${regions[@]}"; do
+  echo "Working in AWS region: $region"
+
+  remove_images_and_snapshots
+  remove_unattached_ebs_disks
+
+  echo "Finished working in AWS region: $region"
+  echo ""
+done
+

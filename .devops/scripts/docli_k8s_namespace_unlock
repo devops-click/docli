@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                           docli K8S Namespace Tools
+###############################################################################
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_k8s_namespace_unlock
+DOCLI_MODULE_TYPE=scripts
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+c_nsp=$1
+c_file=tmp-ns.json
+
+echo "** Checking all locking objects for namespace $c_nsp"
+kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n $c_nsp
+
+kubectl get namespace $c_nsp -o json >$c_file
+echo "** Now, edit the following file: $file and remove "kubernetes" from the "finalizers:" **"
+echo "** After editing, run the following to start a proxy and then issue the command to delete: **"
+echo "kubectl proxy"
+echo "curl -k -H "Content-Type: application/json" -X PUT --data-binary @$file http://127.0.0.1:8001/api/v1/namespaces/$c_nsp/finalize"
+echo "rm -rf tmp-ns.json"

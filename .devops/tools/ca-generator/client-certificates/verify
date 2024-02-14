@@ -1,0 +1,99 @@
+#!/bin/bash
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:$HOME/devops/bin:$PATH"
+
+# Check for existence of docli_full_name and docli_user_email variables
+if [[ -z "$DOCLI_OWN_NAME" ]]; then
+  read -p "Please enter your full name: " full_name
+else
+  full_name="$DOCLI_OWN_NAME"
+fi
+
+if [[ -z "$DOCLI_OWN_EMAIL" ]]; then
+  read -p "Please enter your email address: " user_email
+else
+  user_email="$DOCLI_OWN_EMAIL"
+fi
+
+# Remove @domain from e-mails
+user_name="${user_email%%@*}"
+
+mkdir -p $DOCLI/CA/clientsROOT/
+# mkdir -p $DOCLI/CA/clientsINTERMEDIATE/
+
+client_root_dir="$DOCLI/CA/clientsROOT"
+# client_intermediate_dir="$DOCLI/CA/clientsINTERMEDIATE"
+timestamp=$(date +%s)
+current_date=$(date)
+client_cert_user=$(whoami)
+consul_server="consul-test.use1.ent.devops.click"
+
+## Mutual TLS Authentication with Consul Server
+
+# Browser-based Authentication:
+# If you're trying to access the Consul UI, some browsers like Chrome and Safari will automatically prompt you to choose a client certificate for mutual TLS authentication.
+
+# Testing/Using it via curl:
+echo "Command Line Authentication:"
+
+echo -e "\n** VERIFY SERVER CERTIFICATES **"
+# /opt/homebrew/bin/openssl s_client -showcerts -connect $consul_server:8501/ui/ || echo
+echo -e "\n** VERIFY SERVER CERTIFICATES WITH YOUR KEY/CERT **"
+# /opt/homebrew/bin/openssl s_client -connect $consul_server:8501/ui/ -cert $client_root_dir/$user_name.crt -key $client_root_dir/$user_name.key -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem || echo
+
+curl -v --http2 --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+echo end verbose
+curl -vvv --http2 --cert new_client_cert.pem --key new_client_key.pem --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+echo end verbose2
+openssl s_client -connect $consul_server:8501/ui/ -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -cert new_client_cert.pem -key new_client_key.pem -debug -msg || echo
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+echo end verbose3
+/opt/homebrew/bin/openssl s_client -connect $consul_server:8501/ui/ -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -cert new_client_cert.pem -key new_client_key.pem -debug -msg || echo
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+echo end verbose-OPENSSL
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$consul_server:8501/ui/ || echo
+
+
+echo -e "\n** VERIFY TCP HANDSHAKES **"
+# sudo tcpdump -i any -s 0 -w output.pcap "port 8501 and host $consul_server"
+
+# curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA BUNDLE CERT"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA ENT CERT"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT CERT ONLY"
+
+
+curl --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA ENT CERT ONLY"
+curl --key $client_root_dir/$user_name.key https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT KEY ONLY"
+curl --cert $client_root_dir/$user_name.crt https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT CERT ONLY"
+curl --cert $client_root_dir/$user_name.p12 https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT P12"

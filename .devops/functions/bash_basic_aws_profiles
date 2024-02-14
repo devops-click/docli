@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# PS: This script is intended to be used as source for others.
+# Basic Bash AWS Profile Check for CI/CD pipelines
+###############################################################################
+# echo "++++++++++++++++++++++++++++++++++"
+# echo "++ Entered bash_basic_aws_profiles ++"
+# echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++ Entered bash_basic_aws_profiles ++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_aws_profiles
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Check for AWS Profile (~/.aws/config)
+# [[ $DOCLI_PARAM_CLOUD == "aws" ]] && check_aws_profiles $awsprofile
+
+check_aws_profiles() {
+    # Load Basic Functions such as contains
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$script_dir/bash_basic_functions"
+
+    PROFILES=$(sed -n 's/^\[profile \([^]]*\)]/\1/p' ~/.aws/config) # Read AWS config file and filter profile names
+    local awsprofile=$1
+
+    # Convert profile names to an array
+    profile_list=()
+    while read -r line; do
+        profile_list+=("$line")
+    done <<< "$PROFILES"
+
+
+    if contains "$awsprofile" "${profile_list[@]}"; then
+        echo "** Profile $awsprofile found. Proceeding..."
+    else
+        echo -e "${TEXT_RED}ERROR: AWS Profile $awsprofile not found on ~/.aws/config${END}"
+        exit 1
+    fi
+}
