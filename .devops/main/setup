@@ -553,8 +553,8 @@ setup_macos_system_config() {
   defaults write com.apple.finder ShowRemovableMediaOnDesktop -boolean true
   echo "** Set on Finder: Sidebar Width 160"
   defaults write com.apple.finder SidebarWidth -integer 160 # Default = 143
-  echo "** Set on Finder: Show icon in Title Bar (folder icon in front of folder name)"
-  defaults write com.apple.universalaccess "showWindowTitlebarIcons" -bool "true"
+  # echo "** Set on Finder: Show icon in Title Bar (folder icon in front of folder name)"
+  # defaults write com.apple.universalaccess "showWindowTitlebarIcons" -bool "true"
   # echo "** Set on Finder: Disable window animations and Get Info animations"
   # defaults read com.apple.finder DisableAllAnimations -bool true
   # echo "** Set on Finder: Automatically clean trash after 30 days"
