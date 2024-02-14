@@ -9,7 +9,7 @@ set -euo pipefail
 install_version="0.0.07"
 os_var=$(uname)
 DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
-DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli
+DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
 
 
 if [[ $DOCLI_DEPLOY == true ]]; then
