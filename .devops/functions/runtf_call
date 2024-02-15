@@ -38,7 +38,7 @@ export DOCLI_PARAM_OPTIONS=("apply" "apply_unlock" "apply_force" "destroy" "dest
 
 export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
 
-[[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=1 || tf_force_param=0
+[[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=0 || tf_force_param=$DOCLI_PARAM_FORCE
 args=()
 
 # Check if any arguments are passed
@@ -89,7 +89,11 @@ if [ ${#args[@]} -eq 0 ]; then
         env | grep "DOCLI_*"
         echo -e "######################################################################################"
 
-        source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}"
+        if [ $tf_force_param -eq 1 ]; then
+          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}" --force
+        else
+          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}"
+        fi
       else
         echo "Skipping env: $env for short_region: $region"
       fi
