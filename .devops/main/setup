@@ -381,17 +381,17 @@ run_fixes() {
 ########################################
 # BREW
 ########################################
-brew_tap() {
-  # Loop through each tap and check if it's already installed
-  for tap in "${1[@]:-}"; do
-    if ! brew tap | grep -q "^$tap\$"; then
-      echo "$tap not found. Tapping..."
-      brew tap "$tap"
-    else
-      echo "$tap is already installed."
-    fi
-  done
-}
+# brew_tap() {
+#   # Loop through each tap and check if it's already installed
+#   for tap in "${1[@]:-}"; do
+#     if ! brew tap | grep -q "^$tap\$"; then
+#       echo "$tap not found. Tapping..."
+#       brew tap "$tap"
+#     else
+#       echo "$tap is already installed."
+#     fi
+#   done
+# }
 
 ########################################
 # DIRECTORY CHECK AND CREATION
@@ -898,17 +898,17 @@ setup_homebrew_and_packages() {
   # List of taps to check and install if not already there
   declare -a taps=("homebrew/cask-fonts")
 
-  brew_tap $taps
+  # brew_tap $taps
 
-  # # Loop through each tap and check if it's already installed
-  # for tap in "${taps[@]}"; do
-  #   if ! brew tap | grep -q "^$tap\$"; then
-  #     echo "$tap not found. Tapping..."
-  #     brew tap "$tap"
-  #   else
-  #     echo "$tap is already installed."
-  #   fi
-  # done
+  # Loop through each tap and check if it's already installed
+  for tap in "${taps[@]}"; do
+    if ! brew tap | grep -q "^$tap\$"; then
+      echo "$tap not found. Tapping..."
+      brew tap "$tap"
+    else
+      echo "$tap is already installed."
+    fi
+  done
 
   ############## homebrew update ##############
   brew update
