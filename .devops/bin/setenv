@@ -28,10 +28,11 @@ done < <(env -0 | grep -z '^DOCLI_AWS|^DOCLI_ARGS|^DOCLI_PROJECT')
 export DOCLI_PROJECT_ROOT="${DO_TMP_PRJ_VAR:-empty}"
 export DOCLI_REPOSITORY="${DO_TMP_REP_VAR:-empty}"
 
+### GENERAL pre-hook ###
 # 1st -> INITIAL step to run any needed pre-setenv steps before even load DOCLI general/shared envs
 # OPTIONAL -> Runs only if file exists
-if [[ -f $DOCLI_PROJECT_ROOT/.docli_pre_envs_hook ]]; then
-  source $DOCLI_PROJECT_ROOT/.docli_pre_envs_hook
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_pre_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_pre_hook
 fi
 
 # 2nd -> Load General/Shared Environment Variables (DOCLI/.docli_envs)
@@ -53,10 +54,11 @@ fi
 # In this step, application specific variables are set to work with different use cases.
 [[ -f $DOCLI_PROJECT_ROOT/.setenv ]] && source $DOCLI_PROJECT_ROOT/.setenv || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.setenv \n"
 
+### GENERAL pre-hook ###
 # 6th -> FINAL step to run any needed post-setenv steps like unset variables, or even cleaning sensitive data.
 # OPTIONAL -> Runs only if file exists
-if [[ -f $DOCLI_PROJECT_ROOT/.docli_post_envs_hook ]]; then
-  source $DOCLI_PROJECT_ROOT/.docli_post_envs_hook
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_post_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_post_hook
 fi
 
 # 7th -> Cleanup temporary variables

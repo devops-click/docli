@@ -41,6 +41,15 @@ export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
 [[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=0 || tf_force_param=$DOCLI_PARAM_FORCE
 args=()
 
+#############################################################
+# runtf pre-hook
+#############################################################
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
+fi
+############################################################
+
 # Check if any arguments are passed
 if [ $# -eq 0 ]; then
   default_tf_command=apply
@@ -126,3 +135,12 @@ elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
   echo "no-force all args:   ${args[@]}"
   source $DOCLI/bin/runtf "${args[@]}"
 fi
+
+#############################################################
+# runtf post-hook
+#############################################################
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook
+fi
+############################################################
