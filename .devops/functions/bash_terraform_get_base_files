@@ -1,0 +1,26 @@
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_terraform_get_base_files
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+tf_get_base_files () {
+  if [[ $current_key == "_template-gen" ]]; then
+    cp $DOCLI_PROJECT_ROOT/terraform/files/locals-custom-templates.tf ./locals-custom.tf && echo "** locals-custom.tf updated! **" || echo "ERROR: could not update locals-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/variables-custom.tf ./variables-custom.tf && echo "** variables-custom.tf updated! **" || echo "ERROR: could not update variables-custom.tf file!"
+  elif [[ $DOCLI_PARAM_SSO == true ]]; then
+    cp $DOCLI_PROJECT_ROOT/terraform/files/backend-s3-custom.tf ./backend-custom.tf && echo "** backend-custom.tf updated! **" || echo "ERROR: could not update backend-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/data-custom.tf ./data-custom.tf && echo "** data-custom.tf updated! **" || echo "ERROR: could not update data-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/variables-custom.tf ./variables-custom.tf && echo "** variables-custom.tf updated! **" || echo "ERROR: could not update variables-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/locals-custom.tf ./locals-custom.tf && echo "** locals-custom.tf updated! **" || echo "ERROR: could not update locals-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/provider-aws-custom-sso.tf ./provider-custom.tf && echo "** provider-custom.tf updated! **" || echo "ERROR: could not update provider-custom.tf file!"
+  else
+    cp $DOCLI_PROJECT_ROOT/terraform/files/backend-s3-custom.tf ./backend-custom.tf && echo "** backend-custom.tf updated! **" || echo "ERROR: could not update backend-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/data-custom.tf ./data-custom.tf && echo "** data-custom.tf updated! **" || echo "ERROR: could not update data-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/variables-custom.tf ./variables-custom.tf && echo "** variables-custom.tf updated! **" || echo "ERROR: could not update variables-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/locals-custom.tf ./locals-custom.tf && echo "** locals-custom.tf updated! **" || echo "ERROR: could not update locals-custom.tf file!"
+    cp $DOCLI_PROJECT_ROOT/terraform/files/provider-aws-custom.tf ./provider-custom.tf && echo "** provider-custom.tf updated! **" || echo "ERROR: could not update provider-custom.tf file!"
+  fi
+}
