@@ -6,7 +6,7 @@ set -euo pipefail
 #                                   docli
 ###############################################################################
 
-docli_version="0.0.02"
+docli_version="0.0.03"
 docli_file_name="$(basename "$0")"
 docli_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 docli_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -438,6 +438,19 @@ main() {
           echo "** Invalid Option **"
           return 0
         fi
+        ;;
+      #---------------- docli setup ----------------#
+      setup)
+        shift
+        : "${DOCLI_SETUP_OS:=macos}"
+        : "${DOCLI_SETUP_PROFILE:=devops}"
+        if [[ $DOCLI_SETUP_OS == "macos" ]]; then
+          #TODO: Make other OS Setups... $DOCLI/main/setup $DOCLI_OS --profile=$DOCLI_SETUP_PROFILE
+          $DOCLI/main/setup --profile=$DOCLI_SETUP_PROFILE
+        else
+          $DOCLI/main/setup --profile=$DOCLI_SETUP_PROFILE
+        fi
+        break
         ;;
       #---------------- docli setenv ----------------#
       setenv)

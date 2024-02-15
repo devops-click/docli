@@ -1,0 +1,37 @@
+#!/usr/bin/expect -f
+# v1.0
+# Requires this configuration on top of ~/.ssh/config
+# Host *
+#   StrictHostKeyChecking no
+#   UserKnownHostsFile /dev/null
+# Usage: expect run username server_ip
+
+# Get the value of the environment variables
+set DOCLI_AUTHENTICATOR $env(DOCLI_AUTHENTICATOR)
+set MFA_CODE $env(MFA_CODE)
+
+set timeout 20
+set user [lindex $argv 0]
+set ip [lindex $argv 1]
+set mfa_code [exec python3 $DOCLI_AUTHENTICATOR $MFA_CODE | awk "NR==1"]
+
+spawn ssh $user@$ip
+
+# Handle the authenticity prompt
+expect {
+    "Are you sure you want to continue connecting (yes/no/\\\[fingerprint\\\])?" {
+        send "yes\r"
+        exp_continue
+    }
+    "Verification code:" {
+        send "$mfa_code\r"
+    }
+}
+
+expect "$ "
+
+# Keeps session open for interactive shell
+interact
+
+# Imediatly exit after login. For automated routines
+# send "exit\r"

@@ -16,7 +16,7 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.2"
+setup_version="1.3"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -528,6 +528,8 @@ setup_macos_system_config() {
   # DESKTOP SERVICES
   echo "** Set on Desktop Services: Avoid creating .DS_Store files on network volumes"
   defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+  echo "** Set on Desktop Services: Avoid creating .DS_Store files on removable volumes"
+  defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 
   # SAFARI
   # echo "** Set on Safari: Show status bar" # Not working on MacOS Sonoma
