@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                               docli runpacker
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                              RUN PACKER SCRIPT                              |
+#-----------------------------------------------------------------------------'
+# Default Generic HashiCorp Packer Run Script designed to be called from any sub-packer-stacks
+
+IFS=$'\n\t'
+PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin:~/devops/bin
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=runpacker
+DOCLI_MODULE_TYPE=bin
+DOCLI_MODULE_VERSION=1.01
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+source $DOCLI/.docli_envs
+source $DOCLI/functions/bash_basic_functions
+
+############################################
+# SANITIZATION
+############################################
+# No sanitization needed
+
+############################################
+# BASIC SCRIPT VARS
+############################################
+export PKR_VAR_CURRENT_DIR=$(basename $PWD)
+# Splitting the variable into three parts
+export PKR_VAR_MACHINE_PROFILE="${PKR_VAR_CURRENT_DIR%%-*}"
+temp="${PKR_VAR_CURRENT_DIR#*-}"
+export PKR_VAR_os_arch=$(get_full_arch_name "${temp%%-*}")
+export PKR_VAR_os_short="${temp##*-}"
+export PKR_VAR_os_version=$(get_full_os_name "$PKR_VAR_os_short")
+
+source $DOCLI_PROJECT_ROOT/packer/.packer-env
+
+############################################
+# INPUT VARS
+############################################
+
+if [[ $1 == "build" ]]; then
+  read -p "Proceed with build? (y/n): " -n 1 -r
+  echo    # (optional) move to a new line
+  if [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    # Build with Packer
+    packer build \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/$PKR_VAR_MACHINE_PROFILE.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/packer.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs-list.pkrvars.hcl" \
+    *.pkr.hcl
+  fi
+elif [[ $1 == "validate" ]]; then
+# Validate the Packer build
+packer validate \
+  *.pkr.hcl
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/$PKR_VAR_MACHINE_PROFILE.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/packer.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs-list.pkrvars.hcl" \
+else
+  echo "Please choose an option!"
+  exit 1
+fi

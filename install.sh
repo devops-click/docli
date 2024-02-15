@@ -215,6 +215,7 @@ check_and_create_dirs
 declare -a file_paths=(
   ".docli"
   "bin/docli"
+  "bin/runpacker"
   "bin/runtf"
   "bin/setenv"
   "functions/bash_aws_copy_credentials"
