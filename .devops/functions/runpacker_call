@@ -38,6 +38,15 @@ source $DOCLI/functions/bash_aws_copy_credentials
 DOCLI_PARAM_FORCE=0
 args=()
 
+#############################################################
+# runpacker pre-hook
+#############################################################
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/packer/.docli_pre_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/packer/.docli_pre_hook
+fi
+#############################################################
+
 # Check if any arguments are passed
 if [ $# -eq 0 ]; then
   default_packer_command=build
@@ -55,7 +64,7 @@ fi
 
 # Check if arguments are empty (excludes --force)
 if [ ${#args[@]} -eq 0 ]; then
-  source runpacker "$default_packer_command"
+  source $DOCLI/bin/runpacker "$default_packer_command"
 fi
 
 # Check if force flag is set and modify 'build' to 'build_force'
@@ -74,9 +83,18 @@ if [ ${#args[@]} != 0 ] && [ $DOCLI_PARAM_FORCE -eq 1 ]; then
     fi
   done
   # Now run the command with modified arguments
-  source runpacker "${args[@]}"
+  source $DOCLI/bin/runpacker "${args[@]}"
 
 elif [ ${#args[@]} != 0 ] && [ $DOCLI_PARAM_FORCE -eq 0 ]; then
   echo "** arguments passed: running normal PACKER..."
-  source runpacker "${args[@]}"
+  source $DOCLI/bin/runpacker "${args[@]}"
 fi
+
+#############################################################
+# runpacker post-hook
+#############################################################
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/packer/.docli_post_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/packer/.docli_post_hook
+fi
+#############################################################
