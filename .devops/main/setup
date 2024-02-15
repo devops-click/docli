@@ -609,10 +609,10 @@ setup_macos_system_config() {
   defaults write com.apple.dock mouse-over-hilte-stack -bool true
   echo "** Set on Dock: Don’t animate opening applications from the Dock"
   defaults write com.apple.dock launchanim -bool false
-  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Set on Dock: Place on Left"
-  [[ $DOCLI_ALL_PACKAGES == true ]] && defaults write com.apple.dock "orientation" -string "left"
-  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Set on Dock: Icon Size 36"
-  [[ $DOCLI_ALL_PACKAGES == true ]] && defaults write com.apple.dock "tilesize" -int "36"
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && echo "** Set on Dock: Place on Left"
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && defaults write com.apple.dock "orientation" -string "left"
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && echo "** Set on Dock: Icon Size 36"
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && defaults write com.apple.dock "tilesize" -int "36"
   echo "** Set on Dock: Minimize Effect Genie"
   defaults write com.apple.dock "mineffect" -string "genie"
   echo "** Set on Dock: Scroll on Dock to Open Related Windows"
@@ -949,7 +949,7 @@ setup_homebrew_and_packages() {
         # brew install
         brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
       fi
-      if [ "${DOCLI_ALL_PACKAGES:-false}" == true ]; then
+      if [ ${DOCLI_ALL_PACKAGES:-false} == true ]; then
         echo "* EXTRA $setup_arch_name packages *"
         brew install leapp ffmpeg macfuse
         brew install --cask gimp microsoft-teams karabiner-elements wp-cli
@@ -983,7 +983,7 @@ setup_homebrew_and_packages() {
       # removed from --cask extras: keybase
       brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
     fi
-    if [ "${DOCLI_ALL_PACKAGES:-false}" == true ]; then
+    if [ ${DOCLI_ALL_PACKAGES:-false} == true ]; then
       echo "* EXTRA $setup_arch_name packages *"
       brew install leapp ffmpeg macfuse
       brew install --cask gimp microsoft-teams karabiner-elements wp-cli
@@ -1049,8 +1049,8 @@ setup_omzsh() {
   $DOCLI/tmp/fonts/install.sh
   rm -rf $DOCLI/tmp/fonts
 
-  [[ $DOCLI_ALL_PACKAGES == true ]] && echo "** Enabling iTerm2 Integration **"
-  [[ $DOCLI_ALL_PACKAGES == true ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration.sh | bash
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && echo "** Enabling iTerm2 Integration **"
+  [[ ${DOCLI_ALL_PACKAGES:-false} == true ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration.sh | bash
 
   # if needed - MacOS Permission
   # sudo dseditgroup -o edit -a $setup_username -t user admin
