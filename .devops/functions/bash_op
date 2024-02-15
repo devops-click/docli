@@ -9,19 +9,18 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_op
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 bash_op_file_name="$(basename "$0")"
 bash_op_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-bash_op_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 bash_op_current_dir="$(pwd)"
 
 # Load environment Vars
-[[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
-[[ -f "$bash_op_script_dir/../../.docli_envs" ]] && source $bash_op_script_dir/../../.docli_envs
+[[ -f "$DOCLI/.docli_envs" ]] && source $DOCLI/.docli_envs
+[[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && source $DOCLI_PROJECT_ROOT/.docli_envs
 [[ -f "$bash_op_current_dir/.docli_envs" ]] && source $bash_op_current_dir/.docli_envs
 source $DOCLI/functions/bash_basic_functions
 if [[ -z ${DOCLI} ]]; then
@@ -44,12 +43,6 @@ op_print_usage() {
     echo "op signout                -> Sign out from all current sessions"
     echo
     print_options
-    # echo "Options:"
-    # echo "  -v, --verbose [true|false]   Turn on verbose"
-    # echo "  -d, --debug [true|false]     Turn on DEBUG mode"
-    # echo "  -i, --ignore-questions       Ignore questions (always yes)"
-    # echo "  -s, --silent                 Silent for CI/CD pipelines"
-    # echo "  -h, --help                   Show this help message"
     exit 1
 }
 

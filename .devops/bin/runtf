@@ -37,10 +37,6 @@ unset AWS_ROLE_SESSION_NAME
 # BASIC SCRIPT VARS
 ############################################
 current_key=$(basename $PWD)
-# tf_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
-# Get the directory of the script.sh file (Full dir since from root)
-# script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# echo -e "\n\n"
 
 echo -e "\n** Sourcing: $DOCLI/.docli"
 source $DOCLI/.docli

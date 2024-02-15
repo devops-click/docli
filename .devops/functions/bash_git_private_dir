@@ -1,15 +1,14 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_git_private_dir
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 create_git_private_dir() {
-    local local_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     # Check if private dir exists
-    git_private_dir=$local_script_dir/../../private
+    git_private_dir=$DOCLI_PROJECT_ROOT/private
 
     if [ ! -d "$git_private_dir" ]; then
         echo "Private Directory does not exist. Creating $git_private_dir..."

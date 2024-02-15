@@ -7,16 +7,13 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_gpg_key
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 PATH="$DOCLI/bin:$PATH"
 [[ -d /opt/homebrew/bin ]] && PATH="/opt/homebrew/bin:$PATH" || echo >/dev/null
-
-# Get the directory of the script.sh file
-gpg_key_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 #:: ### This part of the code check for the existence of private dir to be used on imports
 #:: - If directory does not exist, it will be created.

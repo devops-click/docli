@@ -27,7 +27,7 @@ DOCLI_REMOTE_REPOSITORY_INSTALL_URL="https://raw.githubusercontent.com/devops-cl
 # : "${DOCLI_DEVELOPER_MODE:=""}"
 
 # echo "==> .docli -> source bash_basic_functions"
-source $docli_script_dir/../functions/bash_basic_functions
+source $DOCLI/functions/bash_basic_functions
 
 docli_command="${1:-}"
 docli_option="${2:-}"
@@ -60,7 +60,7 @@ docli_arg8="${8:-}"
 ## or
 # screen -dm bash -c 'DOCLI_UPDATE_SKIP_OPTIONS=check_and_create_dirs,files_check_and_creation,private_envs_file,setup_macos_system_config,setup_macos_system_config_sudoers,setup_homebrew_and_packages,setup_variables_and_sources,setup_java,setup_omzsh,setup_aws_tools,setup_terraform,setup_elasticsearch,setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_custom_routines,setup_linux_packages docli_update; exec sh'
 
-# source $docli_script_dir/../functions/bash_base_get_arguments
+# source $DOCLI/functions/bash_base_get_arguments
 # set -- $(parse_arguments "$@")
 #########################
 # DOCLI_ARGS_DEBUG=0
@@ -199,7 +199,7 @@ parse_arguments() {
         if [[ $args_help == "" ]] || [[ $args_help == "docli" ]] || [[ $args_help == "-h" ]] || [[ $args_help == "--help" ]]; then
           docli_print_usage
         else
-          source $docli_script_dir/../$args_help
+          source $DOCLI/$args_help
         fi
         eval ${docli_command}_print_usage
         break
@@ -283,7 +283,7 @@ eval $DOCLI_DEBUG && echo "++> docli_command=$docli_command"
 eval $DOCLI_DEBUG && echo "++> docli_option=$docli_option"
 
 eval $DOCLI_VERBOSE && echo "==> docli -> source .docli"
-source $docli_script_dir/../.docli
+source $DOCLI/.docli
 
 eval $DOCLI_VERBOSE && echo "==> docli -> echo args_help"
 eval $DOCLI_VERBOSE && echo "args_help=${args_help:-}"
@@ -300,8 +300,8 @@ eval $DOCLI_DEBUG && echo "++> docli_eks_assign=$docli_eks_assign"
 #:: This program has the following functionalies:
 #:: `sso clean` -> Cleans all AWS SSO Tokens (CLI and SSO caches)
 #:: `sso <aws_profile>` -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)
-# source $docli_script_dir/../functions/bash_basic_functions
-# source $docli_script_dir/../functions/bash_base_get_arguments
+# source $DOCLI/functions/bash_basic_functions
+# source $DOCLI/functions/bash_base_get_arguments
 
 #:: # Function to check software versions.
 #:: ## Usage example:
@@ -396,7 +396,7 @@ main() {
       #---------------- docli run HashiCorp Packer ----------------#
       packer)
         shift
-        source $docli_script_dir/../main/packer
+        source $DOCLI/main/packer
         echo docli_option=$docli_option
         if [ "${1:-}" == "" ]; then
           packer_print_usage
@@ -415,7 +415,7 @@ main() {
       #---------------- docli run OnePassword ----------------#
       op)
         shift
-        source $docli_script_dir/../functions/bash_op
+        source $DOCLI/functions/bash_op
         # if [ "${1:-}" == "" ]; then
         if [ "${1#*=}" == "" ]; then
           op_print_usage
@@ -463,7 +463,7 @@ main() {
         ;;
       #---------------- docli SSO ----------------#
       sso)
-        source $docli_script_dir/../main/sso
+        source $DOCLI/main/sso
         echo "SSO Profile: $docli_option"
         if [ "${1:-}" == "" ]; then
           sso_print_usage
@@ -497,7 +497,7 @@ main() {
       #---------------- docli System ----------------#
       sys)
         shift
-        source $docli_script_dir/../main/sys
+        source $DOCLI/main/sys
         local local_option="${1:-}"
         local files_path="${2:-}"
         echo local_option=$local_option
@@ -519,7 +519,7 @@ main() {
         ;;
       #---------------- docli run HashiCorp Terraform ----------------#
       tf)
-        source $docli_script_dir/../main/tf
+        source $DOCLI/main/tf
         if [ "${1#*=}" == "" ]; then
           tf_print_usage
         fi

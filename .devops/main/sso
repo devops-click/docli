@@ -16,10 +16,9 @@ eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 eval $DOCLI_DEBUG && echo "++ Entered sso ++"
 eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 
-sso_version="1.0"
+sso_version="1.1"
 sso_file_name="$(basename "$0")"
 sso_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-sso_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 sso_current_dir="$(pwd)"
 
 ## DOCLI MODULE INFORMATION
@@ -41,8 +40,8 @@ else
   sso_eks_assign=false
 fi
 
-# source $sso_script_dir/../functions/bash_basic_functions
-# source $sso_script_dir/../../.docli
+# source $DOCLI/functions/bash_basic_functions
+# source $DOCLI_PROJECT_ROOT/.docli
 
 eval $DOCLI_VERBOSE && echo -e "\n**** Running $sso_file_name_upper script ****"
 

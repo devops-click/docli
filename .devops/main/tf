@@ -14,10 +14,10 @@ set -euo pipefail
 #:: tf_current_dir     - Returns the directory where script has been called from. Used to output information to current directory.
 ###############################################################################
 
-tf_version="1.0"
+tf_version="1.1"
 tf_file_name="$(basename "$0")"
 tf_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
-tf_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# tf_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 tf_current_dir="$(pwd)"
 
 ## DOCLI MODULE INFORMATION
@@ -43,8 +43,8 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 #:: '--------------------------------------------------------' #dltbr
 #:: ```                                                        #dltbr
 
-# source $tf_script_dir/../../.docli $tf_script_dir
-source $tf_script_dir/../../.docli
+# source $DOCLI_PROJECT_ROOT/.docli $tf_script_dir
+source $DOCLI_PROJECT_ROOT/.docli
 
 tf_print_usage() {
   echo
@@ -83,10 +83,6 @@ echo "USE $DOCLI_PROJECT_ROOT!!! EX:"
 
 # echo source_first_docli...
 # source_first_docli $tf_script_dir $root_script_dir
-
-runtfzao() {
-    echo "Mais eh isso mremu?"
-}
 
 # TODO: URGENT!!! SOURCING OK!!!
 # 2 - NOW need to start putting stuff in here.

@@ -16,7 +16,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_environments
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -25,8 +25,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 
 function check_environment {
     # Load Basic Functions such as contains
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$script_dir/bash_basic_functions"
+    source "$DOCLI/functions/bash_basic_functions"
 
     VALID_ENVIRONMENTS=(
         dev

@@ -13,7 +13,7 @@ set -euo pipefail
 #:: parse_arguments   - parse arguments and treat options ex: [-vdish]
 ###############################################################################
 
-root_version="1.0"
+root_version="1.1"
 root_file_name="$(basename "$0")"
 root_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -26,19 +26,6 @@ root_env_file="$root_script_dir/.docli_envs"
 source_script_dir=${1:-not_available}
 # Return the root directory depth for every script in docli. Ex: ../../..
 root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
-
-# source $root_script_dir/functions/bash_base_get_arguments
-# set -- $(parse_arguments "$@")
-# #########################
-# # args_debug=0
-# # args_verbose=1
-
-# load_vars() {
-#   # Validations to activate modes:
-#   DOCLI_VERBOSE="[[ $args_verbose == 1 || $args_debug == 1 ]]"
-#   DOCLI_DEBUG="[[ $args_debug == 1 ]]"
-# }
-# load_vars
 
 eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 eval $DOCLI_DEBUG && echo "++ Entered .docli (main source) ++"
@@ -103,15 +90,6 @@ source_verbose_info(){
   eval $DOCLI_VERBOSE && echo -e "*********************************************************\n"
   endofline=1
 }
-
-# Disabled, now using local namespaced variables
-# # Get the directory of the current script
-# get_current_script_dir() {
-#   debug_begin "${FUNCNAME[0]}"
-#   current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-#   eval $DOCLI_VERBOSE && echo -e "current_script_dir=$current_script_dir"
-#   debug_end "${FUNCNAME[0]}"
-# }
 
 # Source ALL .docli files until it reaches / root directory
 source_all_docli() {

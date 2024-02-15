@@ -15,10 +15,9 @@ eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 eval $DOCLI_DEBUG && echo "++ Entered packer ++"
 eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 
-packer_version="1.1"
+packer_version="1.2"
 packer_file_name="$(basename "$0")"
 packer_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-packer_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 packer_current_dir="$(pwd)"
 
 ## DOCLI MODULE INFORMATION
@@ -34,11 +33,11 @@ current_key=$(basename $PWD)
 prefix_path=$(dirname -- "${BASH_SOURCE[0]}")
 
 # Load environment Vars
-[[ -f "$packer_script_dir/../functions/bash_basic_functions" ]] && source $packer_script_dir/../functions/bash_basic_functions
+[[ -f "$DOCLI/functions/bash_basic_functions" ]] && source $DOCLI/functions/bash_basic_functions
 
 # .docli_envs override order: HOME -> DOCLI INSTALLATION DIR -> CURRENT DIR
 [[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
-[[ -f "$packer_script_dir/../../.docli_envs" ]] && source $packer_script_dir/../../.docli_envs
+[[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && source $DOCLI_PROJECT_ROOT/.docli_envs
 [[ -f "$packer_current_dir/.docli_envs" ]] && source $packer_current_dir/.docli_envs
 if [[ -z ${DOCLI} ]]; then
   echo "** .docli_envs found! using it's values when applicable **"

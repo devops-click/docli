@@ -16,10 +16,9 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.3"
+setup_version="1.4"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-setup_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 setup_current_dir="$(pwd)"
 PATH="$DOCLI/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 
@@ -37,8 +36,8 @@ ops_profile=""
 
 source $DOCLI/functions/bash_basic_functions
 
-[[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
-[[ -f "$setup_script_dir/../../.docli_envs" ]] && source $setup_script_dir/../../.docli_envs
+[[ -f "$DOCLI/.docli_envs" ]] && source $DOCLI/.docli_envs
+[[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && source $DOCLI_PROJECT_ROOT/.docli_envs
 [[ -f "$setup_current_dir/.docli_envs" ]] && source $setup_current_dir/.docli_envs
 [[ -z ${DOCLI} ]] && export DOCLI="$HOME/devops" || echo "** .docli_envs found! using it's values when applicable **"
 
