@@ -55,7 +55,7 @@ fi
 
 # Check if arguments are empty (excludes --force)
 if [ ${#args[@]} -eq 0 ]; then
-  source ../../../runpacker "$default_packer_command"
+  source runpacker "$default_packer_command"
 fi
 
 # Check if force flag is set and modify 'build' to 'build_force'
@@ -74,9 +74,9 @@ if [ ${#args[@]} != 0 ] && [ $DOCLI_PARAM_FORCE -eq 1 ]; then
     fi
   done
   # Now run the command with modified arguments
-  source ../../runpacker "${args[@]}"
+  source runpacker "${args[@]}"
 
 elif [ ${#args[@]} != 0 ] && [ $DOCLI_PARAM_FORCE -eq 0 ]; then
   echo "** arguments passed: running normal PACKER..."
-  source ../../runpacker "${args[@]}"
+  source runpacker "${args[@]}"
 fi
