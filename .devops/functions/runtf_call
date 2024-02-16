@@ -41,14 +41,19 @@ export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
 [[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=0 || tf_force_param=$DOCLI_PARAM_FORCE
 args=()
 
-#############################################################
+###############################################################
 # runtf pre-hook
-#############################################################
 # OPTIONAL -> Runs only if file exists
+###############################################################
+# Calling folder pre-hook (terraform/cloud/deploy/recipe)
+if [[ -f .docli_pre_hook ]]; then
+  source .docli_pre_hook
+fi
+# Main Terraform pre-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
   source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
 fi
-############################################################
+###############################################################
 
 # Check if any arguments are passed
 if [ $# -eq 0 ]; then
@@ -136,11 +141,16 @@ elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
   source $DOCLI/bin/runtf "${args[@]}"
 fi
 
-#############################################################
+###############################################################
 # runtf post-hook
-#############################################################
 # OPTIONAL -> Runs only if file exists
+###############################################################
+# Calling folder post-hook (terraform/cloud/deploy/recipe)
+if [[ -f .docli_post_hook ]]; then
+  source .docli_post_hook
+fi
+# Main Terraform post-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook ]]; then
   source $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook
 fi
-############################################################
+###############################################################
