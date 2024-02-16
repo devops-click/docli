@@ -1,18 +1,18 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_azure
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 ### AZURE EXCLUSIVE
 check_if_running_on_tenant() {
-    echo "** Checking Azure if using Tenant Account..."
-    filtered=$(az account show -o json | jq '.name | contains("N/A") or contains("tenant")')
-    if [[ "$filtered" == "true" ]]; then
-        echo "** Tenant account: OK"
-    else
-        echo "** Error! Please login using Tenant: az login --allow-no-subscriptions"
-    fi
+  echo "** Checking Azure if using Tenant Account..."
+  export filtered=$(az account show -o json | jq '.name | contains("N/A") or contains("tenant")')
+  if [[ "$filtered" == "true" ]]; then
+    echo "** Tenant account: OK"
+  else
+    echo "** Error! Please login using Tenant: az login --allow-no-subscriptions"
+  fi
 }
