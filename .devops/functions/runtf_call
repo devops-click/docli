@@ -80,14 +80,8 @@ if [ ${#args[@]} -eq 0 ]; then
   # source $DOCLI/bin/runtf "${args[@]}"
   # Iterate through env_list
   for env in "${env_list[@]}"; do
-    echo $env
-    echo $env
-    echo $env
     # Iterate through reg_list
     for region in "${reg_list[@]}"; do
-      echo $region
-      echo $region
-      echo $region
       # Check if the env is enabled for the current region
       enabled_var="enabled_${region}[@]"
       if [[ " ${!enabled_var} " =~ " ${env} " ]]; then
