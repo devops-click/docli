@@ -1,20 +1,45 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_azure
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_VERSION=0.4
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 ### AZURE EXCLUSIVE
-check_if_running_on_tenant() {
-  echo "** Checking Azure if using Tenant Account..."
+azure_check_if_running_on_tenant() {
+  echo -e "\n** Checking Azure if using Tenant Account... **"
   filtered=$(az account show -o json | jq '.name | contains("N/A") or contains("tenant")')
   if [[ "$filtered" == "true" ]]; then
-    echo "** Tenant account: OK"
-    export DOCLI_AZURE_REQUIRE_LOGIN=false
+    echo "* DOCLI Azure Checks: Using Tenant Level Account"
+    export DOCLI_AZURE_TENANT_ACCOUNT=true
   else
-    echo "** Error! Please login using Tenant: az login --allow-no-subscriptions"
+    echo "* DOCLI Azure Checks: Using non-Tenant Level Account"
+    export DOCLI_AZURE_TENANT_ACCOUNT=false
+  fi
+}
+
+azure_check_connection() {
+  echo -e "\n** Checking Azure CLI Connectivity... **"
+  az_con_check=$(az account show -o json 2>&1)
+  exit_status=$?
+
+  if [ $exit_status -ne 0 ]; then
+    echo "* DOCLI Azure Checks: Azure CLI not logged in or other error. Attempting to log in..."
+    if echo $az_con_check | grep -q "Please run 'az login' to setup account."; then
+      echo "* DOCLI Azure Checks: Error: $az_con_check"
+    else
+      # else if we want to exit on different errors...
+      echo "* DOCLI Azure Checks: Error: $az_con_check"
+      # exit $exit_status
+    fi
     export DOCLI_AZURE_REQUIRE_LOGIN=true
+    echo "** Error! Please login! **"
+    echo "* Usage without subscription: az login --allow-no-subscriptions"
+    echo "* Usage with subscription:    az login"
+    echo "* Or, use .docli_pre_hook receiving DOCLI_AZURE_REQUIRE_LOGIN=true/false env variable for that ;)"
+  else
+    echo "* DOCLI Azure Checks: Successfully retrieved Azure account details."
+    export DOCLI_AZURE_REQUIRE_LOGIN=false
   fi
 }
