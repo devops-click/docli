@@ -50,6 +50,11 @@ if [[ -f .docli_pre_hook ]]; then
   echo "* Current folder .docli_pre_hook found. Using it. *"
   source .docli_pre_hook
 fi
+# Cloud Terraform pre-hook (applies to all TFs inside that specific Cloud if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook ]]; then
+  echo "* Cloud Terraform .docli_pre_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook
+fi
 # General Terraform pre-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
   echo "* General Terraform .docli_pre_hook found for the project. Using it. *"
@@ -145,6 +150,11 @@ fi
 if [[ -f .docli_post_hook ]]; then
   echo "* Current folder .docli_post_hook found. Using it. *"
   source .docli_post_hook
+fi
+# Cloud Terraform post-hook (applies to all TFs inside that specific Cloud if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_post_hook ]]; then
+  echo "* Cloud Terraform .docli_post_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_post_hook
 fi
 # General Terraform post-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook ]]; then
