@@ -47,10 +47,12 @@ args=()
 ###############################################################
 # Calling folder pre-hook (terraform/cloud/deploy/recipe)
 if [[ -f .docli_pre_hook ]]; then
+  echo "* Current folder .docli_pre_hook found. Using it. *"
   source .docli_pre_hook
 fi
-# Main Terraform pre-hook (applies to all TFs if file found)
+# General Terraform pre-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
+  echo "* General Terraform .docli_pre_hook found for the project. Using it. *"
   source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
 fi
 ###############################################################
@@ -147,10 +149,12 @@ fi
 ###############################################################
 # Calling folder post-hook (terraform/cloud/deploy/recipe)
 if [[ -f .docli_post_hook ]]; then
+  echo "* Current folder .docli_post_hook found. Using it. *"
   source .docli_post_hook
 fi
-# Main Terraform post-hook (applies to all TFs if file found)
+# General Terraform post-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook ]]; then
+  echo "* General Terraform .docli_post_hook found for the project. Using it. *"
   source $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook
 fi
 ###############################################################
