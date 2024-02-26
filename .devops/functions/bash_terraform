@@ -317,8 +317,8 @@ run_terraform() {
       ;;
     state_show)
       tf_opt="state show"
-      echo "Running 'terraform $tf_opt $cmd_args' with profile: $awsprofile and tf_arg1=${tf_arg1:-not_available}"
-      eval "$tf_command $tf_opt $cmd_args" ${tf_arg1:-not_available}
+      echo "Running 'terraform $tf_opt' with profile: $awsprofile and tf_arg1=${tf_arg1:-not_available}"
+      eval "$tf_command $tf_opt" ${tf_arg1:-not_available}
       ;;
     import)
       tf_opt="import"
