@@ -312,17 +312,17 @@ run_terraform() {
       ;;
     state_pull)
       tf_opt="state pull"
-      echo "Running 'terraform $tf_opt > ${tf_confdir}.tfstate' with profile: $awsprofile"
+      echo "Running 'terraform $tf_opt > ${tf_confdir}.tfstate' with profile: $awsprofile -> Outputting to: $tf_confdir.tfstate"
       eval "$tf_command $tf_opt" > $tf_confdir.tfstate
       ;;
     state_show)
       tf_opt="state show"
-      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      echo "Running 'terraform $tf_opt $cmd_args' with profile: $awsprofile and tf_arg1=${tf_arg1:-not_available}"
       eval "$tf_command $tf_opt $cmd_args" ${tf_arg1:-not_available}
       ;;
     import)
       tf_opt="import"
-      echo "Running 'terraform $tf_opt' with profile: $awsprofile"
+      echo "Running 'terraform $tf_opt $cmd_args' with profile: $awsprofile - Importing: ${tf_arg1:-not_available}"
       eval "$tf_command $tf_opt $cmd_args ${tf_arg1:-not_available} ${tf_arg1:-not_available}" # TODO: TF IMPORT - Make it work. Order now is correct: terraform <option> <global_variables> <ADDR> <ID>, but still returning error.
       ;;
     providers)

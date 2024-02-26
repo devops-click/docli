@@ -926,7 +926,6 @@ main() {
 
   # export TF_LOG="DEBUG"
   echo "** Starting Terraform... **"
-  echo
   # aws configure list --profile $awsprofile
   echo
   run_terraform
