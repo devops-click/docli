@@ -227,19 +227,28 @@ run_terraform() {
     exit 1
   fi
 
-  if [ -z "$DOCLI_PARAM_CLOUD" ]; then
-    if [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
-      cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
-    fi
-  else
+  if [ ! -z "$DOCLI_PARAM_CLOUD" ]; then
     cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+    if [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
+      echo "azure ok"
+
+    ## APPEND strings to cmd_args
+    elif [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
+      if [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]]; then
+        cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-workspace.tfvars\""
+        echo "* $DOCLI/.private/.bitb-workspace.tfvars bitbucket variable loaded..."
+      fi
+      if [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]]; then
+        if [[ $current_key == "repository-variables" ]]; then
+          cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars\""
+          echo "* $DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars bitbucket variable loaded..."
+        fi
+      fi
+    fi
+
+  else
+    echo "* ERROR: You must specify a Cloud Provider using --cloud|-cld *"
   fi
-
-  # cmd_bitbucket_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
-
-  ## Append strings to cmd_args
-  [[ $DOCLI_PARAM_CLOUD == bitbucket ]] && [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]]              && cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-workspace.tfvars\"" && echo "* $DOCLI/.private/.bitb-workspace.tfvars bitbucket variable loaded..."
-  [[ $DOCLI_PARAM_CLOUD == bitbucket ]] && [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]] && [[ $current_key == "repository-variables" ]]                               && cmd_args="$cmd_args -var-file=\"\$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars\"" echo "* $DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars bitbucket variable loaded..."
 
   local command=$tf_opt
   case "$command" in
