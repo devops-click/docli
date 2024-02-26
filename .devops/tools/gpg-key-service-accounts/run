@@ -1,0 +1,85 @@
+#!/bin/bash -euo pipefail
+
+echo -e "\n!!!! WARNING: You should only execute this script if the GPG KEY WAS LEAKED !!!!"
+echo -e "!!!! As soon as you change this, ALL TERRAFORM OBJECTS that depend on this key will be RECREATED !!!!\n"
+read -p ">>>>> PRESS ENTER IF YOU ARE SURE YOU WANT TO DO THIS <<<<<"
+echo ""
+
+# Sources
+echo "** Loading: $DOCLI/functions/bash_gpg_key"
+source $DOCLI/functions/bash_gpg_key
+echo "** Loading: $DOCLI/functions/bash_git_private_dir"
+source $DOCLI/functions/bash_git_private_dir
+echo "** Loading: $DOCLI/functions/bash_op"
+source $DOCLI/functions/bash_op
+
+echo "** Setting variables **"
+environment=$1
+echo $environment
+uppercase_environment=$(echo "$environment" | tr '[:lower:]' '[:upper:]')
+gpg_name="$uppercase_environment GPG Key for Service Accounts"
+gpg_comment="$uppercase_environment - GPG key for all AWS IAM Service Users"
+gpg_email=$DOCLI_PROJECT_MAIL_MAIN
+gpg_expiration=0
+# this will generate priv-$gpg_key_filename.gpg and pub-$gpg_key_filename.gpg
+gpg_key_filename="gpg-key-aws-$environment"
+op_vault=$DOCLI_PROJECT_PW_DEFAULT_VAULT
+op_tags='AWS','Terraform','gpg-keys',"$environment"
+
+create_git_private_dir
+
+gpg_remove_all_local_keys "$gpg_key_filename.gpg"
+
+create_gpg_key "$gpg_name" "$gpg_comment" "$gpg_email" "$gpg_expiration" "$gpg_key_filename"
+
+op_check_connection
+
+echo "** Creating/Updating $gpg_key_filename on 1Password..."
+
+## PRIVATE
+o1=$(op_update_document "priv-$gpg_key_filename.gpg" "$DOCLI/.private/.priv-$gpg_key_filename.gpg" ".priv-$gpg_key_filename.gpg" "$op_vault" "$op_tags,priv-gpg-keys" 2>&1)
+echo "$o1"
+if [[ $o1 == *"ERROR"* ]]; then
+  echo "** Could not update priv-$gpg_key_filename.gpg. Trying now OP CREATE command..."
+  op_create_document "priv-$gpg_key_filename.gpg" "$DOCLI/.private/.priv-$gpg_key_filename.gpg" ".priv-$gpg_key_filename.gpg" "$op_vault" "$op_tags,priv-gpg-keys"
+  echo "** priv-$gpg_key_filename.gpg CREATED on 1Password! **"
+else
+  echo "** priv-$gpg_key_filename.gpg correctly updated on 1Password! **"
+fi
+
+o2=$(op_update_document "priv-$gpg_key_filename.key" "$DOCLI/.private/.priv-$gpg_key_filename.key" ".priv-$gpg_key_filename.key" "$op_vault" "$op_tags,priv-gpg-keys,gpg-armor" 2>&1)
+echo "$o2"
+if [[ $o2 == *"ERROR"* ]]; then
+  echo "** Could not update priv-$gpg_key_filename.key. Trying now OP CREATE command..."
+  op_create_document "priv-$gpg_key_filename.key" "$DOCLI/.private/.priv-$gpg_key_filename.key" ".priv-$gpg_key_filename.key" "$op_vault" "$op_tags,priv-gpg-keys,gpg-armor"
+  echo "** priv-$gpg_key_filename.key CREATED on 1Password! **"
+else
+  echo "** priv-$gpg_key_filename.key correctly updated on 1Password! **"
+fi
+
+## PUBLIC
+o3=$(op_update_document "pub-$gpg_key_filename.gpg" "$DOCLI/.private/.pub-$gpg_key_filename.gpg" ".pub-$gpg_key_filename.gpg" "$op_vault" "$op_tags,pub-gpg-keys" 2>&1)
+echo "$o3"
+if [[ $o3 == *"ERROR"* ]]; then
+  echo "** Could not update pub-$gpg_key_filename.gpg. Trying now OP CREATE command..."
+  op_create_document "pub-$gpg_key_filename.gpg" "$DOCLI/.private/.pub-$gpg_key_filename.gpg" ".pub-$gpg_key_filename.gpg" "$op_vault" "$op_tags,pub-gpg-keys"
+  echo "** pub-$gpg_key_filename.gpg CREATED on 1Password! **"
+else
+  echo "** pub-$gpg_key_filename.gpg correctly updated on 1Password! **"
+fi
+
+o4=$(op_update_document "pub-$gpg_key_filename.key" "$DOCLI/.private/.pub-$gpg_key_filename.key" ".pub-$gpg_key_filename.key" "$op_vault" "$op_tags,pub-gpg-keys,gpg-armor" 2>&1)
+echo "$o4"
+if [[ $o4 == *"ERROR"* ]]; then
+  echo "** Could not update pub-$gpg_key_filename.key. Trying now OP CREATE command..."
+  op_create_document "pub-$gpg_key_filename.key" "$DOCLI/.private/.pub-$gpg_key_filename.key" ".pub-$gpg_key_filename.key" "$op_vault" "$op_tags,pub-gpg-keys,gpg-armor"
+  echo "** pub-$gpg_key_filename.key CREATED on 1Password! **"
+else
+  echo "** pub-$gpg_key_filename.key correctly updated on 1Password! **"
+fi
+
+echo "** Clean up..."
+[[ -f $DOCLI/.private/.priv-$gpg_key_filename.gpg ]] && rm $DOCLI/.private/.priv-$gpg_key_filename.gpg || echo "CUSTOM_ERROR: .priv-$gpg_key_filename.gpg not_found"
+[[ -f $DOCLI/.private/.pub-$gpg_key_filename.gpg ]] && rm $DOCLI/.private/.pub-$gpg_key_filename.gpg || echo "CUSTOM_ERROR: .pub-$gpg_key_filename.gpg not_found"
+[[ -f $DOCLI/.private/.priv-$gpg_key_filename.key ]] && rm $DOCLI/.private/.priv-$gpg_key_filename.key || echo "CUSTOM_ERROR: .priv-$gpg_key_filename.key not_found"
+[[ -f $DOCLI/.private/.pub-$gpg_key_filename.key ]] && rm $DOCLI/.private/.pub-$gpg_key_filename.key || echo "CUSTOM_ERROR: .pub-$gpg_key_filename.key not_found"

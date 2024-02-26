@@ -60,6 +60,9 @@ tf_opt=$DOCLI_PARAM_OPTION                        # Received options. Ex: apply,
 tf_env=$DOCLI_PARAM_ENV                           # Received environment. Ex: ent, prd, qas, etc...
 tf_srg=$DOCLI_PARAM_SHORT_REGION                  # Received short_region. Ex: use1, euc1, use2, apse2, sae1, etc...
 tf_clt=$DOCLI_PARAM_CLIENT                        # Received client. Ex: co (also get DOCLI_PROJECT_CLIENT if not specified)
+tf_arg1=$DOCLI_PARAM_ARG1                         # Received additional argument 1
+tf_arg2=$DOCLI_PARAM_ARG2                         # Received additional argument 2
+tf_arg3=$DOCLI_PARAM_ARG3                         # Received additional argument 3
 
 field0=username
 
@@ -574,20 +577,20 @@ fi
 # ARGUMENT/COMMAND CHECKS
 ############################################
 # Check for the correct number of arguments
-if [[ $tf_opt == "state_show" ]]; then
-  if [ "$#" -ne 6 ]; then
-    echo "Error: Incorrect number of arguments provided."
-    help
-    exit 1
-  fi
-else
-  echo
-  # if [ "$#" -ne 5 ]; then
-  #   echo "Error: Incorrect number of arguments provided."
-  #   help
-  #   exit 1
-  # fi
-fi
+# if [[ $tf_opt == "state_show" ]]; then
+#   if [ "$#" -ne 6 ]; then
+#     echo "Error: Incorrect number of arguments provided."
+#     help
+#     exit 1
+#   fi
+# else
+#   echo
+#   # if [ "$#" -ne 5 ]; then
+#   #   echo "Error: Incorrect number of arguments provided."
+#   #   help
+#   #   exit 1
+#   # fi
+# fi
 
 # Validate the provided terraform command
 if ! contains "$tf_opt" "${VALID_COMMANDS[@]}"; then

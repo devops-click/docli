@@ -1,0 +1,22 @@
+#!/bin/bash
+
+environment=$1
+
+# Sources
+source $DOCLI/functions/bash_op
+source $DOCLI/functions/bash_gpg_key
+
+# Check if private dir exists
+dir=$DOCLI/.private
+if [ ! -d "$dir" ]; then
+  echo "Private Directory does not exist. Creating $dir..."
+  mkdir -p "$dir"
+  echo "Directory created."
+else
+  echo "Directory already exists."
+fi
+
+op_check_connection
+gpg_import_priv_keys $environment
+
+echo "Done! Bye ;)"

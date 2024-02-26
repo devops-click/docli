@@ -16,7 +16,7 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.4"
+setup_version="1.5"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_current_dir="$(pwd)"
@@ -922,7 +922,7 @@ setup_homebrew_and_packages() {
     else
       echo "** Detected INTEL processor."
       brew install zsh-autosuggestions cmctl helm k9s popeye jq \
-      kubectl kubectx eksctl awscli azure-cli cilium-cli kube-ps1 \
+      kubectl kubectx eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 \
       mysql-client libpq tfenv packer font-fira-code watch strace \
       pbcopy xclip figlet boxes toilet lolcat gh strongswan macfuse duti go md5sum \
       shellcheck shdoc kustomize gnupg 1password-cli openssl@3 \
@@ -958,7 +958,7 @@ setup_homebrew_and_packages() {
   elif [ "$setup_arch_name" == "arm64" ]; then
     echo "This is an ARM processor."
     brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx \
-    eksctl awscli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer \
+    eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer \
     font-fira-code watch xclip figlet boxes toilet lolcat gh strongswan \
     duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 \
     ca-certificates htop nss curl bash prometheus turbot/tap/steampipe

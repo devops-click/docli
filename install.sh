@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.08"
+install_version="0.0.09"
 os_var=$(uname)
 DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
 DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
@@ -256,10 +256,12 @@ declare -a tool_dirs=(
   "tools/ca-generator"
   "tools/aws-account-cleaner"
   "tools/aws-instance-backup-to-ami"
-  # "tools/aws-rds-connectivity-tests"
-  # "tools/aws-vpc-connectivity-tests"
+  "tools/aws-rds-connectivity-tests"
+  "tools/aws-vpc-connectivity-tests"
   "tools/aws-instance-backup-to-ami"
   "tools/gcp-storage-bucket-cleanup"
+  # "tools/gpg-import-keys"
+  # "tools/gpg-key-service-accounts"
   # "tools/gcp-storage-bucket-copy"
   # "tools/macos-troubleshoot"
   # "tools/mfa-expect"

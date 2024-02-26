@@ -309,12 +309,12 @@ run_terraform() {
     state_show)
       tf_opt="state show"
       echo "Running 'terraform $tf_opt' with profile: $awsprofile"
-      eval "$tf_command $tf_opt $cmd_args" ${tf_input_7:-not_available}
+      eval "$tf_command $tf_opt $cmd_args" ${tf_arg1:-not_available}
       ;;
     import)
       tf_opt="import"
       echo "Running 'terraform $tf_opt' with profile: $awsprofile"
-      eval "$tf_command $tf_opt $cmd_args ${tf_input_7:-not_available} ${tf_input_7:-not_available}" # TODO: TF IMPORT - Make it work. Order now is correct: terraform <option> <global_variables> <ADDR> <ID>, but still returning error.
+      eval "$tf_command $tf_opt $cmd_args ${tf_arg1:-not_available} ${tf_arg1:-not_available}" # TODO: TF IMPORT - Make it work. Order now is correct: terraform <option> <global_variables> <ADDR> <ID>, but still returning error.
       ;;
     providers)
       # tf_opt="providers"

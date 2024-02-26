@@ -169,6 +169,11 @@ docli_params_load() {
   : "${DOCLI_PARAM_REMOTE_STATE:=s3}}"
   : "${DOCLI_PARAM_SHORT_REGION:=$DOCLI_PROJECT_ENTERPRISE_SRG}}"
 
+  # Additional Parameters (Used in some docli functions like runtf state_show or import)
+  : "${DOCLI_PARAM_ARG1:=""}}"
+  : "${DOCLI_PARAM_ARG2:=""}}"
+  : "${DOCLI_PARAM_ARG3:=""}}"
+
   # Used in specific modules
   : "${DOCLI_PARAM_BITB_REPO:=}}"
 
@@ -241,6 +246,19 @@ docli_params_load() {
       -bbr=*|--bitbucket-repository=*)
         export DOCLI_PARAM_BITB_REPO="${1#*=}"
         echo opt_DOCLI_PARAM_BITB_REPO=$DOCLI_PARAM_BITB_REPO
+        ;;
+
+      -a1=*|--arg1=*)
+        export DOCLI_PARAM_ARG1="${1#*=}"
+        echo opt_DOCLI_PARAM_ARG1=$DOCLI_PARAM_ARG1
+        ;;
+      -a2=*|--arg2=*)
+        export DOCLI_PARAM_ARG2="${1#*=}"
+        echo opt_DOCLI_PARAM_ARG2=$DOCLI_PARAM_ARG2
+        ;;
+      -a3=*|--arg3=*)
+        export DOCLI_PARAM_ARG3="${1#*=}"
+        echo opt_DOCLI_PARAM_ARG3=$DOCLI_PARAM_ARG3
         ;;
 
       *)

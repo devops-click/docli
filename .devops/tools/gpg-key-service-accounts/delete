@@ -1,0 +1,40 @@
+#!/bin/bash -euo pipefail
+
+echo -e "\n!!!! WARNING: You should only execute this script if the GPG KEY WAS LEAKED !!!!"
+echo -e "!!!! As soon as you change this, ALL TERRAFORM OBJECTS that depend on this key will be RECREATED !!!!\n"
+read -p ">>>>> PRESS ENTER IF YOU ARE SURE YOU WANT TO DO THIS <<<<<"
+echo ""
+
+# Sources
+echo "** Loading: $DOCLI/functions/bash_gpg_key"
+source $DOCLI_PROJECT_ROOT/.docli_envs
+echo "** Loading: $DOCLI/functions/bash_gpg_key"
+source $DOCLI/functions/bash_gpg_key
+echo "** Loading: $DOCLI/functions/bash_git_private_dir"
+source $DOCLI/functions/bash_git_private_dir
+echo "** Loading: $DOCLI/functions/bash_op"
+source $DOCLI/functions/bash_op
+
+echo "** Setting variables **"
+environment=$1
+echo $environment
+uppercase_environment=$(echo "$environment" | tr '[:lower:]' '[:upper:]')
+gpg_name="$uppercase_environment GPG Key for Service Accounts"
+gpg_comment="GPG key for all $uppercase_environment AWS IAM Service users"
+gpg_email=$DOCLI_PROJECT_MAIL_MAIN
+gpg_expiration=0
+# this will generate priv-$gpg_key_filename.gpg and pub-$gpg_key_filename.gpg
+gpg_key_filename="gpg-key-aws-$environment"
+op_vault=$DOCLI_PROJECT_PW_DEFAULT_VAULT
+op_tags='AWS','Terraform','gpg-key',"$environment"
+
+create_git_private_dir
+
+gpg_remove_all_local_keys "$gpg_key_filename.gpg"
+
+echo "** Clean up..."
+if [[ -f $DOCLI/.private/.$gpg_key_filename.gpg ]]; then
+  [[ -f $DOCLI/.private/.$gpg_key_filename.gpg ]] && rm "$DOCLI/.private/.$gpg_key_filename.gpg"
+else
+  echo "* $DOCLI/.private/.$gpg_key_filename.gpg not found for cleanup..."
+fi
