@@ -16,7 +16,7 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.5"
+setup_version="1.6"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_current_dir="$(pwd)"
@@ -925,7 +925,7 @@ setup_homebrew_and_packages() {
       kubectl kubectx eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 \
       mysql-client libpq tfenv packer font-fira-code watch strace \
       pbcopy xclip figlet boxes toilet lolcat gh strongswan macfuse duti go md5sum \
-      shellcheck shdoc kustomize gnupg 1password-cli openssl@3 \
+      shellcheck shdoc kustomize gnupg 1password-cli openssl@3 powershell/tap/powershell \
       ca-certificates nss curl bash prometheus turbot/tap/steampipe wp-cli
       # removed from default install: yt-download, leapp, ffmpeg
       brew install --cask aws-vault iterm2 google-chrome \
@@ -960,7 +960,7 @@ setup_homebrew_and_packages() {
     brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx \
     eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer \
     font-fira-code watch xclip figlet boxes toilet lolcat gh strongswan \
-    duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 \
+    duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 powershell/tap/powershell \
     ca-certificates htop nss curl bash prometheus turbot/tap/steampipe
     brew install --cask aws-vault iterm2 xbar cryptr rsyncui keka google-cloud-sdk
     curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash

@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.09
+DOCLI_MODULE_VERSION=1.10
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -261,7 +261,13 @@ if [[ $current_key == "_template-gen" ]]; then
   echo "** Starting Template Generation **"
   export TF_CLI_ARGS_init="-reconfigure"
   terraform init
-  terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars"
+  if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/$current_key.tf" ]]; then
+    echo "* _template-gen.tf file found!"
+    terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars" -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/$current_key.tf"
+  else
+    echo "* _template-gen.tf file not found. skipping..."
+    terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars"
+  fi
   exit 0
 fi
 
