@@ -11,7 +11,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_VERSION=0.4
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -228,7 +228,25 @@ run_terraform() {
   fi
 
   if [ ! -z "$DOCLI_PARAM_CLOUD" ]; then
-    cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+    cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\""
+
+    ################################## $current_key.tfvars load ##################################
+    # Skips the load of $current_key.tfvars for specific terraform recipes
+    ##############################################################################################
+    key_found=0
+    # Loop through the array to check if current_key exists
+    for terraform_current_directory in "${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[@]}"; do
+      if [[ "$terraform_current_directory" == "$current_key" ]]; then
+        key_found=1
+        break
+      fi
+    done
+    # If the key is not on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, load $current_key.tfvars
+    if [[ $key_found -eq 0 ]]; then
+      cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+    fi
+    ##############################################################################################
+
     if [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
       echo "azure ok"
 

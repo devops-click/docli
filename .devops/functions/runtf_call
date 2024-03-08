@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.2
+DOCLI_MODULE_VERSION=0.3
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -35,6 +35,13 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
 
 export DOCLI_PARAM_OPTIONS=("apply" "apply_unlock" "apply_force" "destroy" "destroy_force" "plan" "plan_destroy" "show" "apply_plan" "refresh" "state_list" "state_pull" "state_show" "import" "providers" "output_base64")
+
+# Check if the array is already initialized and has at least one element
+if [ -z "${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD+x}" ] || [ ${#DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[@]} -eq 0 ]; then
+  DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD=("backup" "backup-tag-existing")
+  DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD_STR="${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[*]}"
+  export DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD_STR
+fi
 
 export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
 
