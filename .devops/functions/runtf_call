@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -105,9 +105,9 @@ if [ ${#args[@]} -eq 0 ]; then
         echo -e "######################################################################################"
 
         if [ $tf_force_param -eq 1 ]; then
-          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}" --force
+          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--short-region=${region}" --force
         else
-          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--region=${region}"
+          source $DOCLI/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--short-region=${region}"
         fi
       else
         echo "Skipping env: $env for short_region: $region"
