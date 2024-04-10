@@ -25,7 +25,7 @@ source $DOCLI/.docli_envs
 source $DOCLI/functions/bash_basic_functions
 
 # Set CURRENT_QUARTER variable for all recipes
-TF_VAR_CURRENT_QUARTER=$(get_quarter)
+export TF_VAR_CURRENT_QUARTER=$(get_quarter)
 
 ############################################
 # SANITIZATION
