@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.11
+DOCLI_MODULE_VERSION=1.12
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -24,6 +24,8 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 source $DOCLI/.docli_envs
 source $DOCLI/functions/bash_basic_functions
 
+# Set CURRENT_QUARTER variable for all recipes
+TF_VAR_CURRENT_QUARTER=$(get_quarter)
 
 ############################################
 # SANITIZATION
