@@ -584,3 +584,90 @@ get_full_arch_name() {
     *) echo "Unknown Architecture" ;;
   esac
 }
+
+#:: # Function to return current quarter in YYqN format
+#:: ## Usage example:
+#:: `quarter=$(get_quarter)`
+function get_quarter() {
+  month=$(date +%m)
+  year=$(date +%Y)
+  last_two_digits_of_year=${year: -2}
+
+  if [ $month -ge 1 ] && [ $month -le 3 ]; then
+    echo "${last_two_digits_of_year}q1"
+  elif [ $month -ge 4 ] && [ $month -le 6 ]; then
+    echo "${last_two_digits_of_year}q2"
+  elif [ $month -ge 7 ] && [ $month -le 9 ]; then
+    echo "${last_two_digits_of_year}q3"
+  else
+    echo "${last_two_digits_of_year}q4"
+  fi
+}
+
+#:: # Function to return the quarter start date
+#:: ## Usage example:
+#:: `$(get_quarter_start_date ${quarter})`
+function get_quarter_start_date() {
+  case $1 in
+    *q1)
+      echo "20${1:0:2}-01-01"
+      ;;
+    *q2)
+      echo "20${1:0:2}-04-01"
+      ;;
+    *q3)
+      echo "20${1:0:2}-07-01"
+      ;;
+    *q4)
+      echo "20${1:0:2}-10-01"
+      ;;
+    *)
+      echo "Invalid quarter"
+      ;;
+  esac
+}
+
+#:: # Function to return the quarter end date
+#:: ## Usage example:
+#:: `$(get_quarter_end_date ${quarter})`
+function get_quarter_end_date() {
+  case $1 in
+    *q1)
+      echo "20${1:0:2}-03-31"
+      ;;
+    *q2)
+      echo "20${1:0:2}-06-30"
+      ;;
+    *q3)
+      echo "20${1:0:2}-09-30"
+      ;;
+    *q4)
+      echo "20${1:0:2}-12-31"
+      ;;
+    *)
+      echo "Invalid quarter"
+      ;;
+  esac
+}
+
+#:: # Function to return if currently on desired quarter (true/false)
+#:: ## Usage example:
+#:: `is_current_quarter`
+function is_current_quarter() {
+  # If MacOS, run compatible date command
+  if [[ "$(uname)" == "Darwin" ]]; then
+    start_date=$(date -jf "%Y-%m-%d" "${1}" +%s)
+    end_date=$(date -jf "%Y-%m-%d" "${2}" +%s)
+    current_date=$(date +%s)
+  else
+    start_date=$(date -d "${1}" +%s)
+    end_date=$(date -d "${2}" +%s)
+    current_date=$(date +%s)
+  fi
+
+  if [ $current_date -ge $start_date ] && [ $current_date -le $end_date ]; then
+    return 0
+  else
+    return 1
+  fi
+}
