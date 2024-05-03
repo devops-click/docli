@@ -706,11 +706,11 @@ op_load_envs() {
       fi
       # Get content from 1Password and write to the file with appropriate file format
       # op item get "$op_item_name" --vault "$op_item_vault" --fields "label=$op_item_field" --format json | jq -r '.value' > "$file_path"
-      op read op://$op_item_vault/$op_item_name/$op_item_field > "$file_path"
+      op read "op://$op_item_vault/$op_item_name/$op_item_field" > "$file_path"
     else
       # Fetch the value from 1Password
       # op_item_value=$(op item get "$op_item_name" --vault "$op_item_vault" --fields "$op_item_field")
-      op_item_value=$(op read op://$op_item_vault/$op_item_name/$op_item_field)
+      op_item_value=$(op read "op://$op_item_vault/$op_item_name/$op_item_field")
       # Check if we need to add quotes around the value
       if [[ $op_item_result == "1" ]] || [[ $op_item_value == *" "* ]]; then
         op_item_value="\"$op_item_value\""
