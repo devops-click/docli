@@ -723,9 +723,9 @@ op_load_envs() {
 
       # Skip $ with \$ if it is a TF_VAR # Using on source for now.
       if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' 's/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+        sed -i '' '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
       else
-        sed -i 's/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+        sed -i '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
       fi
       # sed '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs" > "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs2"
     fi
