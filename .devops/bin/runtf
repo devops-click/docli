@@ -721,14 +721,23 @@ op_load_envs() {
       echo "export $op_item_name_underscore=$op_item_value" >> "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
       echo "export TF_VAR_$op_item_name_underscore=$op_item_value" >> "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
 
-      # Skip $ with \$ if it is a TF_VAR # Using on source for now.
-      perl -pi -e 's/^(export TF_VAR_.*?)(\$)/$1\\$2/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
     fi
 
   done < "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.op_load_envs"
   IFS=$original_ifs # Restore the original IFS
 
+  echo "* Escaping needed characters on private envs... *"
+  # Skip $ with \$ if it is a TF_VAR # Using on source for now.
+  # if [[ "$OSTYPE" == "darwin"* ]]; then
+  #   sed -i '' '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+  # else
+  #   sed -i '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+  # fi
+  # Using perl for higher compatibility
+  perl -pi -e 's/^(export TF_VAR_.*?)(\$)/$1\\$2/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+
   echo "* Sourcing private envs... *"
+  # source <(sed '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs")
   source "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
 
   echo -e "${BOLD}${TEXT_GREEN}** 1password load envs: end ${END}\n"
