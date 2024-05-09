@@ -714,7 +714,7 @@ op_load_envs() {
       op_item_value=$(op read "op://$op_item_vault/$op_item_name/$op_item_field")
       # Check if we need to add quotes around the value
       if [[ $op_item_result == "1" ]] || [[ $op_item_value == *" "* ]]; then
-        op_item_value="\"$op_item_value\""
+        op_item_value="'$op_item_value'"
       fi
 
       # Append to .private_envs
@@ -728,11 +728,11 @@ op_load_envs() {
 
   echo "* Escaping needed characters on private envs... *"
   # Skip $ with \$ if it is a TF_VAR # Using on source for now.
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
-  else
-    sed -i '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
-  fi
+  # if [[ "$OSTYPE" == "darwin"* ]]; then
+  #   sed -i '' '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+  # else
+  #   sed -i '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+  # fi
   # Using perl for higher compatibility
   # perl -pi -e 's/^(export TF_VAR_)(.*)/"$1" . ($2 =~ s|\$|\\\$|gr)/e' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
 
