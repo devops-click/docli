@@ -734,7 +734,7 @@ op_load_envs() {
   #   sed -i '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
   # fi
   # Using perl for higher compatibility
-  perl -pi -e 's/^(export TF_VAR_)(.*)/$1 . ($2 =~ s|\$|\\\$|gr)/e' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
+  perl -pi -e 's/^(export TF_VAR_)(.*)/"$1" . ($2 =~ s|\$|\\\$|gr)/e' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs"
 
   echo "* Sourcing private envs... *"
   # source <(sed '/^export TF_VAR_/s/\$/\\$/g' "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_envs")
