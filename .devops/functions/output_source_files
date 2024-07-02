@@ -1,0 +1,21 @@
+#!/bin/bash
+set -a
+
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                         docli runtf -> bash_terraform
+###############################################################################
+#-----------------------------------------------------------------------------;
+#    GENERATE CLEAN OUTPUT FROM SOURCE FILES FOR OTHER PROGRAMS LIKE PYTHON   |
+#-----------------------------------------------------------------------------'
+# Simple output to be called by other programs
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=output_source_files
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+source "$1"
+env

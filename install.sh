@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.09"
+install_version="0.0.10"
 os_var=$(uname)
 DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
 DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
@@ -241,6 +241,7 @@ declare -a file_paths=(
   "functions/bash_terraform_get_base_files"
   "functions/runtf_call"
   "functions/runpacker_call"
+  "functions/output_source_files"
   "main/packer"
   "main/setup"
   "main/sso"
