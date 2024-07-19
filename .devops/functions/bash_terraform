@@ -11,7 +11,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.6
+DOCLI_MODULE_VERSION=0.7
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -243,7 +243,13 @@ run_terraform() {
     done
     # If the key is not on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, load $current_key.tfvars
     if [[ $key_found -eq 0 ]]; then
-      cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_BACKEND_PROVIDER/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+      if [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository" ]]; then
+        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/workspace/configs/\$current_key.tfvars\""
+      elif [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository-variables" ]]; then
+        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
+      else
+        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_BACKEND_PROVIDER/envs/\$tf_confdir/configs/\$current_key.tfvars\""
+      fi
       echo "* DOCLI: current_key.tfvars loaded! ($current_key.tfvars)"
     else
       echo "* DOCLI: current_key.tfvars IGNORED! ($current_key.tfvars found on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD list)"
