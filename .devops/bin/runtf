@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.19
+DOCLI_MODULE_VERSION=1.20
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -199,6 +199,11 @@ sleep 4
 ############################################
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend ]]; then
   source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend
+  if [[ $backend == "s3" ]]; then
+    export DOCLI_PARAM_BACKEND_PROVIDER=aws
+  else
+    export DOCLI_PARAM_BACKEND_PROVIDER=$backend
+  fi
 else
   echo "** ERROR: Could not find Backend Configuration file!!! **"
   echo "** You must specify a backend on $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend file! **"
@@ -263,19 +268,19 @@ if [[ $current_key == "_template-gen" ]]; then
   echo "** Starting Template Generation **"
   export TF_CLI_ARGS_init="-reconfigure"
   terraform init
-  if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars" ]]; then
+  if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars" ]]; then
     echo "* _template-gen.tf file found!"
     terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars"
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars"
   else
     echo "* _template-gen.tf file not found. skipping..."
     terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars"
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars"
   fi
   exit 0
 fi
@@ -311,7 +316,7 @@ FILE_OR_DIR_CHECK=(
   $DOCLI/functions/bash_colors_tput
   $DOCLI/bin
   $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs.tfvars
-  $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$tf_confdir/configs/envs.tfvars
+  $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$tf_confdir/configs/envs.tfvars
   $DOCLI/functions/bash_aws_local_sso_temp_creds
   $DOCLI/functions/bash_basic_aws_profiles
   $DOCLI/functions/bash_basic_functions
@@ -384,7 +389,7 @@ if [[ $backend == "local" ]]; then
   echo -e "** Backend config: $backend_hcl"
   echo -e "**"
   echo -e "** Cloud Profile:  $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
@@ -395,7 +400,7 @@ elif [[ $backend == "s3" ]]; then
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/s3"
 
   ### EXPORTING BACKEND VARIABLES
-  backend_hcl="$DOCLI_PROJECT_ROOT/terraform/aws/envs/$awsprofile/configs/backend.hcl"
+  backend_hcl="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$awsprofile/configs/backend.hcl"
   bucket=$(grep '^bucket' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   region=$(grep '^region' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   dynamodb_table=$(grep '^dynamodb_table' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
@@ -403,7 +408,7 @@ elif [[ $backend == "s3" ]]; then
   tf_region=$region
 
   ### EXPORTING TF_CLI_ARGS_init ENVIRONMENT VARIABLE - USES CLOUD_PROFILE SINCE IT USES DOCLI_PARAM_CLOUD FOLDER TO GET INFO
-  export TF_CLI_ARGS_init="-backend-config=$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl \
+  export TF_CLI_ARGS_init="-backend-config=$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl \
   -backend-config=workspace_key_prefix=remote-state \
   -backend-config=key=${current_key}/terraform.tfstate \
   -reconfigure"
@@ -424,7 +429,7 @@ elif [[ $backend == "s3" ]]; then
   echo -e "** encrypt:        $encrypt"
   echo -e "**"
   echo -e "** Cloud Profile:  $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
@@ -452,7 +457,7 @@ elif [[ $backend == "azurerm" ]]; then
   echo -e "** Container RG:     $container_name"
   echo -e "**"
   echo -e "** Cloud Profile:    $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
