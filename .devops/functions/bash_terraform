@@ -11,7 +11,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.7
+DOCLI_MODULE_VERSION=0.8
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -246,6 +246,7 @@ run_terraform() {
       if [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository" ]]; then
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/workspace/configs/\$current_key.tfvars\""
       elif [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository-variables" ]]; then
+        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/envs.tfvars\""
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
       else
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_BACKEND_PROVIDER/envs/\$tf_confdir/configs/\$current_key.tfvars\""
