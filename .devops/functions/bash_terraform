@@ -229,6 +229,11 @@ run_terraform() {
   fi
 
   if [ ! -z "$DOCLI_PARAM_CLOUD" ]; then
+    echo "* cmd_args using:"
+    echo "* DOCLI_PROJECT_ROOT=$DOCLI_PROJECT_ROOT"
+    echo "* DOCLI_PARAM_CLOUD=$DOCLI_PARAM_CLOUD"
+    echo "* DOCLI_PARAM_CLOUD=$DOCLI_PARAM_CLOUD_PROFILE"
+
     cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\""
 
     ################################## $current_key.tfvars load ##################################
