@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.24
+DOCLI_MODULE_VERSION=1.25
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -406,7 +406,7 @@ if [[ $DOCLI_PARAM_BACKEND_TYPE == "local" ]]; then
   echo -e "** Backend config: $backend_hcl"
   echo -e "**"
   echo -e "** Cloud Profile:  $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
@@ -417,7 +417,7 @@ elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/s3"
 
   ### EXPORTING BACKEND VARIABLES
-  backend_hcl="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  backend_hcl="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_PROFILE/configs/backend.hcl"
   bucket=$(grep '^bucket' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   region=$(grep '^region' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   dynamodb_table=$(grep '^dynamodb_table' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
@@ -425,7 +425,7 @@ elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   tf_region=$region
 
   ### EXPORTING TF_CLI_ARGS_init ENVIRONMENT VARIABLE - USES CLOUD_PROFILE SINCE IT USES DOCLI_PARAM_CLOUD FOLDER TO GET INFO
-  export TF_CLI_ARGS_init="-backend-config=$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl \
+  export TF_CLI_ARGS_init="-backend-config=$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_PROFILE/configs/backend.hcl \
   -backend-config=workspace_key_prefix=remote-state \
   -backend-config=key=${current_key}/terraform.tfstate \
   -reconfigure"
@@ -446,7 +446,7 @@ elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   echo -e "** encrypt:        $encrypt"
   echo -e "**"
   echo -e "** Cloud Profile:  $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
@@ -474,7 +474,7 @@ elif [[ $DOCLI_PARAM_BACKEND_TYPE == "azurerm" ]]; then
   echo -e "** Container RG:     $container_name"
   echo -e "**"
   echo -e "** Cloud Profile:    $DOCLI_PARAM_CLOUD_PROFILE **"
-  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/backend.hcl"
+  echo -e "** $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_PROFILE/configs/backend.hcl"
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
