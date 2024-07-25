@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.25
+DOCLI_MODULE_VERSION=1.26
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -94,6 +94,7 @@ if [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
   export fixed_enterprise_remote_state=true           # Force all Azure Terraform Remote State files to be hosted on ENTERPRISE ONLY.
   export DOCLI_PARAM_CON_TYPE=sso                     # OVERRIDE to SSO TRUE
   export DOCLI_PARAM_BITB_REPO=${DOCLI_PARAM_ARG1:-$DOCLI_PARAM_BITB_REPO}
+  export DOCLI_PARAM_CLOUD_CONFIG_DIR=${DOCLI_PARAM_ARG1:-$DOCLI_PARAM_BITB_REPO}
   export tf_workspace="$DOCLI_PARAM_CLOUD-$DOCLI_PARAM_BITB_REPO"
 
 #---------- ELASTIC CLOUD VARIABLES ----------#
@@ -279,19 +280,19 @@ if [[ $current_key == "_template-gen" ]]; then
   echo "** Starting Template Generation **"
   export TF_CLI_ARGS_init="-reconfigure"
   terraform init
-  if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars" ]]; then
+  if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars" ]]; then
     echo "* _template-gen.tf file found!"
     terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars"
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/_template-gen.tfvars"
   else
     echo "* _template-gen.tf file not found. skipping..."
     terraform apply -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/envs.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
-    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars"
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/envs.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars" \
+    -var-file="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD_PROVIDER/envs/$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars"
   fi
   exit 0
 fi
