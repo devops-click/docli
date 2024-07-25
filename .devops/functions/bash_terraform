@@ -11,7 +11,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.11
+DOCLI_MODULE_VERSION=0.12
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -229,12 +229,18 @@ run_terraform() {
   fi
 
   if [ ! -z "$DOCLI_PARAM_CLOUD" ]; then
+    echo "***********************************************************************"
     echo "* cmd_args using:"
-    echo "* DOCLI_PROJECT_ROOT=$DOCLI_PROJECT_ROOT"
-    echo "* DOCLI_PARAM_CLOUD=$DOCLI_PARAM_CLOUD"
-    echo "* DOCLI_PARAM_CLOUD=$DOCLI_PARAM_CLOUD_PROFILE"
+    echo "* DOCLI_PROJECT_ROOT            $DOCLI_PROJECT_ROOT"
+    echo "* DOCLI_PARAM_CLOUD             $DOCLI_PARAM_CLOUD"
+    echo "* DOCLI_PARAM_CLOUD_PROFILE     $DOCLI_PARAM_CLOUD_PROFILE"
+    echo "* DOCLI_PARAM_CLOUD_CONFIG_DIR  $DOCLI_PARAM_CLOUD_CONFIG_DIR"
+    echo "***********************************************************************"
 
-    cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_PROFILE/configs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_PROFILE/configs/envs-list.tfvars\" -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\""
+    cmd_args="-var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/envs.tfvars\" \
+              -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/envs-list.tfvars\" \
+              -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs.tfvars\" \
+              -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\""
 
     ################################## $current_key.tfvars load ##################################
     # Skips the load of $current_key.tfvars for specific terraform recipes
