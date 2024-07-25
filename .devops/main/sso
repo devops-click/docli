@@ -147,9 +147,9 @@ sso_login_mfa() {
 eks_login() {
   local eks_cluster=$1
   local region=$2
-  local cust_awsprofile=$3
+  local local_aws_profile=$3
 
-  export AWS_PROFILE=$cust_awsprofile
+  export AWS_PROFILE=$local_aws_profile
 
   while true; do
     # TODO: Assign function to auto-get tenant for $DOCLI_PROJECT_CURRENT_TENANT

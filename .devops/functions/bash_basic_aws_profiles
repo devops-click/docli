@@ -22,14 +22,14 @@ DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Check for AWS Profile (~/.aws/config)
-# [[ $DOCLI_PARAM_CLOUD == "aws" ]] && check_aws_profiles $awsprofile
+# [[ $DOCLI_PARAM_CLOUD == "aws" ]] && check_aws_profiles $DOCLI_PARAM_BACKEND_PROFILE
 
 check_aws_profiles() {
     # Load Basic Functions such as contains
     source "$DOCLI/functions/bash_basic_functions"
 
     PROFILES=$(sed -n 's/^\[profile \([^]]*\)]/\1/p' ~/.aws/config) # Read AWS config file and filter profile names
-    local awsprofile=$1
+    local local_aws_profile=$1
 
     # Convert profile names to an array
     profile_list=()
@@ -38,10 +38,10 @@ check_aws_profiles() {
     done <<< "$PROFILES"
 
 
-    if contains "$awsprofile" "${profile_list[@]}"; then
-        echo "** Profile $awsprofile found. Proceeding..."
+    if contains "$local_aws_profile" "${profile_list[@]}"; then
+        echo "** Profile $local_aws_profile found. Proceeding..."
     else
-        echo -e "${TEXT_RED}ERROR: AWS Profile $awsprofile not found on ~/.aws/config${END}"
+        echo -e "${TEXT_RED}ERROR: AWS Profile $local_aws_profile not found on ~/.aws/config${END}"
         exit 1
     fi
 }

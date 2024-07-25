@@ -13,12 +13,12 @@ PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
 sso_local_creds() {
   echo "** ######## AWS SSO INFORMATION ####### **"
   if [[ -z ${AWS_PROFILE+x} ]]; then
-    export AWS_PROFILE="$awsprofile-sso"
+    export AWS_PROFILE="$DOCLI_PARAM_BACKEND_PROFILE-sso"
     echo "** Using AWS_PROFILE=${AWS_PROFILE}"
   else
     echo "** Using AWS_PROFILE=${AWS_PROFILE}"
   fi
-  docli sso $awsprofile
+  docli sso $DOCLI_PARAM_BACKEND_PROFILE
   local account_id role_name access_token region
   account_id="$(aws configure get sso_account_id --profile ${AWS_PROFILE})"
   role_name="$(aws configure get sso_role_name --profile ${AWS_PROFILE})"
@@ -71,7 +71,7 @@ sso_local_creds() {
 sso_sha_local_creds() {
   # THIS VERSION CHECKS FOR SHA TO MATCH PROFILE. WE WILL USE SINGLE SSO-SESSION INSTEAD OF INDIVIDUAL PROFILES.
   if [[ -z ${AWS_PROFILE+x} ]]; then
-    export AWS_PROFILE="$awsprofile-sso-start"
+    export AWS_PROFILE="$DOCLI_PARAM_BACKEND_PROFILE-sso-start"
     echo "** Using AWS_PROFILE=${AWS_PROFILE}"
   else
     echo "** Using AWS_PROFILE=${AWS_PROFILE}"
@@ -161,7 +161,7 @@ old_sso_local_creds() {
     # ls -larth $JSON_BASEPATH
 
     # # Check if any valid SSO Token still exists:
-    # [[ "$(find "$JSON_BASEPATH" -maxdepth 1 -type f -print -quit)" ]] && echo "** Valid SSO token found. Proceeding... **" || aws sso login --profile "$awsprofile-sso"
+    # [[ "$(find "$JSON_BASEPATH" -maxdepth 1 -type f -print -quit)" ]] && echo "** Valid SSO token found. Proceeding... **" || aws sso login --profile "$DOCLI_PARAM_BACKEND_PROFILE-sso"
 
     # if [ -f ${AWS_CREDENTIALS_PATH} ]; then
     #         echo "backing up existing credentials"
@@ -203,9 +203,9 @@ old_sso_local_creds() {
     # export AWS_SESSION_TOKEN=$aws_session_token
     # echo $AWS_SESSION_TOKEN
     # export AWS_REGION="eu-central-1"
-    # export AWS_PROFILE="$awsprofile-sso"
-    # export AWS_DEFAULT_PROFILE="$awsprofile-sso"
+    # export AWS_PROFILE="$DOCLI_PARAM_BACKEND_PROFILE-sso"
+    # export AWS_DEFAULT_PROFILE="$DOCLI_PARAM_BACKEND_PROFILE-sso"
 
     # aws sso login --sso-session "devopsclick-sso"
-    # aws sso login --profile $awsprofile-sso
+    # aws sso login --profile $DOCLI_PARAM_BACKEND_PROFILE-sso
 }

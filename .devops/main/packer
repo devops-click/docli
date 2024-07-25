@@ -72,7 +72,7 @@ echo "args_help=${args_help:-}"
 packer_command=$1
 packer_cloud=$2
 packer_env=$3
-awsprofile="$4-$packer_env"
+local_aws_profile="$4-$packer_env"
 packer_confdir="$4-$packer_env"
 packer_script=$5
 
@@ -123,10 +123,10 @@ for source in "${FILE_OR_DIR_CHECK[@]}"; do
     fi
 done
 
-if contains "$awsprofile" "${profile_list[@]}"; then
-    echo "** Profile $awsprofile found. Proceeding..."
+if contains "$local_aws_profile" "${profile_list[@]}"; then
+    echo "** Profile $local_aws_profile found. Proceeding..."
 else
-    echo -e "${TEXT_RED}ERROR: AWS Profile $awsprofile not found on ~/.aws/config${END}"
+    echo -e "${TEXT_RED}ERROR: AWS Profile $local_aws_profile not found on ~/.aws/config${END}"
     exit 1
 fi
 
@@ -292,12 +292,12 @@ run_packer() {
     local command=$packer_command
     case "$command" in
         build)
-            echo -e "\n** Running Packer with $packer_cloud and profile: $awsprofile **"
+            echo -e "\n** Running Packer with $packer_cloud and profile: $local_aws_profile **"
             [[ $packer_cloud == "aws" ]] && echo "** Initiating Packer for $packer_script" \
             && packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
 
             [[ $packer_cloud == "aws-vault" ]] && echo "** Initiating Packer for $packer_script" \
-            && aws-vault exec "$awsprofile" -- packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
+            && aws-vault exec "$local_aws_profile" -- packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log
 
             [[ $packer_cloud == "azure" ]] && echo "** Initiating Packer for $packer_script" \
             && packer build $packer_current_dir/$packer_script 2>&1 | tee /tmp/packer.log

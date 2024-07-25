@@ -8,7 +8,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_hashicorp_vault
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -71,7 +71,7 @@ force=true
 source $DIR/bash_basic_functions
 ## After loading basic_functions...
 if [[ $custom_option == "secret" ]]; then
-  split_aws_profile_string $awsprofile # Returns: profile_client|profile_env|profile_short_region|profile_sso`
+  split_aws_profile_string $DOCLI_PARAM_BACKEND_PROFILE # Returns: profile_client|profile_env|profile_short_region|profile_sso`
   [[ $custom_app != "" ]] && k8s_secrets_secret_name="${profile_short_region}-${profile_env}-k8s-${custom_app}" || k8s_secrets_secret_name="${profile_short_region}-${profile_env}-k8s"
   k8s_secrets_source_file=$(replace_dash_with_underline $k8s_secrets_secret_name)
   k8s_secrets_source_path="$DIR/../../private/."

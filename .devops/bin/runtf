@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.23
+DOCLI_MODULE_VERSION=1.24
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -71,9 +71,8 @@ field0=username
 ############################################
 # TAILORED VARS
 ############################################
-DOCLI_PARAM_CLOUD_PROFILE="$tf_clt-$tf_srg-$tf_env" # awsprofile of the cloud provider
-awsprofile="$tf_clt-$tf_srg-$tf_env"                # Used to iterate with aws profiles (Also the BACKEND awsprofile)
-tf_confdir="$tf_clt-$tf_srg-$tf_env"                # Terraform Config Dir (Can be do-env-srg in case of aws, a repository name in case of bitbucket, or others) - Used to find configuration files
+DOCLI_PARAM_CLOUD_PROFILE="$tf_clt-$tf_srg-$tf_env"     # Cloud Provider Profile
+DOCLI_PARAM_CLOUD_CONFIG_DIR="$tf_clt-$tf_srg-$tf_env"  # Cloud Provider Configuration Directory
 # : "${sso:=true}"                                    # If sso is not set, set it to false # TODO: see the possibility to default becomes true
 : "${fixed_enterprise_remote_state:=false}"         # Tells if the Application REMOTE STATE files are going to be hosted only on ENTERPRISE account. (Fixed backend)
 
@@ -92,34 +91,32 @@ fi
 
 #---------- BITBUCKET VARIABLES ----------#
 if [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
-  export DOCLI_PARAM_BITB_REPO=${DOCLI_PARAM_ARG1:-$DOCLI_PARAM_BITB_REPO}
   export fixed_enterprise_remote_state=true           # Force all Azure Terraform Remote State files to be hosted on ENTERPRISE ONLY.
   export DOCLI_PARAM_CON_TYPE=sso                     # OVERRIDE to SSO TRUE
+  export DOCLI_PARAM_BITB_REPO=${DOCLI_PARAM_ARG1:-$DOCLI_PARAM_BITB_REPO}
   export tf_workspace="$DOCLI_PARAM_CLOUD-$DOCLI_PARAM_BITB_REPO"
 
 #---------- ELASTIC CLOUD VARIABLES ----------#
 elif [[ $DOCLI_PARAM_CLOUD == "elastic" ]]; then
   export fixed_enterprise_remote_state=true           # Force all Azure Terraform Remote State files to be hosted on ENTERPRISE ONLY.
   export DOCLI_PARAM_CON_TYPE=sso                     # OVERRIDE to SSO TRUE
-  export tf_workspace="$DOCLI_PARAM_CLOUD-$tf_clt-$tf_srg-$tf_env"
+  export tf_workspace="$DOCLI_PARAM_CLOUD-$DOCLI_PARAM_CLOUD_PROFILE"
 
 #------- HASHICORP VAULT VARIABLES -------#
 elif [[ $DOCLI_PARAM_CLOUD == "vault" ]]; then
   export DOCLI_PARAM_CON_TYPE=sso                     # OVERRIDE to SSO TRUE
-  # export tf_workspace="$DOCLI_PARAM_CLOUD-$tf_clt-$tf_srg-$tf_env" # TODO: VAULT REMOTE STATE FILES... SHOULD BE THIS. MIGRATE STATES IN FUTURE
-  tf_workspace="$tf_clt-$tf_srg-$tf_env"
+  # export tf_workspace="$DOCLI_PARAM_CLOUD-$DOCLI_PARAM_CLOUD_PROFILE" # TODO: VAULT REMOTE STATE FILES... SHOULD BE THIS. MIGRATE STATES IN FUTURE
+  export tf_workspace="$DOCLI_PARAM_CLOUD_PROFILE"
 
 #------------ AZURE VARIABLES ------------#
 elif [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
-  export fixed_enterprise_remote_state=true # Force all Azure Terraform Remote State files to be hosted on ENTERPRISE ONLY.
-  # export awsprofile="${DOCLI_PROJECT_CLIENT}-${DOCLI_PROJECT_ENTERPRISE_SRG}-${DOCLI_PROJECT_ENTERPRISE_ENV}"
-  export tf_workspace="$DOCLI_PARAM_CLOUD-$tf_clt-$tf_srg-$tf_env"
-  export DOCLI_PARAM_CLOUD_PROFILE="$tf_clt-$tf_srg-ent"  # Azure TF using S3 Backend will always save state files on ENTERPRISE ACCOUNT.
-  export tf_confdir="$tf_clt-$tf_srg-ent"                 # Azure TF using S3 Backend will always save state files on ENTERPRISE ACCOUNT.
+  export fixed_enterprise_remote_state=true                         # Force all Azure Terraform Remote State files to be hosted on ENTERPRISE ONLY.
+  export DOCLI_PARAM_CON_TYPE=sso                                   # OVERRIDE to SSO TRUE
+  export tf_workspace="$DOCLI_PARAM_CLOUD-$DOCLI_PARAM_CLOUD_PROFILE"  # Custom Terraform Workspace
 
 #------------- AWS VARIABLES -------------#
 elif [[ $DOCLI_PARAM_CLOUD == "aws" ]]; then
-  export tf_workspace="$tf_clt-$tf_srg-$tf_env"
+  export tf_workspace="$DOCLI_PARAM_CLOUD_PROFILE"
 
 else
   echo "ERROR: You must provide a valid cloud provider"
@@ -130,9 +127,17 @@ fi
 # ENTERPRISE REMOTE STATE ONLY APPLICATIONS
 ############################################
 if [[ $fixed_enterprise_remote_state == true ]]; then
-  export awsprofile="${DOCLI_PROJECT_CLIENT}-${DOCLI_PROJECT_ENTERPRISE_SRG}-${DOCLI_PROJECT_ENTERPRISE_ENV}"
+  export DOCLI_PARAM_BACKEND_ENV="${DOCLI_PROJECT_ENTERPRISE_ENV}"
+  export DOCLI_PARAM_BACKEND_SRG="${DOCLI_PROJECT_ENTERPRISE_SRG}"
+  export DOCLI_PARAM_BACKEND_CONFIG_DIR="${DOCLI_PROJECT_CLIENT}-${DOCLI_PROJECT_ENTERPRISE_SRG}-${DOCLI_PROJECT_ENTERPRISE_ENV}"
+  export DOCLI_PARAM_BACKEND_PROFILE="${DOCLI_PROJECT_CLIENT}-${DOCLI_PROJECT_ENTERPRISE_SRG}-${DOCLI_PROJECT_ENTERPRISE_ENV}"
   export tf_env=$DOCLI_PROJECT_ENTERPRISE_ENV
   export tf_srg=$DOCLI_PROJECT_ENTERPRISE_SRG
+else
+  export DOCLI_PARAM_BACKEND_ENV="${tf_env}"
+  export DOCLI_PARAM_BACKEND_SRG="${tf_srg}"
+  export DOCLI_PARAM_BACKEND_CONFIG_DIR="$DOCLI_PARAM_CLOUD_PROFILE"
+  export DOCLI_PARAM_BACKEND_PROFILE="$DOCLI_PARAM_CLOUD_PROFILE"
 fi
 
 
@@ -153,15 +158,42 @@ DOCLI_SCRIPT_TITLE="docli => $DOCLI_MODULE $current_key" && echo -e '\033k'$DOCL
 printf '\033[2J'
 
 if [[ "${DOCLI_PARAM_MODE:-}" == "funny" ]]; then
-  toilet -w 120 -f future "Terraform - $awsprofile"
-  toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d unicornthink -p a2v1
+  toilet -w 120 -f future "Terraform - $DOCLI_PARAM_CLOUD_PROFILE"
+  toilet -w 120 -f future "$DOCLI_PARAM_CLOUD_PROFILE" | lolcat -f | boxes -d unicornthink -p a2v1
   # toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d unicornthink -p a2v1 | lolcat -f
   # figlet -w 120 -f puffy -c "$current_key" | lolcat -f | boxes -d unicornthink
   # figlet -w 120 -f small -c "$current_key" | lolcat -f | boxes -d unicornthink
-  # toilet -w 120 -f future $awsprofile
+  # toilet -w 120 -f future $DOCLI_PARAM_CLOUD_PROFILE
 else
-  toilet -w 120 -f future "Terraform - $awsprofile"
-  toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d shell -p a2v1
+  toilet -w 120 -f future "Terraform - $DOCLI_PARAM_CLOUD_PROFILE"
+  toilet -w 120 -f future "$DOCLI_PARAM_CLOUD_PROFILE" | lolcat -f | boxes -d shell -p a2v1
+fi
+
+############################################
+# BITBUCKET PIPELINES
+############################################
+# Create fake pre-requisites for bitbucket pipeline machines. May be used in future
+[[ -d ~/devops ]]                 && echo "** ~/devops exists"                || mkdir -p ~/devops
+[[ -f ~/devops/envs ]]            && echo "** ~/devops/envs exists"           || touch ~/devops/envs
+[[ -f ~/devops/.envs_override ]]  && echo "** ~/devops/.envs_override exists" || touch ~/devops/.envs_override
+[[ -d ~/devops/bin ]]             && echo "** ~/devops/bin exists"            || mkdir -p ~/devops/bin
+
+
+############################################
+# TERRAFORM REMOTE STATE BACKENDS
+############################################
+if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend ]]; then
+  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend
+  export DOCLI_PARAM_BACKEND_TYPE=$backend
+  if [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
+    export DOCLI_PARAM_BACKEND_PROVIDER=aws
+  else
+    export DOCLI_PARAM_BACKEND_PROVIDER=$DOCLI_PARAM_BACKEND_TYPE
+  fi
+else
+  echo "** ERROR: Could not find Backend Configuration file!!! **"
+  echo "** You must specify a backend on $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend file! **"
+  exit 1
 fi
 
 ############################################
@@ -181,38 +213,14 @@ echo -e " SRG:        $tf_srg"
 [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]] && echo -e " BitBucket Repository: $DOCLI_PARAM_BITB_REPO"
 # echo -e " ARG2:       $tf_add_2"
 echo -e "######################################################################################\n"
-echo -e " BACKEND       AWS_PROFILE:       $awsprofile"
-echo -e " CLOUD PROFILE AWS_PROFILE:       $DOCLI_PARAM_CLOUD_PROFILE (When other TF recipes are using AWS as Backend)"
+echo -e " BACKEND TYPE:         $DOCLI_PARAM_BACKEND_TYPE"
+echo -e " BACKEND PROVIDER:     $DOCLI_PARAM_BACKEND_PROVIDER"
+echo -e " BACKEND PROFILE:      $DOCLI_PARAM_BACKEND_PROFILE"
+echo -e " BACKEND ENVIRONMENT:  $DOCLI_PARAM_BACKEND_ENV"
+echo -e " BACKEND SHORT_REGION: $DOCLI_PARAM_BACKEND_SRG"
 echo -e "######################################################################################\n"
 
 sleep 4
-
-############################################
-# BITBUCKET PIPELINES
-############################################
-# Create fake pre-requisites for bitbucket pipeline machines. May be used in future
-[[ -d ~/devops ]]                 && echo "** ~/devops exists"                || mkdir -p ~/devops
-[[ -f ~/devops/envs ]]            && echo "** ~/devops/envs exists"           || touch ~/devops/envs
-[[ -f ~/devops/.envs_override ]]  && echo "** ~/devops/.envs_override exists" || touch ~/devops/.envs_override
-[[ -d ~/devops/bin ]]             && echo "** ~/devops/bin exists"            || mkdir -p ~/devops/bin
-
-
-############################################
-# TERRAFORM REMOTE STATE BACKENDS
-############################################
-if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend ]]; then
-  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend
-  if [[ $backend == "s3" ]]; then
-    export DOCLI_PARAM_BACKEND_PROVIDER=aws
-  else
-    export DOCLI_PARAM_BACKEND_PROVIDER=$backend
-  fi
-else
-  echo "** ERROR: Could not find Backend Configuration file!!! **"
-  echo "** You must specify a backend on $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/backend file! **"
-  exit 1
-fi
-
 
 ############################################
 # SSO CONFIGURATION
@@ -233,10 +241,10 @@ echo "** Finish setenv **"
 # # SETENV
 # echo "** Running setenv **"
 # original_ifs=$IFS # Store the original IFS
-# split_vars="$awsprofile"
+# split_vars="$DOCLI_PARAM_CLOUD_PROFILE"
 # # Separate the values into individual variables
 # IFS='-' read -r setenv_client setenv_short_region setenv_environment <<< "$(IFS='='; echo $split_vars)"
-# echo awsprofile=$awsprofile setenv_environment=$setenv_environment setenv_short_region=$setenv_short_region tf setenv_client=$setenv_client
+# echo awsprofile=$DOCLI_PARAM_CLOUD_PROFILE setenv_environment=$setenv_environment setenv_short_region=$setenv_short_region tf setenv_client=$setenv_client
 # source setenv $setenv_environment $setenv_short_region tf $setenv_client
 # IFS=$original_ifs # Restore the original IFS
 # echo "** Finish setenv **"
@@ -319,7 +327,7 @@ FILE_OR_DIR_CHECK=(
   $DOCLI/functions/bash_colors_tput
   $DOCLI/bin
   $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/envs.tfvars
-  $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$tf_confdir/configs/envs.tfvars
+  $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_CONFIG_DIR/configs/envs.tfvars
   $DOCLI/functions/bash_aws_local_sso_temp_creds
   $DOCLI/functions/bash_basic_aws_profiles
   $DOCLI/functions/bash_basic_functions
@@ -355,8 +363,13 @@ echo -e "** Variable Cleaning: OK **\n"
 if [[ "${TERM}" == "" || "${TERM}" == "dumb" ]]; then
   echo "** Skipping AWS Profile Check... **"
 else
-  echo "** Checking AWS Profile **"
-  check_aws_profiles $awsprofile
+  if [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
+    echo "** Checking AWS Profile **"
+    check_aws_profiles $DOCLI_PARAM_BACKEND_PROFILE
+  elif [[ $DOCLI_PARAM_CLOUD == "aws" ]]; then
+    echo "** Checking AWS Profile **"
+    check_aws_profiles $DOCLI_PARAM_CLOUD_PROFILE
+  fi
 fi
 
 # Get Terraform Base Files
@@ -371,7 +384,8 @@ echo -e "${TEXT_BLUE}** Setting $DOCLI_PARAM_CLOUD TF_CLI_ARGS_init${END}"
 # TERRAFORM REMOTE STATE BACKEND CONFIGURATIONS
 ############################################
 
-if [[ $backend == "local" ]]; then
+if [[ $DOCLI_PARAM_BACKEND_TYPE == "local" ]]; then
+  export backend_hcl="none"
   export backend_remote_state_provider=local
   export backend_remote_state_description="Local (WARNING: Using Local State file, risk of loss)"
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/local"
@@ -397,7 +411,7 @@ if [[ $backend == "local" ]]; then
   echo -e "====================================================================================\n"
 
 
-elif [[ $backend == "s3" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   export backend_remote_state_provider=s3
   export backend_remote_state_description="Amazon S3 + Dynamo DB"
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/s3"
@@ -436,7 +450,7 @@ elif [[ $backend == "s3" ]]; then
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
-elif [[ $backend == "azurerm" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "azurerm" ]]; then
   export backend_remote_state_provider=azurerm
   export backend_remote_state_description="Amazon S3 + Dynamo DB"
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/azurerm"
@@ -464,7 +478,7 @@ elif [[ $backend == "azurerm" ]]; then
   echo -e "** TF_CLI_ARGS_init=$TF_CLI_ARGS_init"
   echo -e "====================================================================================\n"
 
-elif [[ $backend == "gcs" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "gcs" ]]; then
   echo -e "\n* Remote State Backend: Google Cloud Storage (gcs) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/gcs *\n"
   export backend_remote_state_provider=gcs
@@ -476,7 +490,7 @@ elif [[ $backend == "gcs" ]]; then
 #   }
 # }
 
-elif [[ $backend == "http" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "http" ]]; then
   echo -e "\n* Remote State Backend: Rest API (http) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/http *\n"
   export backend_remote_state_provider=http
@@ -490,7 +504,7 @@ elif [[ $backend == "http" ]]; then
 # }
 
 
-elif [[ $backend == "kubernetes" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "kubernetes" ]]; then
   echo -e "\n* Remote State Backend: Kubernetes (kubernetes) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/kubernetes *\n"
   export backend_remote_state_provider=kubernetes
@@ -503,7 +517,7 @@ elif [[ $backend == "kubernetes" ]]; then
 # }
 
 
-elif [[ $backend == "pg" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "pg" ]]; then
   echo -e "\n* Remote State Backend: Postgre Database v10+ (pg) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/pg *\n"
   export backend_remote_state_provider=pg
@@ -514,7 +528,7 @@ elif [[ $backend == "pg" ]]; then
 #   }
 # }
 
-elif [[ $backend == "oss" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "oss" ]]; then
   echo -e "\n* Remote State Backend: Alibaba Cloud OSS + Alibaba Cloud Table Store (oss) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/pg *\n"
   export backend_remote_state_provider=oss
@@ -531,11 +545,11 @@ elif [[ $backend == "oss" ]]; then
 # }
 
 ############## Removed in TF 1.3
-# elif [[ $backend == "etcd" ]]; then
+# elif [[ $DOCLI_PARAM_BACKEND_TYPE == "etcd" ]]; then
 #   echo -e "\n* Remote State Backend: Using etcd (etcd) *\n"
 #   export backend_remote_state_provider=etcd
 
-elif [[ $backend == "cos" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "cos" ]]; then
   echo -e "\n* Remote State Backend: Using Tencent Cloud Object Storage (cos) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/cos *\n"
   export backend_remote_state_provider=cos
@@ -548,7 +562,7 @@ elif [[ $backend == "cos" ]]; then
 #   }
 # }
 
-elif [[ $backend == "remote" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "remote" ]]; then
   echo -e "\n* Remote State Backend: Using Terraform Cloud (remote) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/remote *\n"
   export backend_remote_state_provider=remote
@@ -577,7 +591,7 @@ elif [[ $backend == "remote" ]]; then
 #   }
 # }
 
-elif [[ $backend == "consul" ]]; then
+elif [[ $DOCLI_PARAM_BACKEND_TYPE == "consul" ]]; then
   echo -e "\n* Remote State Backend: Using HashiCorp Consul (consul) *\n"
   echo -e "\n* More info at: https://developer.hashicorp.com/terraform/language/settings/backends/consul *\n"
   export backend_remote_state_provider=consul
@@ -880,7 +894,7 @@ main() {
   fi
 
   # We set the default workspace always, because when changing projects, terraform complain about the non-existent namespace on remote state.
-  if [[ $backend == "s3" ]]; then
+  if [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
     create_bucket_if_not_exist
     create_dynamodb_if_not_exist
 
@@ -934,14 +948,16 @@ main() {
 
     echo "** aws specific finished..."
   else
+    # NOT USING S3... Running default config...
     eval $DOCLI_VERBOSE && echo "*- NO BACKEND PROVIDED - Running Defaults"
     ( terraform workspace select default ; )
     ( terraform init || terraform init -upgrade ; ) #|| terraform init -migrate-state ; )
     ( terraform workspace select default ; )
     if [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
-      op_check_requirement
-      # op_get_document $tf_env-$DOCLI_PARAM_CLOUD-variables DevOps bbcred-notused
-      op_get_document $DOCLI_PARAM_CLOUD-cred-$awsprofile DevOps .bbcred-$awsprofile-notused
+      echo not used...
+      # op_check_requirement
+      # # op_get_document $tf_env-$DOCLI_PARAM_CLOUD-variables DevOps bbcred-notused
+      # op_get_document $DOCLI_PARAM_CLOUD-cred-$DOCLI_PARAM_CLOUD_PROFILE DevOps .bbcred-$DOCLI_PARAM_CLOUD_PROFILE-notused
     fi
     terraform_validate
     ( terraform workspace select "$tf_workspace" || terraform workspace new "$tf_workspace" ; )
@@ -952,9 +968,9 @@ main() {
   #   create_bucket_if_not_exist
   #   create_dynamodb_if_not_exist
   #   # terraform init || terraform init -upgrade #|| terraform init -migrate-state
-  #   aws-vault exec "$awsprofile" -- terraform init || aws-vault exec "$awsprofile" -- terraform init -upgrade #|| aws-vault exec "$awsprofile" -- terraform init -migrate-state
+  #   aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform init || aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform init -upgrade #|| aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform init -migrate-state
   #   # terraform workspace select "default"
-  #   aws-vault exec "$awsprofile" -- terraform workspace select default > /dev/null 2>&1 || echo "... terraform init..."
+  #   aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform workspace select default > /dev/null 2>&1 || echo "... terraform init..."
   #   ### op_check_requirement
   #   ### [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]] && rm "$DOCLI/.private/.bitb-workspace.tfvars" && echo "** getting secrets from 1Password..."
   #   ### op_get_document "bitbucket-workspace" DevOps "$DOCLI/.private/.bitb-workspace.tfvars"
@@ -964,14 +980,14 @@ main() {
   #   # [[ $current_key == "repository-variables" ]] && [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]] && rm "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" && echo "** getting secrets from 1Password..."
   #   # [[ $current_key == "repository-variables" ]] && op_get_document "bitbucket-variables-$DOCLI_PARAM_BITB_REPO" DevOps "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars"
   #   terraform_validate
-  #   [[ $DOCLI_PARAM_CON_TYPE == "vault" ]] && ( aws-vault exec "$awsprofile" -- terraform workspace select "$tf_workspace" || aws-vault exec "$awsprofile" -- terraform workspace new "$tf_workspace" ; ) # Used to set correct remote-state/... on S3/DynamoDB
+  #   [[ $DOCLI_PARAM_CON_TYPE == "vault" ]] && ( aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform workspace select "$tf_workspace" || aws-vault exec "$DOCLI_PARAM_BACKEND_PROFILE" -- terraform workspace new "$tf_workspace" ; ) # Used to set correct remote-state/... on S3/DynamoDB
   #   [[ $cloud_env == "aws" ]] && ( terraform workspace select "$tf_workspace" || terraform workspace new "$tf_workspace" ; )
   #   echo "** Vault specific finished..."
   # fi
 
   # export TF_LOG="DEBUG"
   echo "** Starting Terraform... **"
-  # aws configure list --profile $awsprofile
+  # aws configure list --profile $DOCLI_PARAM_BACKEND_PROFILE
   echo
   run_terraform
 
