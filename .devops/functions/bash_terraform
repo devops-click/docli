@@ -11,11 +11,12 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.10
+DOCLI_MODULE_VERSION=0.11
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
+export DOCLI_PARAM_BACKEND_PROFILE=${DOCLI_PARAM_BACKEND_PROFILE:-$DOCLI_PARAM_CLOUD_PROFILE}
 export aws_session_ttl=1h
 export awsvault_command="AWS_CHAINED_SESSION_TOKEN_TTL=$aws_session_ttl aws-vault exec $DOCLI_PARAM_BACKEND_PROFILE --debug --duration $aws_session_ttl"
 # export awsvault_command="AWS_PROFILE=do-euc1-val-child aws-vault exec $DOCLI_PARAM_BACKEND_PROFILE --debug --duration $aws_session_ttl"
