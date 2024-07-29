@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# PS: This script is intended to be used as source for others.
+# runbuild call script, to be sourced directly from kubernetes/build/recipe folders
+# by ./build script, with or without parameters.
+###############################################################################
+# If variable DOCLI_PROJECT_CLIENT is set, the last option will be set by default
+# -----------------------------------------------------------------------------
+# -f|--force   <-   runs terraform without asking (can be set anywhere in the arg position)
+# -----------------------------------------------------------------------------
+# Examples:
+# runbuild
+# runbuild -force (runs terraform without asking)
+# runbuild aws-sso build ent usw2 (when variable is already set)
+# runbuild aws-sso build ent usw2 "do" -force (no ask + when variable is not set)
+###############################################################################
+# echo "++++++++++++++++++++++++++++++++++"
+# echo "++ Entered runbuild_call ++"
+# echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+# eval $DOCLI_DEBUG && echo "++ Entered runbuild_call ++"
+# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=runbuild_call
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
+
+export DOCLI_PARAM_OPTIONS=("build", "destroy", "destroy_all", "recreate", "list", "help")
+
+# Check if the array is already initialized and has at least one element
+if [ -z "${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD+x}" ] || [ ${#DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[@]} -eq 0 ]; then
+  DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD=("none_yet")
+  DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD_STR="${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[*]}"
+  export DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD_STR
+fi
+
+export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
+
+[[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=0 || tf_force_param=$DOCLI_PARAM_FORCE
+args=()
+
+###############################################################
+# runbuild pre-hook
+# OPTIONAL -> Runs only if file exists
+###############################################################
+# Calling folder pre-hook (kubernetes/build/cloud/deploy/recipe)
+if [[ -f .docli_pre_hook ]]; then
+  echo "* Current folder .docli_pre_hook found. Using it. *"
+  source .docli_pre_hook
+fi
+# Specific Build pre-hook (applies to all Builds inside that specific recipe if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/kubernetes/build/$current_key/.docli_pre_hook ]]; then
+  echo "* Specific Build .docli_pre_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/kubernetes/build/$current_key/.docli_pre_hook
+fi
+# General Build pre-hook (applies to all Builds if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/kubernetes/build/.docli_pre_hook ]]; then
+  echo "* General Build .docli_pre_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/kubernetes/build/.docli_pre_hook
+fi
+###############################################################
+
+# Check if any arguments are passed
+if [ $# -eq 0 ]; then
+  default_option=build
+else
+  # Process arguments to check for -force and remove it
+  for arg in "$@"; do
+    if [ "$arg" = "-force" ] || [ "$arg" = "--force" ]; then
+      echo $arg
+      tf_force_param=1
+      default_option=build_force
+    else
+      args+=("$arg")  # Add argument to new array if it's not -force
+    fi
+  done
+fi
+
+########## EMPTY
+# Check if arguments are empty (excludes -force)
+if [ ${#args[@]} -eq 0 ]; then
+  echo "runbuild_call -> empty params"
+  # source $DOCLI/bin/runbuild "${args[@]}"
+  # Iterate through env_list
+  for env in "${env_list[@]}"; do
+    # Iterate through reg_list
+    for region in "${reg_list[@]}"; do
+      # Check if the env is enabled for the current region
+      enabled_var="enabled_${region}[@]"
+      if [[ " ${!enabled_var} " =~ " ${env} " ]]; then
+
+        echo -e "\n######################################################################################"
+        echo -e " => runbuild_call - Calling docli build script for Terraform"
+        echo -e "######################################################################################"
+        echo -e " Force Option: $(if [ "$tf_force_param" -eq 1 ]; then echo "YES (FORCED OPTION SELECTED !!!!!)"; else echo "no"; fi)"
+        echo -e "######################################################################################"
+        echo -e " Cloud Type:   $DOCLI_PARAM_CLOUD"
+        echo -e " Environment:  $env"
+        echo -e " Short Region: $region"
+        echo -e "######################################################################################"
+        echo -e "                         DOCLI Environment Variables"
+        env | grep "DOCLI_*"
+        echo -e "######################################################################################"
+
+        if [ $tf_force_param -eq 1 ]; then
+          source $DOCLI/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}" --force
+        else
+          source $DOCLI/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}"
+        fi
+      else
+        echo "Skipping env: $env for short_region: $region"
+      fi
+    done
+  done
+
+# Check if force flag is set and modify 'build' to 'build_force'
+elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 1 ]; then
+  echo "** arguments passed: running TF with -force flag!"
+  for i in "${!args[@]}"; do
+    echo "argument_count=$i"
+    if [ "${args[$i]}" = "build" ]; then
+      args[$i]="build_force"
+      echo "argument=${args[$i]}"
+    elif [ "${args[$i]}" = "destroy" ]; then
+      args[$i]="destroy_force"
+      echo "argument=${args[$i]}"
+    else
+      echo "argument=${args[$i]}"
+    fi
+  done
+  # Now run the command with modified arguments
+  echo "force all params: $@"
+  echo "force all args:   ${args[@]}"
+  source $DOCLI/bin/runbuild "${args[@]}"
+
+elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
+  echo "** arguments passed: running normal TF..."
+  echo "no-force all params: $@"
+  echo "no-force all args:   ${args[@]}"
+  source $DOCLI/bin/runbuild "${args[@]}"
+fi
+
+###############################################################
+# runbuild post-hook
+# OPTIONAL -> Runs only if file exists
+###############################################################
+# Calling folder post-hook (kubernetes/build/cloud/deploy/recipe)
+if [[ -f .docli_post_hook ]]; then
+  echo "* Current folder .docli_post_hook found. Using it. *"
+  source .docli_post_hook
+fi
+# Specific Build post-hook (applies to all Builds inside that specific recipe if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/kubernetes/build/$current_key/.docli_post_hook ]]; then
+  echo "* Specific Build .docli_post_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/kubernetes/build/$current_key/.docli_post_hook
+fi
+# General Build post-hook (applies to all Builds if file found)
+if [[ -f $DOCLI_PROJECT_ROOT/kubernetes/build/.docli_post_hook ]]; then
+  echo "* General Build .docli_post_hook found for the project. Using it. *"
+  source $DOCLI_PROJECT_ROOT/kubernetes/build/.docli_post_hook
+fi
+###############################################################

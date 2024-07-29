@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -58,7 +58,7 @@ MACHINE_PROFILE="${current_key}"
 ############################################
 # Default values
 option="${1:-build}"
-cloud_env="${BUILD_CLOUD_ENV:-aws}"
+cloud_env="${DOCLI_PARAM_CLOUD:-aws}"
 environment="${DOCLI_PROJECT_ENTERPRISE_ENV:-ent}"
 repo="${environment}-repo"
 arch="${BUILD_ARCH:-amd}"
@@ -115,7 +115,7 @@ for arg in "$@"; do
     region="${arg#*=}"
     shift
     ;;
-    --short_region=*|-srg=*)
+    --short-region=*|-srg=*)
     short_region="${arg#*=}"
     shift
     ;;
@@ -152,8 +152,7 @@ fi
 source $DOCLI/functions/bash_basic_source_files_or_dir_check
 source_files_list_dir_check
 
-# Load basic functions including region_to_short_region to be used below.
-short_region=$(region_to_short_region "$region")
+# Load basic functions.
 awsprofile="$client-$short_region-$environment"
 
 # Check if provided Provider is valid, otherwise exit.
