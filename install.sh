@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.10"
+install_version="0.0.11"
 os_var=$(uname)
 DOCLI_DEPLOY=${DOCLI_DEPLOY:-false}
 DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
@@ -215,6 +215,7 @@ check_and_create_dirs
 declare -a file_paths=(
   ".docli"
   "bin/docli"
+  "bin/runbuild"
   "bin/runpacker"
   "bin/runtf"
   "bin/setenv"

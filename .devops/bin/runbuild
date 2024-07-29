@@ -1,0 +1,402 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                                 docli runbuild
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                          RUN CONTAINER BUILD SCRIPT                         |
+#-----------------------------------------------------------------------------'
+# Default Generic Container Build Script designed to be called from any sub-container-build-stacks
+
+# ! https://gallery.ecr.aws/amazonlinux/amazonlinux
+# Usage:
+# ./build.sh -c=local -e=ent -r=local -a=amd -cr=public -os=al2023
+# ./build.sh --cloud=aws --env=ent --repo=repo-example --arch=amd --container-registry=private --os=amzn2
+
+PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin:$DOCLI/bin
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=runbuild
+DOCLI_MODULE_TYPE=bin
+DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+source $DOCLI/.docli_envs
+source $DOCLI/functions/bash_basic_functions
+
+############################################
+# SANITIZATION
+############################################
+
+# Cache invalidation
+export CACHEBUST=${CACHEBUST:-disabled}
+
+############################################
+# BASIC SCRIPT VARS
+############################################
+current_key=$(basename $PWD)
+
+echo -e "\n** Sourcing: $DOCLI/.docli"
+source $DOCLI/.docli
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+MACHINE_PROFILE="${current_key}"
+
+## Only when using -osXXXX on folder name
+# # Extract the MACHINE_PROFILE (all segments except the last one)
+# MACHINE_PROFILE="${current_key%-*}"
+# Extract the os_version (last segment after the last hyphen)
+# BUILD_OS_VERSION="${current_key##*-}"
+
+############################################
+# INPUT VARS
+############################################
+# Default values
+option="${1:-build}"
+cloud_env="${BUILD_CLOUD_ENV:-aws}"
+environment="${DOCLI_PROJECT_ENTERPRISE_ENV:-ent}"
+repo="${environment}-repo"
+arch="${BUILD_ARCH:-amd}"
+cr_type="${BUILD_CR_TYPE:-private}"
+# Your company public ECR Repository. (Normally kept on repository/files/envs/<environment>)
+company_public_ecr_repo="${BUILD_PUBLIC_ECR_REPO:="public.ecr.aws/a1b2c3d4e"}"
+## Only when using -osXXXX on folder name
+# os_type="${BUILD_OS_VERSION:-amzn2}"
+os_type="${BUILD_OS_TYPE:-amzn2}"
+client="${DOCLI_PROJECT_CLIENT:-none}"
+short_region="${docli_short_region:-euc1}"
+region=$(short_region_to_region "$short_region")
+
+# Function to display help message
+function help() {
+  echo -e "\nValid Options: build|destroy|destroy_all|recreate|list|help\n"
+  echo -e "Defaults (get them from docli envs): ./build.sh build --cloud=aws --env=${environment} --repo=${environment}-repo --arch=amd --registry=private --os=amzn2 --client=${client} --region=${region} --short_region=${short_region}"
+  echo -e "Usage: ./build.sh [option] [--cloud=<cloud_env>] [--env=<environment>] [--repo=<repo>] [--arch=<arch>] [--registry=<registry>] [--os=<os_type>] [--client=<client>] [--region=<region>] [--short_region=<short_region>]"
+  echo -e "Example: ./build.sh build --cloud=aws --env=${environment} --repo=${environment}-repo --arch=amd --registry=public --os=amzn2\n"
+}
+
+# Parse named arguments
+for arg in "$@"; do
+  case $arg in
+    -c=*|--cloud=*)
+    cloud_env="${arg#*=}"
+    shift
+    ;;
+    --env=*|-e=*)
+    environment="${arg#*=}"
+    shift
+    ;;
+    --repo=*|-r=*)
+    repo="${arg#*=}"
+    shift
+    ;;
+    --arch=*|-a=*)
+    arch="${arg#*=}"
+    shift
+    ;;
+    --container-registry=*|-cr=*)
+    cr_type="${arg#*=}"
+    shift
+    ;;
+    --os=*|-os=*)
+    os_type="${arg#*=}"
+    shift
+    ;;
+    --client=*|-c=*)
+    client="${arg#*=}"
+    shift
+    ;;
+    --region=*|-rg=*)
+    region="${arg#*=}"
+    shift
+    ;;
+    --short_region=*|-srg=*)
+    short_region="${arg#*=}"
+    shift
+    ;;
+    *)
+    # option="$arg"
+    echo
+    shift
+    ;;
+  esac
+done
+
+[[ $cloud_env == "local" ]] && cloud="local" && repo="local" || cloud=$cloud_env
+[[ $cloud_env == "aws-vault" ]] && cloud="aws" || cloud=$cloud_env
+[[ $cloud_env == "aws" ]] && cloud="aws" && AWS_PROFILE="$client-$short_region-$environment-sso" || cloud=$cloud_env
+[[ $arch == "amd" || $arch == "arm" ]] && echo "** Using linux/${arch}64!" || echo "** ERROR: Architecture invalid or empty!"
+
+if [[ $cloud_env == "local" ]]; then
+  FILE_OR_DIR_CHECK=(
+    $DOCLI/functions/bash_colors_tput
+    $DOCLI/functions/bash_basic_environments
+    $DOCLI/functions/bash_os_check
+  )
+else
+  FILE_OR_DIR_CHECK=(
+    $DOCLI/functions/bash_colors_tput
+    $script_dir/../../files/envs/$environment
+    $DOCLI/functions/bash_basic_aws_profiles
+    $DOCLI/functions/bash_basic_environments
+    $DOCLI/functions/bash_os_check
+  )
+fi
+
+# Import all sources in FILE_OR_DIR_CHECK List and also check DIRS:
+source $DOCLI/functions/bash_basic_source_files_or_dir_check
+source_files_list_dir_check
+
+# Load basic functions including region_to_short_region to be used below.
+short_region=$(region_to_short_region "$region")
+awsprofile="$client-$short_region-$environment"
+
+# Check if provided Provider is valid, otherwise exit.
+source $DOCLI/functions/bash_basic_cloud_providers
+[[ $cloud_env != "local" ]] && check_providers $cloud
+
+# Check for AWS Profile (~/.aws/config)
+[[ $cloud == "aws" ]] && check_aws_profiles $awsprofile
+# Check if running on MacOS or Linux, otherwise exit.
+os_check_macos_or_linux
+
+# Check if provided environment is valid, otherwise exit.
+check_environment $environment
+
+if [[ $cr_type == "public" ]]; then
+  cr_repository=$company_public_ecr_repo
+  region="us-east-1"
+else
+  cr_repository=$aws_account_id.dkr.ecr.$region.amazonaws.com
+fi
+
+if [[ "$repo" == "" ]]; then
+  echo "** You must provide a repository **"
+  help
+  exit 1
+fi
+
+if [[ "$environment" == "ent" ]]; then
+  echo "** build a $environment image"
+else
+  echo "** We have fixed Enterprise as main repo, please use it or remove --env from your command to use the default **"
+  exit 0
+fi
+
+
+datevar="$(date +%Y%m%d)"
+
+if [ $os_type == "amzn2" ]; then
+  BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2"
+  DEST_IMAGE="$repo:amazonlinux2-$datevar"
+elif [ $os_type == "al2023" ]; then
+  BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2023"
+  DEST_IMAGE="$repo:amazonlinux2023-$datevar"
+elif [ $os_type == "al2022" ]; then
+  BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2022"
+  DEST_IMAGE="$repo:amazonlinux2022-$datevar"
+elif [ $os_type == "u2204" ]; then
+  BASE_IMAGE="ubuntu:22.04"
+  DEST_IMAGE="$repo:ubuntu2204-$datevar"
+fi
+
+IMAGE="$repo:$MACHINE_PROFILE-$datevar"
+TAG_LATEST=$(eval "echo $IMAGE|sed 's/:.*/:$MACHINE_PROFILE-latest/g'")
+
+#############################################################################################
+# LOCAL
+#############################################################################################
+function build_local() {
+  echo "CREATING DOCKER IMAGE $IMAGE AND UPLOADING TO local docker"
+  docker buildx create --name multiarch --use
+  docker buildx inspect --bootstrap
+
+  if [[ $CACHEBUST == "disabled" ]]; then
+    # Build for amd64
+    [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
+    # Build for arm64
+    [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
+  else
+    [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
+    # [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
+    [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
+    # [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
+  fi
+
+
+  # # To be used with Container Registry
+  # docker buildx build --platform linux/amd64,linux/arm64 -t $IMAGE --build-arg IMG_FROM=$BASE_IMAGE --push .
+
+  echo "Done! Now you may use: ${IMAGE} from your local docker images!"
+  echo "** based on $BASE_IMAGE **"
+  # exit 0
+}
+
+function destroy_local() {
+  echo "!!! DELETING ALL FLAGGED IMAGES IN LOCAL DOCKER !!!"
+  docker delete $IMAGE
+
+  echo "Done! Now you may use: ${IMAGE} from your local docker images!"
+  echo "** based on $BASE_IMAGE **"
+  # exit 0
+}
+
+#############################################################################################
+# AWS
+#############################################################################################
+[[ $cloud_env == "aws-vault" ]] && cmd_aws_vault="aws-vault exec $awsprofile --"
+[[ $cloud_env == "aws" ]] && cmd_aws_sso="--profile $awsprofile-sso "
+
+function build_aws() {
+  echo "CREATING DOCKER IMAGE $IMAGE and TAG $TAG_LATEST AND UPLOADING TO $cr_repository/$repo"
+
+  # [[ $cr_type == "public" ]]  && eval "$cmd_aws_vault aws ecr-public get-login-password --region $region | docker login --username AWS --password-stdin $company_public_ecr_repo"
+
+  # aws-vault exec co-euc1-ent-sso-start -- aws ecr get-login-password --region eu-central-1 --profile co-euc1-ent-sso | docker login --username AWS --password-stdin 969852750332.dkr.ecr.eu-central-1.amazonaws.com
+  eval "$cmd_aws_vault aws ecr-public get-login-password --region $region | docker login --username AWS --password-stdin $company_public_ecr_repo"
+  eval "$cmd_aws_vault docker pull --platform linux/${arch}64 $BASE_IMAGE"
+
+  [[ $cr_type == "private" ]] && eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login --username AWS --password-stdin $cr_repository"
+  eval "$cmd_aws_vault docker tag $BASE_IMAGE $cr_repository/$DEST_IMAGE"
+  eval "$cmd_aws_vault docker push $cr_repository/$DEST_IMAGE"
+
+  # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
+  # If we use new relic in the future...
+  # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
+  echo "** Building linux/${arch}64 architecture image..."
+  eval "$cmd_aws_vault docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
+
+  eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$TAG_LATEST"
+  eval "$cmd_aws_vault docker push $cr_repository/$IMAGE"
+  eval "$cmd_aws_vault docker push $cr_repository/$TAG_LATEST"
+  echo "Done! Now you may use: $cr_repository/${IMAGE} and $cr_repository/${TAG_LATEST}"
+  echo "** based on $BASE_IMAGE **"
+  # exit 0
+}
+
+function destroy_aws() {
+  echo "DELETING ALL IMAGES LISTED:"
+  echo "$DEST_IMAGE"
+  echo "$IMAGE"
+  echo "$TAG_LATEST"
+  az acr repository delete --name $CR --image $DEST_IMAGE --yes
+  az acr repository delete --name $CR --image $IMAGE --yes
+  az acr repository delete --name $CR --image $TAG_LATEST --yes
+  # exit 0
+}
+
+#############################################################################################
+# AZURE
+#############################################################################################
+function build_azure() {
+  echo "CREATING DOCKER IMAGE $IMAGE and TAG $TAG_LATEST AND UPLOADING TO $CR"
+  az config set defaults.location=eastus defaults.group=${client}-${RG}-rg-01
+  az aks get-credentials --resource-group ${client}-${RG}-rg-01 --name ${client}-${RG}-public-aks-01 --overwrite-existing
+  az acr login --name $CR
+
+  docker pull --platform linux/arm64 $BASE_IMAGE
+  docker tag $BASE_IMAGE $CR.azurecr.io/$DEST_IMAGE
+  docker push --platform linux/arm64 $CR.azurecr.io/$DEST_IMAGE
+
+  # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
+  docker buildx build --platform linux/arm64 -t $CR.azurecr.io/$IMAGE --build-arg IMG_FROM=$CR.azurecr.io/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
+  # docker buildx build --platform linux/arm64 -t $CR.azurecr.io/$IMAGE .
+  docker tag $CR.azurecr.io/$IMAGE $CR.azurecr.io/$TAG_LATEST
+  docker push $CR.azurecr.io/$IMAGE
+  docker push $CR.azurecr.io/$TAG_LATEST
+
+  echo "Done! Now you may use: ${CR}.azurecr.io/${IMAGE} and ${CR}.azurecr.io/${TAG_LATEST}"
+  echo "** based on $BASE_IMAGE **"
+  # exit 0
+}
+
+
+function destroy_azure() {
+  echo "DELETING ALL IMAGES LISTED:"
+  echo "$DEST_IMAGE"
+  echo "$IMAGE"
+  echo "$TAG_LATEST"
+  az acr repository delete --name $CR --image $DEST_IMAGE --yes
+  az acr repository delete --name $CR --image $IMAGE --yes
+  az acr repository delete --name $CR --image $TAG_LATEST --yes
+  # exit 0
+}
+
+function destroy_all_azure() {
+  echo "!!! DELETING ALL IMAGES IN CONTAINER REGISTRY $CR !!!"
+  # ToDo: erase all images instead of manual adding
+  echo "$DEST_IMAGE"
+  echo "$IMAGE"
+  echo "$TAG_LATEST"
+  az acr repository delete --name $CR --image $DEST_IMAGE --yes
+  az acr repository delete --name $CR --image $IMAGE --yes
+  az acr repository delete --name $CR --image $TAG_LATEST --yes
+  # exit 0
+}
+
+function list_azure() {
+  echo "LISTING ALL IMAGES ON $CR:"
+
+  registry_name="${CR}"
+  destination='result.txt'
+  #az acr login --name $registry_name
+  touch $destination
+
+  repos="$(az acr repository list -n $registry_name --output tsv)"
+  echo $repos
+
+  for i in $repos; do
+    images="$(az acr repository show-tags -n $registry_name --repository $i --output tsv --orderby time_desc)"
+    for j in $images; do
+      echo $i":"$j >> $destination;
+    done;
+  done;
+
+  cat $destination
+  # exit 0
+}
+
+function recreate() {
+  destroy_${cloud}
+  build_${cloud}
+  # exit 0
+}
+
+# Main
+function main() {
+  if [[ -z "${option:-}" ]]; then
+    echo "Error: You need to provide an option, e.g., build, destroy, etc."
+    exit 1
+  fi
+  if [[ "$option" == "build" ]]; then
+    build_${cloud}
+  fi
+  if [[ "$option" == "destroy" ]]; then
+    destroy_${cloud}
+  fi
+  if [[ "$option" == "destroy_all" ]]; then
+    destroy_all_${cloud}
+  fi
+  if [[ "$option" == "list" ]]; then
+    list_${cloud}
+  fi
+  if [[ "$option" == "recreate" ]]; then
+    recreate
+  fi
+  if [[ "$option" == "help" ]]; then
+    help
+  fi
+  if [[ "$option" == "" ]]; then
+    echo "... no options provided... running CREATE\n"
+    build_${cloud}
+  fi
+  # exit 0
+}
+
+# Calls main with args
+main "$@"
