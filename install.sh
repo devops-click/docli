@@ -6,10 +6,11 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.13"
+install_version="0.0.14"
 os_var=$(uname)
 : "${DOCLI_DEPLOY:=false}"
 : "${DOCLI_DEVELOPER_MODE:=false}"
+: "${DOCLI_REPOSITORY:=}"
 DOCLI_REMOTE_REPOSITORY=https://raw.githubusercontent.com/devops-click/docli/main
 
 if [[ $DOCLI_DEPLOY == true ]]; then
