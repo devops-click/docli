@@ -16,7 +16,7 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.6"
+setup_version="1.7"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_current_dir="$(pwd)"
@@ -896,7 +896,7 @@ setup_homebrew_and_packages() {
   # Install homebrew additional taps
 
   # List of taps to check and install if not already there
-  declare -a taps=("homebrew/cask-fonts")
+  declare -a taps=("homebrew/cask-fonts" "homebrew/bundle" "derailed/k9s")
 
   # brew_tap $taps
 
@@ -914,6 +914,68 @@ setup_homebrew_and_packages() {
   brew update
 
   ############## homebrew install ##############
+  ## Define Default Packages to Install
+  # Information: cryptr -> HashiCorp Vault UI Manager requirement
+  # strace -> There is no support for ARM processor yet
+  # encfs -> not working yet, 'brew install encfs' + needs macfuse first
+
+  ##################################
+  #  COMMON Packages (ARM + AMD)   #
+  ##################################
+  # Common
+  export brew_common_packages="zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx eksctl awscli \
+  awsebcli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer font-fira-code watch \
+  xclip figlet boxes toilet lolcat gh strongswan duti go md5sha1sum shellcheck kustomize gnupg \
+  1password-cli openssl@3 powershell/tap/powershell ca-certificates nss curl bash prometheus \
+  turbot/tap/steampipe"
+  export brew_cask_common_packages="aws-vault iterm2 xbar keka google-cloud-sdk"
+  ## Additional Packages
+  export brew_common_additional_packages="pyenv certifi python-packaging"
+  export brew_cask_common_additional_packages="google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password \
+  1password-cli github slack"
+  ## All Packages
+  export brew_common_all_packages="leapp ffmpeg macfuse"
+  export brew_cask_common_all_packages="gimp microsoft-teams karabiner-elements wp-cli"
+
+  ##################################
+  # Architecture Specific Packages #
+  ##################################
+  ###############
+  # ARM (arm64) #
+  ###############
+  ## Packages
+  export brew_arm_packages="md5sha1sum htop"
+  export brew_cask_arm_packages=""
+  ### Additional Packages
+  export brew_arm_additional_packages=""
+  export brew_cask_arm_additional_packages=""
+  ### All Packages
+  export brew_arm_all_packages=""
+  export brew_cask_arm_all_packages=""
+
+  #################
+  # AMD (x86_x64) #
+  #################
+  ## Packages
+  export brew_amd_packages="strace pbcopy md5sum shdoc"
+  export brew_cask_amd_packages=""
+  ### Additional Packages
+  export brew_amd_additional_packages=""
+  export brew_cask_amd_additional_packages=""
+  ### All Packages
+  export brew_amd_all_packages=""
+  export brew_cask_amd_all_packages=""
+
+  ## Installing Default TAPS (Multi-Arch Compatible)
+  echo "** Installing HashiCorp Binaries **"
+  brew tap hashicorp/tap
+  brew install hashicorp/tap/nomad
+  brew install hashicorp/tap/consul
+  brew install hashicorp/tap/vault
+
+  echo "** Installing packer plugins **"
+  packer plugins install github.com/hashicorp/amazon
+
   # Execute MacOS specific Architecture Commands:
   if [ "$setup_arch_name" == "x86_64" ]; then
     if [ "$(sysctl -in sysctl.proc_translated)" == "1" ]; then
@@ -921,25 +983,9 @@ setup_homebrew_and_packages() {
       echo
     else
       echo "** Detected INTEL processor."
-      brew install zsh-autosuggestions cmctl helm k9s popeye jq \
-      kubectl kubectx eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 \
-      mysql-client libpq tfenv packer font-fira-code watch strace \
-      pbcopy xclip figlet boxes toilet lolcat gh strongswan macfuse duti go md5sum \
-      shellcheck shdoc kustomize gnupg 1password-cli openssl@3 powershell/tap/powershell \
-      ca-certificates nss curl bash prometheus turbot/tap/steampipe wp-cli
-      # removed from default install: yt-download, leapp, ffmpeg
-      brew install --cask aws-vault iterm2 google-chrome \
-      visual-studio-code 1password 1password-cli github aws-vpn-client firefox \
-      obsidian postman xbar microsoft-teams keybase karabiner-elements keka google-cloud-sdk
-      curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
-      # not working brew install encfs # encfs needs macfuse first
-      echo "** Installing HashiCorp Binaries **"
-      brew tap hashicorp/tap
-      brew install hashicorp/tap/nomad
-      brew install hashicorp/tap/consul
-      brew install hashicorp/tap/vault
-      echo "** Installing packer plugins **"
-      packer plugins install github.com/hashicorp/amazon
+      eval brew install $brew_common_packages $brew_amd_packages
+      eval brew install --cask $brew_cask_common_packages $brew_cask_amd_packages
+
       # set bash to latest version
       latest_bash_path=$(brew --prefix bash)/bin/bash
       echo $latest_bash_path | sudo tee -a /etc/shells
@@ -947,32 +993,24 @@ setup_homebrew_and_packages() {
       if [ "${DOCLI_ADDITIONAL_PACKAGES:-false}" == true ]; then
         echo "* ADDITIONAL $setup_arch_name packages *"
         # brew install
-        brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
+        eval brew install $brew_common_additional_packages $brew_amd_additional_packages \
+        || brew link --overwrite python-packaging \
+        && brew link --overwrite certifi \
+        && eval brew install $brew_common_additional_packages $brew_amd_additional_packages
+        # brew cask install
+        eval brew install --cask $brew_cask_common_additional_packages $brew_cask_amd_additional_packages || eval brew install --cask $brew_cask_common_additional_packages $brew_cask_amd_additional_packages
       fi
       if [ ${DOCLI_ALL_PACKAGES:-false} == true ]; then
         echo "* EXTRA $setup_arch_name packages *"
-        brew install leapp ffmpeg macfuse
-        brew install --cask gimp microsoft-teams karabiner-elements wp-cli
+        eval brew install $brew_common_all_packages $brew_amd_all_packages
+        eval brew install --cask $brew_cask_common_all_packages $brew_cask_amd_all_packages
       fi
     fi
   elif [ "$setup_arch_name" == "arm64" ]; then
     echo "This is an ARM processor."
-    brew install zsh-autosuggestions cmctl helm k9s popeye jq kubectl kubectx \
-    eksctl awscli awsebcli azure-cli cilium-cli kube-ps1 mysql-client libpq tfenv packer \
-    font-fira-code watch xclip figlet boxes toilet lolcat gh strongswan \
-    duti go md5sha1sum shellcheck kustomize gnupg 1password-cli openssl@3 powershell/tap/powershell \
-    ca-certificates htop nss curl bash prometheus turbot/tap/steampipe
-    brew install --cask aws-vault iterm2 xbar cryptr rsyncui keka google-cloud-sdk
-    curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
-    # cryptr -> HashiCorp Vault UI Manager
-    # strace -> There is no ARM version yet
-    echo "** Installing HashiCorp Binaries **"
-    brew tap hashicorp/tap
-    brew install hashicorp/tap/nomad
-    brew install hashicorp/tap/consul
-    brew install hashicorp/tap/vault
-    echo "** Installing packer plugins **"
-    packer plugins install github.com/hashicorp/amazon
+    eval brew install $brew_arm_packages || eval brew install $brew_arm_packages
+    eval brew install --cask $brew_cask_arm_packages || eval brew install --cask $brew_cask_arm_packages
+
     # set bash to latest version
     latest_bash_path=$(brew --prefix bash)/bin/bash
     echo $latest_bash_path | sudo tee -a /etc/shells
@@ -980,18 +1018,28 @@ setup_homebrew_and_packages() {
     if [ "${DOCLI_ADDITIONAL_PACKAGES:-false}" == true ]; then
       echo "* ADDITIONAL $setup_arch_name packages *"
       # brew install
-      # removed from --cask extras: keybase
-      brew install --cask google-chrome aws-vpn-client firefox obsidian postman dbeaver-community visual-studio-code 1password 1password-cli github slack
+      eval brew install $brew_common_additional_packages $brew_arm_additional_packages \
+      || brew link --overwrite python-packaging \
+      && brew link --overwrite certifi \
+      && eval brew install $brew_common_additional_packages $brew_arm_additional_packages
+      # brew cask install
+      eval brew install --cask $brew_cask_common_additional_packages $brew_cask_arm_additional_packages || eval brew install --cask $brew_cask_common_additional_packages $brew_cask_arm_additional_packages
     fi
     if [ ${DOCLI_ALL_PACKAGES:-false} == true ]; then
       echo "* EXTRA $setup_arch_name packages *"
-      brew install leapp ffmpeg macfuse
-      brew install --cask gimp microsoft-teams karabiner-elements wp-cli
+      eval brew install $brew_common_all_packages $brew_arm_all_packages
+      eval brew install --cask $brew_cask_common_all_packages $brew_cask_arm_all_packages
     fi
   else
     echo "** ERROR: Unknown processor architecture. **"
     exit 1
   fi
+
+  ## Post-Packages Install (Multi-Arch Compatible)
+  echo -e "\n** Post Package Installations **"
+  echo -e "*** Installing HashiCorp Binaries ***"
+  curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
+
 }
 
 ########################################
@@ -1017,13 +1065,13 @@ setup_java() {
   # BUG
   # brew install --cask adoptopenjdk16
 
+  ############## homebrew update ##############
+  brew update
+
   # If needed to solve adoptopenjdkXX error
   # brew uninstall --cask adoptopenjdk16
   # brew untap AdoptOpenJDK/openjdk
   brew install --cask temurin
-
-  ############## homebrew update ##############
-  brew update
 }
 
 ########################################
@@ -1097,8 +1145,8 @@ setup_aws_tools() {
 setup_terraform() {
   echo -e "\n**** HASHICORP TOOLS ****"
   echo "** Installing Terraform **"
-  tfenv install 1.6.3
-  tfenv use 1.6.3
+  tfenv install 1.9.3
+  tfenv use 1.9.3
   ### Sets into $HOME/.zshrc and $HOME/.bash_profile:
   # autoload -U +X bashcompinit && bashcompinit
   # complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.6/terraform terraform
