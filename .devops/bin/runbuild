@@ -15,18 +15,32 @@ set -euo pipefail
 # ./build.sh -c=local -e=ent -r=local -a=amd -cr=public -os=al2023
 # ./build.sh --cloud=aws --env=ent --repo=repo-example --arch=amd --container-registry=private --os=amzn2
 
-PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin:$DOCLI/bin
+PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.5
+DOCLI_MODULE_VERSION=0.6
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
+############################################
+# DEVELOPER MODE
+############################################
+: "${DOCLI_DEVELOPER_MODE:=false}"
+
+if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  export DOCLI_DIR=$DOCLI_REPOSITORY
+else
+  export DOCLI_DIR=$DOCLI
+fi
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH=$PATH:$DOCLI_DIR/bin
+############################################
+
 source $DOCLI/.docli_envs
-source $DOCLI/functions/bash_basic_functions
+source $DOCLI_DIR/functions/bash_basic_functions
 
 ############################################
 # SANITIZATION
@@ -134,29 +148,29 @@ done
 
 if [[ $cloud_env == "local" ]]; then
   FILE_OR_DIR_CHECK=(
-    $DOCLI/functions/bash_colors_tput
-    $DOCLI/functions/bash_basic_environments
-    $DOCLI/functions/bash_os_check
+    $DOCLI_DIR/functions/bash_colors_tput
+    $DOCLI_DIR/functions/bash_basic_environments
+    $DOCLI_DIR/functions/bash_os_check
   )
 else
   FILE_OR_DIR_CHECK=(
-    $DOCLI/functions/bash_colors_tput
+    $DOCLI_DIR/functions/bash_colors_tput
     $DOCLI_PROJECT_ROOT/kubernetes/envs/$client-$short_region-$environment/envs
-    $DOCLI/functions/bash_basic_aws_profiles
-    $DOCLI/functions/bash_basic_environments
-    $DOCLI/functions/bash_os_check
+    $DOCLI_DIR/functions/bash_basic_aws_profiles
+    $DOCLI_DIR/functions/bash_basic_environments
+    $DOCLI_DIR/functions/bash_os_check
   )
 fi
 
 # Import all sources in FILE_OR_DIR_CHECK List and also check DIRS:
-source $DOCLI/functions/bash_basic_source_files_or_dir_check
+source $DOCLI_DIR/functions/bash_basic_source_files_or_dir_check
 source_files_list_dir_check
 
 # Load basic functions.
 awsprofile="$client-$short_region-$environment"
 
 # Check if provided Provider is valid, otherwise exit.
-source $DOCLI/functions/bash_basic_cloud_providers
+source $DOCLI_DIR/functions/bash_basic_cloud_providers
 [[ $cloud_env != "local" ]] && check_providers $cloud
 
 # Check for AWS Profile (~/.aws/config)

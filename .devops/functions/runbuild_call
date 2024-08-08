@@ -27,12 +27,24 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
+############################################
+# DEVELOPER MODE
+############################################
+: "${DOCLI_DEVELOPER_MODE:=false}"
+
+if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  export DOCLI_DIR=$DOCLI_REPOSITORY
+else
+  export DOCLI_DIR=$DOCLI
+fi
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
+############################################
 
 export DOCLI_PARAM_OPTIONS=("build", "destroy", "destroy_all", "recreate", "list", "help")
 
@@ -112,9 +124,9 @@ if [ ${#args[@]} -eq 0 ]; then
         echo -e "######################################################################################"
 
         if [ $tf_force_param -eq 1 ]; then
-          source $DOCLI/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}" --force
+          source $DOCLI_DIR/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}" --force
         else
-          source $DOCLI/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}"
+          source $DOCLI_DIR/bin/runbuild "--cloud=$DOCLI_PARAM_CLOUD" "$default_option" "--env=$env" "--short-region=${region}"
         fi
       else
         echo "Skipping env: $env for short_region: $region"
@@ -140,13 +152,13 @@ elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 1 ]; then
   # Now run the command with modified arguments
   echo "force all params: $@"
   echo "force all args:   ${args[@]}"
-  source $DOCLI/bin/runbuild "${args[@]}"
+  source $DOCLI_DIR/bin/runbuild "${args[@]}"
 
 elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
   echo "** arguments passed: running normal TF..."
   echo "no-force all params: $@"
   echo "no-force all args:   ${args[@]}"
-  source $DOCLI/bin/runbuild "${args[@]}"
+  source $DOCLI_DIR/bin/runbuild "${args[@]}"
 fi
 
 ###############################################################
