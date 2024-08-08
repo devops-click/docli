@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.6
+DOCLI_MODULE_VERSION=0.7
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -262,6 +262,8 @@ function destroy_local() {
 #############################################################################################
 # AWS
 #############################################################################################
+: "${cmd_aws_vault:=}"
+: "${cmd_aws_sso:=}"
 [[ $cloud_env == "aws-vault" ]] && cmd_aws_vault="aws-vault exec $awsprofile --"
 [[ $cloud_env == "aws" ]] && cmd_aws_sso="--profile $awsprofile-sso "
 
