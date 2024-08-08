@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_VERSION=0.4
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -55,17 +55,17 @@ args=()
 # Calling folder pre-hook (terraform/cloud/deploy/recipe)
 if [[ -f .docli_pre_hook ]]; then
   echo "* Current folder .docli_pre_hook found. Using it. *"
-  source .docli_pre_hook
+  source .docli_pre_hook "${args[@]}"
 fi
 # Cloud Terraform pre-hook (applies to all TFs inside that specific Cloud if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook ]]; then
   echo "* Cloud Terraform .docli_pre_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook
+  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook "${args[@]}"
 fi
 # General Terraform pre-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
   echo "* General Terraform .docli_pre_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
+  source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook "${args[@]}"
 fi
 ###############################################################
 
@@ -156,16 +156,16 @@ fi
 # Calling folder post-hook (terraform/cloud/deploy/recipe)
 if [[ -f .docli_post_hook ]]; then
   echo "* Current folder .docli_post_hook found. Using it. *"
-  source .docli_post_hook
+  source .docli_post_hook "${args[@]}"
 fi
 # Cloud Terraform post-hook (applies to all TFs inside that specific Cloud if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_post_hook ]]; then
   echo "* Cloud Terraform .docli_post_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_post_hook
+  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_post_hook "${args[@]}"
 fi
 # General Terraform post-hook (applies to all TFs if file found)
 if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook ]]; then
   echo "* General Terraform .docli_post_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook
+  source $DOCLI_PROJECT_ROOT/terraform/.docli_post_hook "${args[@]}"
 fi
 ###############################################################
