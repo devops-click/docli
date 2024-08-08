@@ -141,7 +141,7 @@ if [[ $cloud_env == "local" ]]; then
 else
   FILE_OR_DIR_CHECK=(
     $DOCLI/functions/bash_colors_tput
-    ./../../files/envs/$client-$short_region-$environment
+    ./../../files/envs/$client-$short_region-$environment/envs
     $DOCLI/functions/bash_basic_aws_profiles
     $DOCLI/functions/bash_basic_environments
     $DOCLI/functions/bash_os_check
