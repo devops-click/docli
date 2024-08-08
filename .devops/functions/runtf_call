@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.3
+DOCLI_MODULE_VERSION=0.4
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -48,26 +48,28 @@ export DOCLI_PARAM_MODULE=${DOCLI_PARAM_MODULE:-terraform}
 [[ -z $DOCLI_PARAM_FORCE ]] && tf_force_param=0 || tf_force_param=$DOCLI_PARAM_FORCE
 args=()
 
-###############################################################
-# runtf pre-hook
-# OPTIONAL -> Runs only if file exists
-###############################################################
-# Calling folder pre-hook (terraform/cloud/deploy/recipe)
-if [[ -f .docli_pre_hook ]]; then
-  echo "* Current folder .docli_pre_hook found. Using it. *"
-  source .docli_pre_hook
-fi
-# Cloud Terraform pre-hook (applies to all TFs inside that specific Cloud if file found)
-if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook ]]; then
-  echo "* Cloud Terraform .docli_pre_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook
-fi
-# General Terraform pre-hook (applies to all TFs if file found)
-if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
-  echo "* General Terraform .docli_pre_hook found for the project. Using it. *"
-  source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
-fi
-###############################################################
+docli_pre_hook() {
+  ###############################################################
+  # runtf pre-hook
+  # OPTIONAL -> Runs only if file exists
+  ###############################################################
+  # Calling folder pre-hook (terraform/cloud/deploy/recipe)
+  if [[ -f .docli_pre_hook ]]; then
+    echo "* Current folder .docli_pre_hook found. Using it. *"
+    source .docli_pre_hook
+  fi
+  # Cloud Terraform pre-hook (applies to all TFs inside that specific Cloud if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook ]]; then
+    echo "* Cloud Terraform .docli_pre_hook found for the project. Using it. *"
+    source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_pre_hook
+  fi
+  # General Terraform pre-hook (applies to all TFs if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook ]]; then
+    echo "* General Terraform .docli_pre_hook found for the project. Using it. *"
+    source $DOCLI_PROJECT_ROOT/terraform/.docli_pre_hook
+  fi
+  ###############################################################
+}
 
 # Check if any arguments are passed
 if [ $# -eq 0 ]; then
@@ -97,6 +99,8 @@ if [ ${#args[@]} -eq 0 ]; then
       # Check if the env is enabled for the current region
       enabled_var="enabled_${region}[@]"
       if [[ " ${!enabled_var} " =~ " ${env} " ]]; then
+        # Execute pre-hook scripts
+        docli_pre_hook
 
         echo -e "\n######################################################################################"
         echo -e " => runtf_call - Calling docli runtf script for Terraform"
