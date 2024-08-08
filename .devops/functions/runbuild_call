@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.2
+DOCLI_MODULE_VERSION=0.3
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -38,7 +38,8 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 : "${DOCLI_DEVELOPER_MODE:=false}"
 
 if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
-  export DOCLI_DIR=$DOCLI_REPOSITORY
+  echo -e "* runbuild_call: DEVELOPER_MODE ON *"
+  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
 else
   export DOCLI_DIR=$DOCLI
 fi
