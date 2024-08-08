@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.7
+DOCLI_MODULE_VERSION=0.8
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -272,11 +272,13 @@ function build_aws() {
 
   # [[ $cr_type == "public" ]]  && eval "$cmd_aws_vault aws ecr-public get-login-password --region $region | docker login --username AWS --password-stdin $company_public_ecr_repo"
 
+  #aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 969852750332.dkr.ecr.eu-central-1.amazonaws.com
+
   # aws-vault exec co-euc1-ent-sso-start -- aws ecr get-login-password --region eu-central-1 --profile co-euc1-ent-sso | docker login --username AWS --password-stdin 969852750332.dkr.ecr.eu-central-1.amazonaws.com
-  eval "$cmd_aws_vault aws ecr-public get-login-password --region $region | docker login --username AWS --password-stdin $company_public_ecr_repo"
+  eval "$cmd_aws_vault aws ecr-public get-login-password --region $region $cmd_aws_sso | docker login --username AWS --password-stdin $company_public_ecr_repo"
   eval "$cmd_aws_vault docker pull --platform linux/${arch}64 $BASE_IMAGE"
 
-  [[ $cr_type == "private" ]] && eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login --username AWS --password-stdin $cr_repository"
+  [[ $cr_type == "private" ]] && eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso $cmd_aws_sso | docker login --username AWS --password-stdin $cr_repository"
   eval "$cmd_aws_vault docker tag $BASE_IMAGE $cr_repository/$DEST_IMAGE"
   eval "$cmd_aws_vault docker push $cr_repository/$DEST_IMAGE"
 
