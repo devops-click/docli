@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.10
+DOCLI_MODULE_VERSION=0.11
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -277,21 +277,32 @@ function build_aws() {
 
   # docker login -u AWS -p $(aws ecr get-login-password --region the-region-you-are-in) xxxxxxxxx.dkr.ecr.the-region-you-are-in.amazonaws.com
   # aws-vault exec co-euc1-ent-sso-start -- aws ecr get-login-password --region eu-central-1 --profile co-euc1-ent-sso | docker login --username AWS --password-stdin 969852750332.dkr.ecr.eu-central-1.amazonaws.com
+  echo -e "\n*** Docker/ECR Login to AWS Public ECR ***"
   eval "$cmd_aws_vault aws ecr-public get-login-password --region $aws_public_ecr_region $cmd_aws_sso | docker login $company_public_ecr_repo --username AWS --password-stdin"
+
+  echo -e "\n*** Pulling AWS public image to our private CR ***"
   eval "$cmd_aws_vault docker pull --platform linux/${arch}64 $BASE_IMAGE"
 
-  [[ $cr_type == "private" ]] && eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login $cr_repository --username AWS --password-stdin"
+  if [[ $cr_type == "private" ]]; then
+    echo -e "\n*** Private Container Register selected. Proceeding with login... ***"
+    eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login $cr_repository --username AWS --password-stdin"
+  fi
+  echo -e "\n*** Tagging Image ***"
   eval "$cmd_aws_vault docker tag $BASE_IMAGE $cr_repository/$DEST_IMAGE"
+  echo -e "\n*** Pushing Image ***"
   eval "$cmd_aws_vault docker push $cr_repository/$DEST_IMAGE"
 
   # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
   # If we use new relic in the future...
   # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
-  echo "** Building linux/${arch}64 architecture image..."
+  echo -e "\n*** Building linux/${arch}64 architecture image... ***"
   eval "$cmd_aws_vault docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
 
+  echo -e "\n*** Adding 'latest' tag to image ***"
   eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$TAG_LATEST"
+  echo -e "\n*** Pushing to CR: $cr_repository/$IMAGE ***"
   eval "$cmd_aws_vault docker push $cr_repository/$IMAGE"
+  echo -e "\n*** Pushing to CR: $cr_repository/$TAG_LATEST ***"
   eval "$cmd_aws_vault docker push $cr_repository/$TAG_LATEST"
   echo "Done! Now you may use: $cr_repository/${IMAGE} and $cr_repository/${TAG_LATEST}"
   echo "** based on $BASE_IMAGE **"
