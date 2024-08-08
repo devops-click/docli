@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.4
+DOCLI_MODULE_VERSION=0.5
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -141,12 +141,18 @@ elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 1 ]; then
       echo "argument=${args[$i]}"
     fi
   done
+  # Execute pre-hook scripts
+  docli_pre_hook
+
   # Now run the command with modified arguments
   echo "force all params: $@"
   echo "force all args:   ${args[@]}"
   source $DOCLI/bin/runtf "${args[@]}"
 
 elif [ ${#args[@]} != 0 ] && [ $tf_force_param -eq 0 ]; then
+  # Execute pre-hook scripts
+  docli_pre_hook
+
   echo "** arguments passed: running normal TF..."
   echo "no-force all params: $@"
   echo "no-force all args:   ${args[@]}"
