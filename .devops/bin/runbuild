@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.4
+DOCLI_MODULE_VERSION=0.5
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -44,7 +44,6 @@ echo -e "\n** Sourcing: $DOCLI/.docli"
 source $DOCLI/.docli
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-current_dir=$(basename $PWD)
 
 MACHINE_PROFILE="${current_key}"
 
@@ -142,7 +141,7 @@ if [[ $cloud_env == "local" ]]; then
 else
   FILE_OR_DIR_CHECK=(
     $DOCLI/functions/bash_colors_tput
-    $current_dir/../../files/envs/$client-$short_region-$environment/envs
+    $DOCLI_PROJECT_ROOT/kubernetes/envs/$client-$short_region-$environment/envs
     $DOCLI/functions/bash_basic_aws_profiles
     $DOCLI/functions/bash_basic_environments
     $DOCLI/functions/bash_os_check
