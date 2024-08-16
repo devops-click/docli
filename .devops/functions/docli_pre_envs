@@ -12,7 +12,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.1
+DOCLI_MODULE_VERSION=0.0.2
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -32,4 +32,23 @@ else
 fi
 # Set the right /bin path after determine if Developer Mode is on or off
 PATH=$PATH:$DOCLI_DIR/bin
+############################################
+
+source $DOCLI_DIR/functions/bash_basic_functions
+
+############################################
+# PRE-ENVS - DEVELOPER MODE SOURCING
+############################################
+[[ $DOCLI_DEVELOPER_MODE == true ]] && echo "* docli: sourcing DEVELOPER_MODE $DOCLI_DIR/docli_pre_envs **" && source $DOCLI_DIR/functions/docli_pre_envs || echo ""
+
+############################################
+# AUTO-UPDATER - docli
+############################################
+# docli MAIN Installer - Define the URL and the destination path
+INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version)
+INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version)
+INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
+
+echo "calling check_new_versions"
+check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION $INSTALLER_COMMAND
 ############################################
