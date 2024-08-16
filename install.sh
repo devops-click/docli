@@ -9,7 +9,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=install
 DOCLI_MODULE_TYPE=install
-DOCLI_MODULE_VERSION=0.0.16
+DOCLI_MODULE_VERSION=0.0.17
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # TODO: REMOVE, kept for small period to keep compatibility
@@ -291,11 +291,12 @@ copy_or_download() {
   for file_path in "${file_paths[@]}"; do
     if [[ $install_local == true ]]; then
       echo "Copying $file_path"
-      if [[ $file_path == ".docli" ]]; then
-        cp "$repo_path/$file_path" "$target_path/$file_path"
-      else
-        cp "$repo_path/.devops/$file_path" "$target_path/$file_path"
-      fi
+      cp "$repo_path/.devops/$file_path" "$target_path/$file_path"
+      # if [[ $file_path == ".docli" ]]; then
+      #   cp "$repo_path/$file_path" "$target_path/$file_path"
+      # else
+      #   cp "$repo_path/.devops/$file_path" "$target_path/$file_path"
+      # fi
     else
       echo "Downloading $file_path"
       curl -sL "$DOCLI_REMOTE_REPOSITORY/.devops/$file_path" -H "Cache-Control: no-cache, no-store" -o "$target_path/$file_path" || echo "* Error downloading $file_path *"
@@ -306,11 +307,12 @@ copy_or_download() {
     [[ ! -d "$target_path/$dir" ]] && mkdir -p "$target_path/$dir"
     if [[ $install_local == true ]]; then
       echo "Copying directory $dir"
-      if [[ $file_path == ".docli" ]]; then
-        cp -R "$repo_path/$dir/"* "$target_path/$dir"
-      else
-        cp -R "$repo_path/.devops/$dir/"* "$target_path/$dir"
-      fi
+      cp -R "$repo_path/.devops/$dir/"* "$target_path/$dir"
+      # if [[ $file_path == ".docli" ]]; then
+      #   cp -R "$repo_path/$dir/"* "$target_path/$dir"
+      # else
+      #   cp -R "$repo_path/.devops/$dir/"* "$target_path/$dir"
+      # fi
     else
       # TODO: Download tools logic here...
       echo "Download logic for tools not implemented"
