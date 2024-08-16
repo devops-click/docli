@@ -16,13 +16,14 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_functions
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.7
+DOCLI_MODULE_VERSION=0.8
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Disabled to don't interphere in docli --version and --version-short results
 # echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Setting PATH
+: "${DOCLI:=$HOME/devops}"
 : "${DOCLI_DIR:=$DOCLI}"
 PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
 
