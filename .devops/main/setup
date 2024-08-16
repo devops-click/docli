@@ -34,7 +34,7 @@ os_var=$(uname)
 os_var_lower="$(echo "$os_var" | tr '[:upper:]' '[:lower:]')"
 ops_profile=""
 
-source $DOCLI/functions/bash_basic_functions
+source $DOCLI_DIR/functions/bash_basic_functions
 
 [[ -f "$DOCLI/.docli_envs" ]] && source $DOCLI/.docli_envs
 [[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && source $DOCLI_PROJECT_ROOT/.docli_envs
