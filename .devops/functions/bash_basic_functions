@@ -23,6 +23,7 @@ DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 # echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Setting PATH
+: "${DOCLI_DIR:=$DOCLI}"
 PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
 
 banner() {
