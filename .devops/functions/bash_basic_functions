@@ -16,13 +16,14 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_functions
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.5
+DOCLI_MODULE_VERSION=0.6
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Disabled to don't interphere in docli --version and --version-short results
 # echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-PATH="$DOCLI/bin:/opt/homebrew/bin:$PATH"
+# Setting PATH
+PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
 
 banner() {
   local version="${1:-}"
@@ -73,7 +74,7 @@ declare -a args=()
 
 # Creates Optional DOCLI Variables if not exists
 : "${DOCLI_REPOSITORY:=}"
-: "${DOCLI_DEVELOPER_MODE:=}"
+: "${DOCLI_DEVELOPER_MODE:=false}"
 
 load_vars() {
   # Validations to activate modes:
@@ -94,21 +95,39 @@ calculate_md5() {
 #:: # disabled if DOCLI_UPDATES=false found
 #:: ## Usage example:
 #:: `check_docli_version`
-check_docli_version() {
-  # Check if DOCLI_UPDATES variable exists and it is set to false, otherwise, proceed to update.
-  DOCLI_UPDATES="${DOCLI_UPDATES:-true}"
-  if [ "$DOCLI_UPDATES" != "false" ]; then
-    echo "* INFO: DOCLI_UPDATES is true. checking for if any update is needed... *"
-    docli_current_version=$(docli --version-short)
-    # docli_newest_version=$(curl -ksv https://...) # TODO: Create check with GitHub deployment versions
-    docli_newest_version=$(docli --version-short)
-    if [[ $docli_current_version == $docli_newest_version ]]; then
-      echo "* INFO: Running version of DOCLI is already up-to-date ($docli_newest_version) *"
-    else
-      docli update
-    fi
+# check_docli_version() {
+#   # Check if DOCLI_UPDATES variable exists and it is set to false, otherwise, proceed to update.
+#   DOCLI_UPDATES="${DOCLI_UPDATES:-true}"
+#   if [ "$DOCLI_UPDATES" != "false" ]; then
+#     echo "* INFO: DOCLI_UPDATES is true. checking for if any update is needed... *"
+#     docli_current_version=$(docli --version-short)
+#     # docli_newest_version=$(curl -ksv https://...) # TODO: Create check with GitHub deployment versions
+#     docli_newest_version=$(docli --version-short)
+#     if [[ $docli_current_version == $docli_newest_version ]]; then
+#       echo "* INFO: Running version of DOCLI is already up-to-date ($docli_newest_version) *"
+#     else
+#       docli update
+#     fi
+#   else
+#     echo "* WARN: DOCLI_UPDATES is set to false, skipping any updates... *"
+#   fi
+# }
+
+#:: # Function to work with any needed module update
+#:: ## Usage example:
+#:: `check_new_versions <module> <local_version> <remote_version> <update_command>`
+check_new_versions() {
+  local MODULE=$1
+  local MODULE_UPPER=$(echo "$MODULE" | tr '[:lower:]' '[:upper:]')
+  local V_LOCAL=$2
+  local V_REMOTE=$3
+  local UPDATE_CMD=${4:-echo}
+  if [[ $V_LOCAL < $V_REMOTE ]]; then
+    echo -e "\n* NEW $MODULE_UPPER VERSION $V_REMOTE FOUND! (Current version: $V_LOCAL) *"
+    read -p "* Press (y) to proceed with the automatic update or any other key to skip *"
+    eval $UPDATE_CMD
   else
-    echo "* WARN: DOCLI_UPDATES is set to false, skipping any updates... *"
+    echo -e "\n* $MODULE_UPPER UP TO DATE | Current version: $V_REMOTE | Installed version: $V_LOCAL *"
   fi
 }
 
@@ -583,6 +602,14 @@ get_full_arch_name() {
     amd) echo "x86_64" ;;
     *) echo "Unknown Architecture" ;;
   esac
+}
+
+#:: # Function to return any docli module version from file
+#:: ## Usage example:
+#:: `SOURCE_VERSION=$(get_version "$TEMP_FILE")`
+get_version() {
+  local file="$1"
+  grep 'DOCLI_MODULE_VERSION' "$file" | awk -F'= ' '{print $2}' | tr -d '"'
 }
 
 #:: # Function to return current quarter in YYqN format
