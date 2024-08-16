@@ -6,7 +6,7 @@ set -euo pipefail
 #                                   docli
 ###############################################################################
 
-docli_version="0.0.04"
+docli_version="0.0.05"
 docli_file_name="$(basename "$0")"
 docli_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 docli_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -26,8 +26,12 @@ DOCLI_REMOTE_REPOSITORY_INSTALL_URL="https://raw.githubusercontent.com/devops-cl
 # : "${DOCLI_REPOSITORY:=""}"
 # : "${DOCLI_DEVELOPER_MODE:=""}"
 
+
 # echo "==> .docli -> source bash_basic_functions"
-source $DOCLI_DIR/functions/bash_basic_functions
+# source $DOCLI_DIR/functions/bash_basic_functions
+# export DOCLI="${DOCLI:-$HOME/devops}"
+# export DOCLI_DIR="${DOCLI_DIR:-$DOCLI}"
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
 
 docli_command="${1:-}"
 docli_option="${2:-}"
