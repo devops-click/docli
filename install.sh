@@ -6,7 +6,15 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.15"
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=install
+DOCLI_MODULE_TYPE=install
+DOCLI_MODULE_VERSION=0.0.16
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+# TODO: REMOVE, kept for small period to keep compatibility
+install_version="$DOCLI_MODULE_VERSION"
+
 os_var=$(uname)
 : "${DOCLI_DEPLOY:=false}"
 : "${DOCLI_DEVELOPER_MODE:=false}"
@@ -215,6 +223,7 @@ check_and_create_dirs
 
 # Define file paths
 declare -a file_paths=(
+  ".version"
   ".docli"
   "bin/docli"
   "bin/runbuild"
