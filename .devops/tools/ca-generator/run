@@ -177,7 +177,7 @@ echo -e "\n** Using HomeBrew OpenSSL **"
 SSL_VER=$(openssl version)
 echo "Current OpenSSL: $SSL_VER"
 # PATH="/opt/homebrew/bin:$PATH"
-export PATH="/opt/homebrew/bin:$DOCLI/bin:$PATH"
+export PATH="/opt/homebrew/bin:$DOCLI_DIR/bin:$PATH"
 SSL_VER=$(openssl version)
 echo "Now Using OpenSSL: $SSL_VER !"
 
@@ -450,11 +450,11 @@ echo -e "########## S3 BACKUP AND SYNC ##########"
 echo -e "########################################"
 
 # Sources
-echo -e "\n** Loading: $DOCLI/functions/bash_gpg_key"
-source $DOCLI/functions/bash_gpg_key
+echo -e "\n** Loading: $DOCLI_DIR/functions/bash_gpg_key"
+source $DOCLI_DIR/functions/bash_gpg_key
 # DOCLI_PRIVATE_DIR variable comes from bash_gpg_key. If unset it will be "${DOCLI}/.private"
-echo "** Loading: $DOCLI/functions/bash_op"
-source $DOCLI/functions/bash_op
+echo "** Loading: $DOCLI_DIR/functions/bash_op"
+source $DOCLI_DIR/functions/bash_op
 
 ca_get_all_env_gpg_keys() {
   ### GET ALL ENVIRONMENT KEYS

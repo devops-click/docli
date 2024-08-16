@@ -25,7 +25,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 
 function check_providers {
   # Load Basic Functions such as contains
-  source "$DOCLI/functions/bash_basic_functions"
+  source "$DOCLI_DIR/functions/bash_basic_functions"
 
   # List of valid parameters
   VALID_PROVIDERS=(

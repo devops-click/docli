@@ -11,7 +11,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_terraform
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.12
+DOCLI_MODULE_VERSION=0.13
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -361,12 +361,20 @@ run_terraform() {
     state_show)
       tf_opt="state show"
       echo "Running 'terraform $tf_opt' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE and tf_arg1=${tf_arg1:-not_available}"
-      eval "$tf_command $tf_opt" ${tf_arg1:-not_available}
+      tf_resource_id=${tf_arg1:-not_available}
+      eval "$tf_command $tf_opt" ${tf_resource_id}
       ;;
     import)
       tf_opt="import"
       echo "Running 'terraform $tf_opt $cmd_args' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE - Importing: ${tf_arg1:-not_available}"
-      eval "$tf_command $tf_opt $cmd_args ${tf_arg1:-not_available} ${tf_arg1:-not_available}" # TODO: TF IMPORT - Make it work. Order now is correct: terraform <option> <global_variables> <ADDR> <ID>, but still returning error.
+      tf_resource_id=${tf_arg1:-not_available}
+      remove_resource_first=${tf_arg2:-false}
+      if [[ ${remove_resource_first:-false} == true ]]; then
+        terraform state rm "${TF_RESOURCE}" || echo "already deleted"
+        eval "$tf_command $tf_opt $cmd_args "${tf_resource_id}" "${tf_resource_id}"
+      else
+        eval "$tf_command $tf_opt $cmd_args "${tf_resource_id}" "${tf_resource_id}"
+      fi
       ;;
     providers)
       # tf_opt="providers"

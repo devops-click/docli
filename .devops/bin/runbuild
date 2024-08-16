@@ -20,25 +20,10 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.12
+DOCLI_MODULE_VERSION=0.13
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
-
-############################################
-# DEVELOPER MODE
-############################################
-: "${DOCLI_DEVELOPER_MODE:=false}"
-
-if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
-  echo -e "* runbuild: DEVELOPER_MODE ON *"
-  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
-else
-  export DOCLI_DIR=$DOCLI
-fi
-# Set the right /bin path after determine if Developer Mode is on or off
-PATH=$PATH:$DOCLI_DIR/bin
-############################################
 
 source $DOCLI/.docli_envs
 source $DOCLI_DIR/functions/bash_basic_functions
@@ -220,8 +205,8 @@ elif [ $os_type == "u2204" ]; then
   DEST_IMAGE="$repo:ubuntu2204-$datevar"
 fi
 
-IMAGE="$repo:$MACHINE_PROFILE-$datevar"
-TAG_LATEST=$(eval "echo $IMAGE|sed 's/:.*/:$MACHINE_PROFILE-latest/g'")
+IMAGE="$repo:$MACHINE_PROFILE-${os_type}-${arch}-$datevar"
+TAG_LATEST=$(eval "echo $IMAGE|sed 's/:.*/:$MACHINE_PROFILE-${os_type}-${arch}-latest/g'")
 
 #############################################################################################
 # LOCAL
@@ -299,12 +284,21 @@ function build_aws() {
   echo -e "\n*** Building linux/${arch}64 architecture image... ***"
   eval "$cmd_aws_vault docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
 
-  echo -e "\n*** Adding 'latest' tag to image ***"
-  eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$TAG_LATEST"
   echo -e "\n*** Pushing to CR: $cr_repository/$IMAGE ***"
+  # echo "**** docker tag $IMAGE $cr_repository/$IMAGE ****"
+  # eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$IMAGE"
+
+  echo "**** docker push $cr_repository/$IMAGE ****"
   eval "$cmd_aws_vault docker push $cr_repository/$IMAGE"
-  echo -e "\n*** Pushing to CR: $cr_repository/$TAG_LATEST ***"
+
+  echo -e "\n*** Adding 'latest' tag to image ***"
+  echo "**** docker tag $IMAGE $cr_repository/$TAG_LATEST ****"
+  eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$TAG_LATEST"
+
+  echo -e "\n*** Pushing 'latest' to CR: $cr_repository/$TAG_LATEST ***"
+  echo "**** docker push $cr_repository/$TAG_LATEST ****"
   eval "$cmd_aws_vault docker push $cr_repository/$TAG_LATEST"
+
   echo "Done! Now you may use: $cr_repository/${IMAGE} and $cr_repository/${TAG_LATEST}"
   echo "** based on $BASE_IMAGE **"
   # exit 0

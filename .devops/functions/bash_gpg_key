@@ -12,7 +12,7 @@ DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-PATH="$DOCLI/bin:$PATH"
+PATH="$DOCLI_DIR/bin:$PATH"
 [[ -d /opt/homebrew/bin ]] && PATH="/opt/homebrew/bin:$PATH" || echo >/dev/null
 
 #:: ### This part of the code check for the existence of private dir to be used on imports
@@ -138,7 +138,7 @@ EOF
 
 gpg_import_priv_keys() {
   local env_var=$1
-  source $DOCLI/functions/bash_op
+  source $DOCLI_DIR/functions/bash_op
   op_check_connection
   vars_gpg_keys
   echo "** getting $env_var gpg keys..."

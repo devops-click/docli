@@ -40,7 +40,7 @@ else
   sso_eks_assign=false
 fi
 
-# source $DOCLI/functions/bash_basic_functions
+# source $DOCLI_DIR/functions/bash_basic_functions
 # source $DOCLI_PROJECT_ROOT/.docli
 
 eval $DOCLI_VERBOSE && echo -e "\n**** Running $sso_file_name_upper script ****"

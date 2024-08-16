@@ -20,7 +20,7 @@ setup_version="1.7"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_current_dir="$(pwd)"
-PATH="$DOCLI/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+PATH="$DOCLI_DIR/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=setup

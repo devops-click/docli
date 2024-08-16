@@ -3,8 +3,8 @@
 environment=$1
 
 # Sources
-source $DOCLI/functions/bash_op
-source $DOCLI/functions/bash_gpg_key
+source $DOCLI_DIR/functions/bash_op
+source $DOCLI_DIR/functions/bash_gpg_key
 
 # Check if private dir exists
 dir=$DOCLI/.private

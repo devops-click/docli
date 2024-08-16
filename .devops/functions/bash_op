@@ -22,7 +22,7 @@ bash_op_current_dir="$(pwd)"
 [[ -f "$DOCLI/.docli_envs" ]] && source $DOCLI/.docli_envs
 [[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]] && source $DOCLI_PROJECT_ROOT/.docli_envs
 [[ -f "$bash_op_current_dir/.docli_envs" ]] && source $bash_op_current_dir/.docli_envs
-source $DOCLI/functions/bash_basic_functions
+source $DOCLI_DIR/functions/bash_basic_functions
 if [[ -z ${DOCLI} ]]; then
   echo "** .docli_envs found! using it's values when applicable **"
 else

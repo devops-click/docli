@@ -2,7 +2,7 @@
 set -euo pipefail
 
 source $DOCLI_PROJECT_ROOT/.docli_envs
-source $DOCLI/functions/bash_basic_functions
+source $DOCLI_DIR/functions/bash_basic_functions
 
 hops=1
 

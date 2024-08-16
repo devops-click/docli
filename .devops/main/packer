@@ -33,7 +33,7 @@ current_key=$(basename $PWD)
 prefix_path=$(dirname -- "${BASH_SOURCE[0]}")
 
 # Load environment Vars
-[[ -f "$DOCLI/functions/bash_basic_functions" ]] && source $DOCLI/functions/bash_basic_functions
+[[ -f "$DOCLI_DIR/functions/bash_basic_functions" ]] && source $DOCLI_DIR/functions/bash_basic_functions
 
 # .docli_envs override order: HOME -> DOCLI INSTALLATION DIR -> CURRENT DIR
 [[ -f "$HOME/.docli_envs" ]] && source $HOME/.docli_envs
@@ -87,10 +87,10 @@ VALID_COMMANDS=("build")
 VALID_ENVIRONMENTS=("dev" "qas" "stg" "prd" "sec" "ent" "val" "fin")
 REQUIRED_PACKER_VERSION="v$packer_version"
 FILE_OR_DIR_CHECK=(
-    $DOCLI/scripts/docli_colors_tput
+    $DOCLI_DIR/scripts/docli_colors_tput
     $DOCLI/.docli_envs
     $DOCLI/.envs_override
-    $DOCLI/bin
+    $DOCLI_DIR/bin
 )
 PROFILES=$(sed -n 's/^\[profile \([^]]*\)]/\1/p' ~/.aws/config) # Read AWS config file and filter profile names
 

@@ -6,12 +6,12 @@ read -p ">>>>> PRESS ENTER IF YOU ARE SURE YOU WANT TO DO THIS <<<<<"
 echo ""
 
 # Sources
-echo "** Loading: $DOCLI/functions/bash_gpg_key"
-source $DOCLI/functions/bash_gpg_key
-echo "** Loading: $DOCLI/functions/bash_git_private_dir"
-source $DOCLI/functions/bash_git_private_dir
-echo "** Loading: $DOCLI/functions/bash_op"
-source $DOCLI/functions/bash_op
+echo "** Loading: $DOCLI_DIR/functions/bash_gpg_key"
+source $DOCLI_DIR/functions/bash_gpg_key
+echo "** Loading: $DOCLI_DIR/functions/bash_git_private_dir"
+source $DOCLI_DIR/functions/bash_git_private_dir
+echo "** Loading: $DOCLI_DIR/functions/bash_op"
+source $DOCLI_DIR/functions/bash_op
 
 echo "** Setting variables **"
 environment=$1

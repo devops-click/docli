@@ -26,7 +26,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 
 check_aws_profiles() {
     # Load Basic Functions such as contains
-    source "$DOCLI/functions/bash_basic_functions"
+    source "$DOCLI_DIR/functions/bash_basic_functions"
 
     PROFILES=$(sed -n 's/^\[profile \([^]]*\)]/\1/p' ~/.aws/config) # Read AWS config file and filter profile names
     local local_aws_profile=$1
