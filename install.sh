@@ -6,7 +6,7 @@ set -euo pipefail
 #                       docli Installation Script
 ###############################################################################
 
-install_version="0.0.14"
+install_version="0.0.15"
 os_var=$(uname)
 : "${DOCLI_DEPLOY:=false}"
 : "${DOCLI_DEVELOPER_MODE:=false}"
@@ -221,6 +221,7 @@ declare -a file_paths=(
   "bin/runpacker"
   "bin/runtf"
   "bin/setenv"
+  "functions/docli_pre_envs"
   "functions/bash_aws_copy_credentials"
   "functions/bash_aws_local_sso_temp_creds"
   "functions/bash_azure"

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                             docli pre-env script
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                                PRE ENV SCRIPT                               |
+#-----------------------------------------------------------------------------'
+# Component of the Default Generic Terraform Run Script designed to be called from any sub-terraform-stacks
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_pre_envs
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+############################################
+# DEVELOPER MODE
+############################################
+: "${DOCLI:=$HOME/devops}"
+: "${DOCLI_DEVELOPER_MODE:=false}"
+: "${DOCLI_REPOSITORY:-$HOME/GitHub/docli}"
+
+if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  echo -e "* runbuild: DEVELOPER_MODE ON *"
+  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
+else
+  export DOCLI_DIR=$DOCLI
+fi
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH=$PATH:$DOCLI_DIR/bin
+############################################
