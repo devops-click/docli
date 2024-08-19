@@ -27,7 +27,9 @@ DOCLI_REMOTE_REPOSITORY_INSTALL_URL="https://raw.githubusercontent.com/devops-cl
 # : "${DOCLI_DEVELOPER_MODE:=""}"
 
 # echo "==> docli -> source docli_pre_envs"
-source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
+# Source docli_pre_envs only when the script is called directly
+export INSTALLER_SKIP=true # Disable auto-update when calling docli
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
 
 docli_command="${1:-}"
 docli_option="${2:-}"

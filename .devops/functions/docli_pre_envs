@@ -12,28 +12,53 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.5
+DOCLI_MODULE_VERSION=0.0.6
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
 echo -e "***** $REAL_PATH *****\n"
 
 source $DOCLI/.docli_envs
 
+# source $DOCLI_DIR/functions/bash_basic_functions "$@"
+source $DOCLI_DIR/functions/bash_basic_functions
+# docli_params_load
+
 ############################################
 # AUTO-UPDATER - docli
 ############################################
 # docli MAIN Installer - Define the URL and the destination path
-INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version || echo "0.0.0")
-INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version)
+INSTALLER_LOCAL_VERSION=$(cat $DOCLI/.version || echo "0.0.0")
+INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version || echo "0.0.0")
 # INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
-INSTALLER_COMMAND="( docli -um ) > /dev/null 2>&1"
+# INSTALLER_COMMAND="( $DOCLI_DIR/bin/docli -um ) > /dev/null 2>&1"
+INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um || echo"
 INSTALLER_MODULE="$DOCLI_MODULE"
+: "${INSTALLER_FLAG:=true}"
+: "${INSTALLER_SKIP:=false}"
+echo INSTALLER_FLAG_PRE=$INSTALLER_FLAG
 
-# Sourcing bash_basic_functions only after defining the INSTALLER_MODULE variable, otherwise it get's overwritten.
-source $DOCLI_DIR/functions/bash_basic_functions
+if [[ $INSTALLER_FLAG == true ]]; then
+  if [[ $INSTALLER_LOCAL_VERSION < $INSTALLER_REMOTE_VERSION ]]; then
+    if [[ $INSTALLER_SKIP == true ]]; then
+      echo "* $DOCLI_MODULE: skipping auto-update *"
+    else
+      ( $DOCLI_DIR/bin/docli -um ) > /dev/null 2>&1
+    fi
+  fi
+fi
 
-echo "* docli_pre_envs: calling check_new_versions *"
-run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
+# Setting flag to false so it only runs once
+export INSTALLER_FLAG=false
+echo INSTALLER_FLAG_POST=$INSTALLER_FLAG
+
+# echo "* docli_pre_envs: calling check_new_versions *"
+# run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
 ############################################

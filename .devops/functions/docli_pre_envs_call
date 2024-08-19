@@ -12,8 +12,14 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.2
+DOCLI_MODULE_VERSION=0.0.3
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
 
@@ -34,5 +40,8 @@ fi
 PATH=$PATH:$DOCLI_DIR/bin
 ############################################
 
+# source $DOCLI_DIR/functions/bash_basic_functions
+# docli_params_load
+
 echo "* Sourcing: $DOCLI_DIR/functions/docli_pre_envs"
-source $DOCLI_DIR/functions/docli_pre_envs
+source $DOCLI_DIR/functions/docli_pre_envs "$@"
