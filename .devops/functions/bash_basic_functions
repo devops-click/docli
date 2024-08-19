@@ -123,7 +123,7 @@ check_new_versions() {
   local MODULE_UPPER=$(echo "$MODULE" | tr '[:lower:]' '[:upper:]')
   local V_LOCAL=$2
   local V_REMOTE=$3
-  local UPDATE_CMD=${4:-echo}
+  local UPDATE_CMD=${4:-docli -um}
 
   if [[ $V_LOCAL < $V_REMOTE ]]; then
     echo -e "\n* NEW $MODULE_UPPER VERSION $V_REMOTE FOUND! (Current version: $V_LOCAL) *"
