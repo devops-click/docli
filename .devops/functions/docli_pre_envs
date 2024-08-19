@@ -12,7 +12,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.3
+DOCLI_MODULE_VERSION=0.0.4
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -42,7 +42,7 @@ source $DOCLI_DIR/functions/bash_basic_functions
 # AUTO-UPDATER - docli
 ############################################
 # docli MAIN Installer - Define the URL and the destination path
-INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version)
+INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version || echo "0.0.0")
 INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version)
 INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
 
