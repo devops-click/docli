@@ -507,6 +507,37 @@ replace_dash_with_underline() {
   echo "$modified_string"
 }
 
+#:: # Function to flag resources to be run only once. Even if they are
+#:: # sourced or called by other subsequential scripts multiple times.
+#:: ## Usage example:
+#:: `run_once`
+# Define a flag to track if the function has already been executed
+: "${_modules_list:=()}"
+run_once() {
+  local _module_name=${1:-""}
+  echo _module_name=$_module_name
+  echo _modules_list=$_modules_list
+  exit
+
+  # Check if the module name is provided
+  if [ -z "$_module_name" ]; then
+    echo "* Error: DOCLI_MODULE is not set."
+    return 1
+  fi
+
+  # Check if the module has already been executed
+  if [[ " ${_modules_list[@]} " =~ " ${_module_name} " ]]; then
+    echo "* $_module_name - Function has already been run, skipping..."
+    return 0
+  fi
+
+  echo "Function for $_module_name is running..."
+  eval $2
+
+  # Add the module to the list after successful execution
+  _modules_list+=("$_module_name")
+}
+
 #:: # Function to replace - with _
 #:: ## Usage example:
 #:: `split_aws_profile_string "$input"`

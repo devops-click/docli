@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                             docli pre-env script
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                              PRE ENV CALL SCRIPT                            |
+#-----------------------------------------------------------------------------'
+# Component to be loaded by all docli modules that calls docli_pre_envs
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docli_pre_envs_call
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.0.1
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
+
+############################################
+# DEVELOPER MODE
+############################################
+: "${DOCLI:=$HOME/devops}"
+: "${DOCLI_DEVELOPER_MODE:=false}"
+: "${DOCLI_REPOSITORY:-$HOME/GitHub/docli}"
+
+if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  echo -e "* $DOCLI_MODULE: DEVELOPER_MODE ON *"
+  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
+else
+  export DOCLI_DIR=$DOCLI
+fi
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH=$PATH:$DOCLI_DIR/bin
+############################################
+
+# Function to load and execute the script based on the profile
+load_pre_envs() {
+  local pre_envs_source="$DOCLI_DIR/functions/docli_pre_envs"
+  echo "* Sourcing: $pre_envs_source"
+  source "$pre_envs_source"
+}
+
+load_pre_envs

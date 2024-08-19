@@ -12,31 +12,14 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.4
+DOCLI_MODULE_VERSION=0.0.5
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
+echo -e "***** $REAL_PATH *****\n"
 
 source $DOCLI/.docli_envs
-
-############################################
-# DEVELOPER MODE
-############################################
-: "${DOCLI:=$HOME/devops}"
-: "${DOCLI_DEVELOPER_MODE:=false}"
-: "${DOCLI_REPOSITORY:-$HOME/GitHub/docli}"
-
-if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
-  echo -e "* $DOCLI_MODULE: DEVELOPER_MODE ON *"
-  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
-else
-  export DOCLI_DIR=$DOCLI
-fi
-# Set the right /bin path after determine if Developer Mode is on or off
-PATH=$PATH:$DOCLI_DIR/bin
-############################################
-
-source $DOCLI_DIR/functions/bash_basic_functions
 
 ############################################
 # AUTO-UPDATER - docli
@@ -45,7 +28,11 @@ source $DOCLI_DIR/functions/bash_basic_functions
 INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version || echo "0.0.0")
 INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version)
 INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
+INSTALLER_MODULE="$DOCLI_MODULE"
+
+# Sourcing bash_basic_functions only after defining the INSTALLER_MODULE variable, otherwise it get's overwritten.
+source $DOCLI_DIR/functions/bash_basic_functions
 
 echo "* docli_pre_envs: calling check_new_versions *"
-check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION $INSTALLER_COMMAND
+run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
 ############################################
