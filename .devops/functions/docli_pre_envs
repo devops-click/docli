@@ -37,21 +37,22 @@ source $DOCLI_DIR/functions/bash_basic_functions
 # docli MAIN Installer - Define the URL and the destination path
 INSTALLER_LOCAL_VERSION=$(cat $DOCLI/.version || echo "0.0.0")
 INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version || echo "0.0.0")
-# INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
-# INSTALLER_COMMAND="( $DOCLI_DIR/bin/docli -um ) > /dev/null 2>&1"
-INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um || echo"
 INSTALLER_MODULE="$DOCLI_MODULE"
 : "${INSTALLER_FLAG:=true}"
-: "${INSTALLER_SKIP:=false}"
-echo INSTALLER_FLAG_PRE=$INSTALLER_FLAG
+: "${AUTOUPDATE_SKIP:=false}"
+: "${APPLY_UPDATE:=false}"
 
-if [[ $INSTALLER_FLAG == true ]]; then
-  if [[ $INSTALLER_LOCAL_VERSION < $INSTALLER_REMOTE_VERSION ]]; then
-    if [[ $INSTALLER_SKIP == true ]]; then
-      echo "* $DOCLI_MODULE: skipping auto-update *"
-    else
-      ( $DOCLI_DIR/bin/docli -um ) > /dev/null 2>&1
-    fi
+echo -e "\n* AUTOUPDATE OPTIONS *"
+echo INSTALLER_FLAG_PRE=$INSTALLER_FLAG
+echo APPLY_UPDATE=$APPLY_UPDATE
+echo AUTOUPDATE_SKIP=$AUTOUPDATE_SKIP
+
+if [[ $INSTALLER_FLAG == true && $AUTOUPDATE_SKIP != true ]] then
+  check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION
+  if [[ $APPLY_UPDATE == false ]]; then
+    echo "* $DOCLI_MODULE: skipping auto-update *"
+  else
+    $DOCLI_DIR/bin/docli -um
   fi
 fi
 
@@ -60,5 +61,6 @@ export INSTALLER_FLAG=false
 echo INSTALLER_FLAG_POST=$INSTALLER_FLAG
 
 # echo "* docli_pre_envs: calling check_new_versions *"
+# INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um || echo"
 # run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
 ############################################
