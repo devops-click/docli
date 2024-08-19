@@ -9,7 +9,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=install
 DOCLI_MODULE_TYPE=install
-DOCLI_MODULE_VERSION=0.0.17
+DOCLI_MODULE_VERSION=0.0.18
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # TODO: REMOVE, kept for small period to keep compatibility
@@ -230,7 +230,6 @@ declare -a file_paths=(
   "bin/runpacker"
   "bin/runtf"
   "bin/setenv"
-  "functions/docli_pre_envs"
   "functions/bash_aws_copy_credentials"
   "functions/bash_aws_local_sso_temp_creds"
   "functions/bash_azure"
@@ -252,6 +251,8 @@ declare -a file_paths=(
   "functions/bash_set"
   "functions/bash_terraform"
   "functions/bash_terraform_get_base_files"
+  "functions/docli_pre_envs_call"
+  "functions/docli_pre_envs"
   "functions/runbuild_call"
   "functions/runtf_call"
   "functions/runpacker_call"
