@@ -27,7 +27,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.5
+DOCLI_MODULE_VERSION=0.6
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Prevents script from being called directly
@@ -104,6 +104,29 @@ if [ ${#args[@]} -eq 0 ]; then
       enabled_var="enabled_${region}[@]"
       if [[ " ${!enabled_var} " =~ " ${env} " ]]; then
 
+        ###############################################################
+        # runtf initial-hook
+        # OPTIONAL -> Runs only if file exists
+        # Runs before every important step like runtf or runbuild.
+        # Allows to iterate with the process variables
+        ###############################################################
+        # Calling folder initial-hook (terraform/cloud/deploy/recipe)
+        if [[ -f .docli_initial_hook ]]; then
+          echo "* Current folder .docli_initial_hook found. Using it. *"
+          source .docli_initial_hook "${args[@]}"
+        fi
+        # Cloud Terraform initial-hook (applies to all TFs inside that specific Cloud if file found)
+        if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_initial_hook ]]; then
+          echo "* Cloud Terraform .docli_initial_hook found for the project. Using it. *"
+          source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_initial_hook "${args[@]}"
+        fi
+        # General Terraform initial-hook (applies to all TFs if file found)
+        if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_initial_hook ]]; then
+          echo "* General Terraform .docli_initial_hook found for the project. Using it. *"
+          source $DOCLI_PROJECT_ROOT/terraform/.docli_initial_hook "${args[@]}"
+        fi
+        ###############################################################
+
         echo -e "\n######################################################################################"
         echo -e " => runtf_call - Calling docli runtf script for Terraform"
         echo -e "######################################################################################"
@@ -122,6 +145,30 @@ if [ ${#args[@]} -eq 0 ]; then
         else
           source $DOCLI_DIR/bin/runtf "--cloud=$DOCLI_PARAM_CLOUD" "$default_tf_command" "--env=$env" "--short-region=${region}"
         fi
+
+        ###############################################################
+        # runtf final-hook
+        # OPTIONAL -> Runs only if file exists
+        # Runs after every important step like runtf or runbuild.
+        # Allows to iterate with the process variables
+        ###############################################################
+        # Calling folder final-hook (terraform/cloud/deploy/recipe)
+        if [[ -f .docli_final_hook ]]; then
+          echo "* Current folder .docli_final_hook found. Using it. *"
+          source .docli_final_hook "${args[@]}"
+        fi
+        # Cloud Terraform final-hook (applies to all TFs inside that specific Cloud if file found)
+        if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_final_hook ]]; then
+          echo "* Cloud Terraform .docli_final_hook found for the project. Using it. *"
+          source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_final_hook "${args[@]}"
+        fi
+        # General Terraform final-hook (applies to all TFs if file found)
+        if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_final_hook ]]; then
+          echo "* General Terraform .docli_final_hook found for the project. Using it. *"
+          source $DOCLI_PROJECT_ROOT/terraform/.docli_final_hook "${args[@]}"
+        fi
+        ###############################################################
+
       else
         echo "Skipping env: $env for short_region: $region"
       fi
