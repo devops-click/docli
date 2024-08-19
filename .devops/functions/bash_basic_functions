@@ -517,11 +517,10 @@ run_once() {
   local _module_name=${1:-""}
   echo _module_name=$_module_name
   echo _modules_list=$_modules_list
-  exit
 
   # Check if the module name is provided
   if [ -z "$_module_name" ]; then
-    echo "* Error: DOCLI_MODULE is not set."
+    echo "* Error: DOCLI_MODULE is not being passed to this script."
     return 1
   fi
 
