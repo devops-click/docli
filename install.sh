@@ -9,7 +9,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=install
 DOCLI_MODULE_TYPE=install
-DOCLI_MODULE_VERSION=0.0.18
+DOCLI_MODULE_VERSION=0.0.19
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # TODO: REMOVE, kept for small period to keep compatibility
@@ -349,4 +349,6 @@ chmod +x $DOCLI/main/* || echo "* Could not chmod $DOCLI/main/ *"
 chmod +x $DOCLI/scripts/* || echo "* Could not chmod $DOCLI/scripts/ *"
 chmod +x $DOCLI/tools/*/run || echo ""
 
-echo -e "\n**** docli installed sucessfully! ****\n"
+SHOW_VERSION=(cat $DOCLI/.version)
+
+echo -e "\n**** docli $SHOW_VERSION installed sucessfully! ****\n"
