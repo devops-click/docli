@@ -27,7 +27,8 @@ source $DOCLI/.docli_envs
 # docli MAIN Installer - Define the URL and the destination path
 INSTALLER_LOCAL_VERSION=$(cat $DOCLI_DIR/.version || echo "0.0.0")
 INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version)
-INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
+# INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um"
+INSTALLER_COMMAND="( docli -um ) > /dev/null 2>&1"
 INSTALLER_MODULE="$DOCLI_MODULE"
 
 # Sourcing bash_basic_functions only after defining the INSTALLER_MODULE variable, otherwise it get's overwritten.
