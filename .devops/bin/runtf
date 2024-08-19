@@ -24,7 +24,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 source $DOCLI/.docli_envs
 
 # echo "==> runtf -> source docli_pre_envs"
-source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
 
 # Set CURRENT_QUARTER variable for all recipes
 export TF_VAR_CURRENT_QUARTER=$(get_quarter)

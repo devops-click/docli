@@ -18,7 +18,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 # source $DOCLI/.docli_envs
 
 # echo "==> setenv -> source docli_pre_envs"
-# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
 
 # Loop through all current set environment variables
 export DO_TMP_PRJ_VAR="${DOCLI_PROJECT_ROOT:-empty}"

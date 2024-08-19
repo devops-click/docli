@@ -24,7 +24,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 source $DOCLI/.docli_envs
 
 # echo "==> runpacker -> source docli_pre_envs"
-# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
 
 ############################################
 # SANITIZATION
