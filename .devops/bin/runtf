@@ -24,7 +24,7 @@ echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE
 source $DOCLI/.docli_envs
 
 # echo "==> runtf -> source docli_pre_envs"
-# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
 
 # Set CURRENT_QUARTER variable for all recipes
 export TF_VAR_CURRENT_QUARTER=$(get_quarter)
@@ -52,6 +52,7 @@ source $DOCLI/.docli
 echo "All arguments: $@"
 docli_params_load "$@"
 # docli_params_load "$#"
+
 
 # If DOCLI_CLEANUP_PRIVATE_INFO is not set, set it to true
 : "${DOCLI_CLEANUP_PRIVATE_INFO:=true}"
@@ -147,11 +148,11 @@ fi
 ############################################
 # DOCLI VERSION UPDATE
 ############################################
-( docli -um ) > /dev/null 2>&1
+# ( docli -um ) > /dev/null 2>&1
 ## or
 # screen -dm bash -c 'docli -um; exec sh'
 
-
+echo PATH=$PATH
 ############################################
 # SHELL TITLE
 ############################################

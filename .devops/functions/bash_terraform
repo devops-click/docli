@@ -366,14 +366,15 @@ run_terraform() {
       ;;
     import)
       tf_opt="import"
-      echo "Running 'terraform $tf_opt $cmd_args' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE - Importing: ${tf_arg1:-not_available}"
-      tf_resource_id=${tf_arg1:-not_available}
-      remove_resource_first=${tf_arg2:-false}
+      tf_resource_addr=${tf_arg1:-not_available}
+      tf_resource_id=${tf_arg2:-not_available}
+      echo "Running 'terraform $tf_opt $cmd_args' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE - Importing: ADDR:${tf_resource_addr} | ID: ${tf_resource_id}"
+      remove_resource_first=${tf_arg3:-false}
       if [[ ${remove_resource_first:-false} == true ]]; then
         terraform state rm "${TF_RESOURCE}" || echo "already deleted"
-        eval "$tf_command $tf_opt $cmd_args "${tf_resource_id}" "${tf_resource_id}"
+        eval "$tf_command $tf_opt $cmd_args" "$tf_resource_addr" "$tf_resource_id"
       else
-        eval "$tf_command $tf_opt $cmd_args "${tf_resource_id}" "${tf_resource_id}"
+        eval "$tf_command $tf_opt $cmd_args" "$tf_resource_addr" "$tf_resource_id"
       fi
       ;;
     providers)
