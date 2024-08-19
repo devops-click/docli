@@ -16,7 +16,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_functions
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.10
+DOCLI_MODULE_VERSION=0.11
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Disabled to don't interphere in docli --version and --version-short results
@@ -526,11 +526,11 @@ run_once() {
 
   # Check if the module has already been executed
   if [[ " ${_modules_list[@]} " =~ " ${_module_name} " ]]; then
-    echo "* $_module_name - Function has already been run, skipping..."
+    echo "* run_once: $_module_name - Function has already been run, skipping... *"
     return 0
   fi
 
-  echo "Function for $_module_name is running..."
+  echo "* run_once: $_module_name - Function not runned yet. running now! *"
   eval $2
 
   # Add the module to the list after successful execution
