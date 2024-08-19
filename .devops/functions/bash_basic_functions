@@ -16,7 +16,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_functions
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.9
+DOCLI_MODULE_VERSION=0.10
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Disabled to don't interphere in docli --version and --version-short results
@@ -124,10 +124,16 @@ check_new_versions() {
   local V_LOCAL=$2
   local V_REMOTE=$3
   local UPDATE_CMD=${4:-echo}
+
   if [[ $V_LOCAL < $V_REMOTE ]]; then
     echo -e "\n* NEW $MODULE_UPPER VERSION $V_REMOTE FOUND! (Current version: $V_LOCAL) *"
-    read -p "* Press (y) to proceed with the automatic update or any other key to skip *"
-    eval $UPDATE_CMD
+    read -p "* Press (y) to proceed with the automatic update or any other key to skip: " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      eval $UPDATE_CMD
+    else
+      echo "* Update skipped *"
+    fi
   else
     echo -e "\n* $MODULE_UPPER UP TO DATE | Current version: $V_REMOTE | Installed version: $V_LOCAL *"
   fi
