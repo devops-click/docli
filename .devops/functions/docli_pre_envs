@@ -12,7 +12,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.6
+DOCLI_MODULE_VERSION=0.0.7
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
 
@@ -47,7 +47,7 @@ echo INSTALLER_FLAG_PRE=$INSTALLER_FLAG
 echo APPLY_UPDATE=$APPLY_UPDATE
 echo AUTOUPDATE_SKIP=$AUTOUPDATE_SKIP
 
-if [[ $INSTALLER_FLAG == true && $AUTOUPDATE_SKIP != true ]] then
+if [[ $INSTALLER_FLAG == true && $AUTOUPDATE_SKIP != true ]]; then
   check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION
   if [[ $APPLY_UPDATE == false ]]; then
     echo "* $DOCLI_MODULE: skipping auto-update *"

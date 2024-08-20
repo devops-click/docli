@@ -174,6 +174,62 @@ else
 fi
 
 ############################################
+# INITIAL AND FINAL HOOKS
+############################################
+docli_initial_hook() {
+  ###############################################################
+  # runtf initial-hook
+  # OPTIONAL -> Runs only if file exists
+  # Runs before every important step like runtf or runbuild.
+  # Allows to iterate with the process variables
+  ###############################################################
+  # Calling folder initial-hook (terraform/cloud/deploy/recipe)
+  if [[ -f .docli_initial_hook ]]; then
+    echo "* Current folder .docli_initial_hook found. Using it. *"
+    env
+    source .docli_initial_hook "${args[@]}"
+  fi
+  # Cloud Terraform initial-hook (applies to all TFs inside that specific Cloud if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_initial_hook ]]; then
+    echo "* Cloud Terraform .docli_initial_hook found for the project. Using it. *"
+    env
+    source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_initial_hook "${args[@]}"
+  fi
+  # General Terraform initial-hook (applies to all TFs if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_initial_hook ]]; then
+    echo "* General Terraform .docli_initial_hook found for the project. Using it. *"
+    env
+    source $DOCLI_PROJECT_ROOT/terraform/.docli_initial_hook "${args[@]}"
+  fi
+  ###############################################################
+}
+
+docli_final_hook() {
+  ###############################################################
+  # runtf final-hook
+  # OPTIONAL -> Runs only if file exists
+  # Runs after every important step like runtf or runbuild.
+  # Allows to iterate with the process variables
+  ###############################################################
+  # Calling folder final-hook (terraform/cloud/deploy/recipe)
+  if [[ -f .docli_final_hook ]]; then
+    echo "* Current folder .docli_final_hook found. Using it. *"
+    source .docli_final_hook "${args[@]}"
+  fi
+  # Cloud Terraform final-hook (applies to all TFs inside that specific Cloud if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_final_hook ]]; then
+    echo "* Cloud Terraform .docli_final_hook found for the project. Using it. *"
+    source $DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/.docli_final_hook "${args[@]}"
+  fi
+  # General Terraform final-hook (applies to all TFs if file found)
+  if [[ -f $DOCLI_PROJECT_ROOT/terraform/.docli_final_hook ]]; then
+    echo "* General Terraform .docli_final_hook found for the project. Using it. *"
+    source $DOCLI_PROJECT_ROOT/terraform/.docli_final_hook "${args[@]}"
+  fi
+  ###############################################################
+}
+
+############################################
 # BITBUCKET PIPELINES
 ############################################
 # Create fake pre-requisites for bitbucket pipeline machines. May be used in future
@@ -866,6 +922,7 @@ runtf_op_custom_secrets() {
 main() {
   trap 'catch $? $LINENO' EXIT
   banner
+  docli_initial_hook
   terraform_version_check
   set_remote_state_key
   terraform_info
@@ -994,6 +1051,8 @@ main() {
   # aws configure list --profile $DOCLI_PARAM_BACKEND_PROFILE
   echo
   run_terraform
+
+  docli_final_hook
 
   cleanup
 
