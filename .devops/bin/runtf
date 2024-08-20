@@ -163,14 +163,14 @@ printf '\033[2J'
 
 if [[ "${DOCLI_PARAM_MODE:-}" == "funny" ]]; then
   toilet -w 120 -f future "Terraform - $DOCLI_PARAM_CLOUD_PROFILE"
-  toilet -w 120 -f future "$DOCLI_PARAM_CLOUD_PROFILE" | lolcat -f | boxes -d unicornthink -p a2v1
+  toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d unicornthink -p a2v1
   # toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d unicornthink -p a2v1 | lolcat -f
   # figlet -w 120 -f puffy -c "$current_key" | lolcat -f | boxes -d unicornthink
   # figlet -w 120 -f small -c "$current_key" | lolcat -f | boxes -d unicornthink
   # toilet -w 120 -f future $DOCLI_PARAM_CLOUD_PROFILE
 else
   toilet -w 120 -f future "Terraform - $DOCLI_PARAM_CLOUD_PROFILE"
-  toilet -w 120 -f future "$DOCLI_PARAM_CLOUD_PROFILE" | lolcat -f | boxes -d shell -p a2v1
+  toilet -w 120 -f future "$current_key" | lolcat -f | boxes -d shell -p a2v1
 fi
 
 ############################################
