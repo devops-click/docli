@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+set -euo pipefail
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                                  docheck
+###############################################################################
+
+docli_version="0.0.01"
+docli_file_name="$(basename "$0")"
+docli_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+docli_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+docli_current_dir="$(pwd)"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=docheck
+DOCLI_MODULE_TYPE=bin
+DOCLI_MODULE_VERSION="$docli_version"
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+OPTION=${1:-help}
+
+install_prerequisites() {
+  echo -e "\n **** Installing Pre-Requisites ****"
+  sudo apt install sysstat || echo "cannot execute apt install"
+  sudo yum install sysstat || echo "cannot execute yum install"
+  sudo apt install linux-tools-common || echo "cannot execute apt install"
+  sudo yum install linux-tools-common || echo "cannot execute yum install"
+}
+
+help() {
+  echo -e "\n${docli_file_name_upper} - Version ${docli_version}"
+  echo "=============================================================="
+  echo "Usage: ${docli_file_name} [OPTION]"
+  echo ""
+  echo "A tool for system diagnostics, including CPU, memory, and Kafka checks."
+  echo "The following options are supported:"
+  echo ""
+  echo "  cpu or vcpu      Run CPU diagnostics, including per-core analysis,"
+  echo "                   I/O wait, process-level CPU usage, and kernel-level bottleneck checks."
+  echo ""
+  echo "  mem or memory    Run memory diagnostics, including OOM logs, memory usage,"
+  echo "                   swap analysis, and memory-intensive process identification."
+  echo ""
+  echo "  kafka or kaf     Run Kafka-specific checks, including JVM garbage collection,"
+  echo "                   thread dumps, and heap size analysis."
+  echo ""
+  echo "  install_prereqs  Install required tools and utilities for running these checks."
+  echo "                   It attempts to install packages like sysstat, linux-tools-common."
+  echo ""
+  echo "  help or -h       Display this help message."
+  echo ""
+  echo "Examples:"
+  echo "  ${docli_file_name} cpu              Run CPU diagnostics"
+  echo "  ${docli_file_name} mem              Run memory diagnostics"
+  echo "  ${docli_file_name} kafka            Run Kafka diagnostics"
+  echo "  ${docli_file_name} install_prereqs  Install necessary utilities"
+  echo ""
+  echo "=============================================================="
+  echo "Visit https://DevOps.click for more information."
+  echo "=============================================================="
+}
+
+check_memory() {
+  echo -e "\n **** Executing Memory checks ****"
+  # Check OOM logs: journalctl -xe | grep -i 'killed process'
+  # Monitor memory usage: free -h, top, htop
+  # Inspect Kafka logs: /path/to/kafka/logs/server.log
+  # Monitor memory with vmstat: vmstat 5
+  # Check and add swap space if needed: swapon --show
+  # Analyze Kafka heap size: KAFKA_HEAP_OPTS
+  # Analyze GC behavior: Enable GC logging with -Xlog:gc*
+  # Use smem to analyze memory: smem -r -k
+  # Check ulimits: ulimit -a
+  # Consider increasing RAM if necessary.
+  journalctl -xe | grep -i 'killed process' || echo "could not run journalctl -xe or grep... (lack sysstat package?)"
+  smem -r -k || echo "could not run smem -r -k ... (lack sysstat package?)"
+  ulimit -a | grep -i 'memory' || echo "could not run ulimit -a or grep ... (lack sysstat package?)"
+  free -h || echo "could not run free -h ... (lack sysstat package?)"
+}
+
+check_cpu() {
+  echo -e "\n **** Executing CPU checks ****"
+  echo -e "\nCheck Ulimits for Processes:"
+  ulimit -a | grep -i 'process' || echo "could not run ulimit -a or grep ... (lack sysstat package?)"
+
+  echo -e "\nCheck for I/O Wait (CPU Waiting on Disk): 1 sample"
+  iostat -x 5 1
+
+  echo -e "\nCheck for CPU Steal Time (Virtualization): CPU Usage in the Past 1 day:"
+  mpstat 1 1 | grep "all" || echo "could not run mpstat 1 1 ... (lack sysstat package?)"
+
+  echo -e "\nAnalyze CPU-Intensive Processes: Top 5 CPU consuming processes:"
+  ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
+
+  echo -e "\nMonitor CPU Usage Over Time: 10 samples"
+  sar -u 1 10 || echo "could not run sar -u 1 10 ... (lack sysstat package?)"
+
+  echo -e "\nCheck Per-Core CPU Usage: Instant CPU Usage:"
+  mpstat -P ALL 5 1 || echo "could not run mpstat -P ALL 5 ... (lack sysstat package?)"
+  # mpstat -P ALL 5 || echo "could not run mpstat -P ALL 5 ... (lack sysstat package?)" # for continuous monitoring
+
+  echo -e "\nMonitor CPU Usage Over Time: I/O Statistics:"
+  iostat -c 5 1
+  # iostat -c 5 # For continue monitoring
+
+  echo -e "\nAnalyze CPU Bottlenecks at the Kernel Level: 10 samples"
+  perf top || echo "could not run perf top ... (lack linux-tools-common package?)"
+
+  echo -e "\nIdentify Zombie and Stuck Processes:"
+  ps aux | grep 'Z' || echo "could not run ps aux | grep 'Z' ... (lack sysstat package?)" && echo "need more info? 'pidstat -u -p <pid> 5' or 'strace -cp <pid>'"
+
+  echo -e "\nMonitor System Performance:"
+  echo -e "\nLegend: \n \
+  r: The number of processes waiting for CPU. \n \
+  us: User CPU time. \n \
+  sy: System CPU time. \n \
+  id: Idle CPU time. \n \
+  wa: I/O wait time."
+  vmstat 5 || echo "could not run vmstat 5 ... (lack sysstat package?)"
+}
+
+check_kafka() {
+  echo -e "\n **** Executing Kafka checks ****"
+
+  echo -e "\nCheck Kafka's CPU Usage:"
+  echo "jstack <kafka_pid>"
+  # jstat -gc 5 1
+}
+
+# Check the input argument
+if [[ "$OPTION" == "cpu" || "$OPTION" == "vcpu" ]]; then
+    check_cpu
+elif [[ "$OPTION" == "help" || "$OPTION" == "h" || "$OPTION" == "--help" || "$OPTION" == "-h" || "$OPTION" == "-help" ]]; then
+    help
+elif [[ "$OPTION" == "install_prereqs" ]]; then
+    install_prerequisites
+elif [[ "$OPTION" == "mem" || "$OPTION" == "memory" ]]; then
+    check_memory
+elif [[ "$OPTION" == "kafka" || "$OPTION" == "kaf" ]]; then
+    check_kafka
+else
+    echo -e "\nERROR: Invalid argument\n"
+    help
+    exit 1
+fi
