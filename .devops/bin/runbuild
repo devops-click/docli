@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.14
+DOCLI_MODULE_VERSION=0.15
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -199,6 +199,9 @@ if [ $os_type == "amzn2" ]; then
 elif [ $os_type == "al2023" ]; then
   BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2023"
   DEST_IMAGE="$repo:amazonlinux2023-$datevar"
+elif [ $os_type == "al2023-minimal" ]; then
+  BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2023-minimal"
+  DEST_IMAGE="$repo:amazonlinux2023-minimal-$datevar"
 elif [ $os_type == "al2022" ]; then
   BASE_IMAGE="public.ecr.aws/amazonlinux/amazonlinux:2022"
   DEST_IMAGE="$repo:amazonlinux2022-$datevar"
@@ -287,8 +290,8 @@ function build_aws() {
   eval "$cmd_aws_vault docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
 
   echo -e "\n*** Pushing to CR: $cr_repository/$IMAGE ***"
-  # echo "**** docker tag $IMAGE $cr_repository/$IMAGE ****"
-  # eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$IMAGE"
+  echo "**** docker tag $IMAGE $cr_repository/$IMAGE ****"
+  eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$IMAGE"
 
   echo "**** docker push $cr_repository/$IMAGE ****"
   eval "$cmd_aws_vault docker push $cr_repository/$IMAGE"
