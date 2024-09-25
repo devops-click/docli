@@ -16,7 +16,7 @@ PATH=/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bi
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.32
+DOCLI_MODULE_VERSION=1.33
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -151,20 +151,20 @@ fi
 echo -e "* Dumping options to .docli_options file *"
 [[ -f .docli_options ]] && rm -rf .docli_options
 touch .docli_options
-echo "runtf_env=$tf_env" > .docli_options
-echo "runtf_srg=$tf_srg" >> .docli_options
-echo "runtf_workspace=$tf_workspace" >> .docli_options
-echo "runtf_clt=$tf_clt" >> .docli_options
-echo "runtf_opt=$tf_opt" >> .docli_options
-echo "runtf_cloud=$tf_cloud" >> .docli_options
-echo "runtf_cloud_profile=$tf_cloud_profile" >> .docli_options
-echo "runtf_cloud_config_dir=$tf_cloud_config_dir" >> .docli_options
-echo "runtf_cloud_region=$tf_cloud_region" >> .docli_options
-echo "runtf_cloud_short_region=$tf_cloud_short_region" >> .docli_options
-echo "runtf_cloud_env=$tf_cloud_env" >> .docli_options
-echo "runtf_cloud_short_env=$tf_cloud_short_env" >> .docli_options
-echo "runtf_cloud_srg=$tf_cloud_srg" >> .docli_options
-echo "runtf_cloud_srg_name=$tf_cloud_srg_name" >> .docli_options
+echo "runtf_env=${tf_env:-}" > .docli_options
+echo "runtf_srg=${tf_srg:-}" >> .docli_options
+echo "runtf_workspace=${tf_workspace:-}" >> .docli_options
+echo "runtf_clt=${tf_clt:-}" >> .docli_options
+echo "runtf_opt=${tf_opt:-}" >> .docli_options
+echo "runtf_cloud=${tf_cloud:-}" >> .docli_options
+echo "runtf_cloud_profile=${tf_cloud_profile:-}" >> .docli_options
+echo "runtf_cloud_config_dir=${tf_cloud_config_dir:-}" >> .docli_options
+echo "runtf_cloud_region=${tf_cloud_region:-}" >> .docli_options
+echo "runtf_cloud_short_region=${tf_cloud_short_region:-}" >> .docli_options
+echo "runtf_cloud_env=${tf_cloud_env:-}" >> .docli_options
+echo "runtf_cloud_short_env=${tf_cloud_short_env:-}" >> .docli_options
+echo "runtf_cloud_srg=${tf_cloud_srg:-}" >> .docli_options
+echo "runtf_cloud_srg_name=${tf_cloud_srg_name:-}" >> .docli_options
 
 ############################################
 # DOCLI VERSION UPDATE
