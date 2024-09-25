@@ -16,12 +16,12 @@
 # ./build.sh -c=local -e=ent -r=local -a=amd -cr=public -os=al2023
 # ./build.sh --cloud=aws --env=ent --repo=repo-example --arch=amd --container-registry=private --os=amzn2
 
-PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin
+PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin:~/devops/bin:$PATH
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.19
+DOCLI_MODULE_VERSION=0.20
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
