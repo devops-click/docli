@@ -21,7 +21,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.22
+DOCLI_MODULE_VERSION=0.23
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -387,36 +387,36 @@ function build_nexus() {
   echo -e "\n*** Pulling AWS public image to our private CR ***"
   docker pull --platform linux/${arch}64 $BASE_IMAGE
 
-  docker tag $BASE_IMAGE $cr_url:443/$cr_repository/$IMAGE:$TAG_LATEST
+  docker tag $BASE_IMAGE $cr_url/$cr_repository/$IMAGE:$TAG_LATEST
 
   ## BASE IMAGE PUSH (official image to nexus)
   echo -e "\n*** Tagging Image ***"
-  docker tag $BASE_IMAGE $cr_url:443/$cr_repository/$DEST_IMAGE
+  docker tag $BASE_IMAGE $cr_url/$cr_repository/$DEST_IMAGE
   echo -e "\n*** Pushing Image ***"
-  docker push $cr_url:443/$cr_repository/$DEST_IMAGE
+  docker push $cr_url/$cr_repository/$DEST_IMAGE
 
   # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
   # If we use new relic in the future...
-  # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_url:443/$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
+  # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_url/$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
   echo -e "\n*** Building linux/${arch}64 architecture image... ***"
-  docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_url:443/$cr_repository/$DEST_IMAGE ${BUILD_EXTRA_ARGS:-} .
+  docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_url/$cr_repository/$DEST_IMAGE ${BUILD_EXTRA_ARGS:-} .
 
-  echo -e "\n*** Pushing to CR: $cr_url:443/$cr_repository/$IMAGE ***"
-  echo "**** docker tag $IMAGE $cr_url:443/$cr_repository/$IMAGE ****"
-  docker tag $IMAGE $cr_url:443/$cr_repository/$IMAGE
+  echo -e "\n*** Pushing to CR: $cr_url/$cr_repository/$IMAGE ***"
+  echo "**** docker tag $IMAGE $cr_url/$cr_repository/$IMAGE ****"
+  docker tag $IMAGE $cr_url/$cr_repository/$IMAGE
 
-  echo "**** docker push $cr_url:443/$cr_repository/$IMAGE ****"
-  docker push $cr_url:443/$cr_repository/$IMAGE
+  echo "**** docker push $cr_url/$cr_repository/$IMAGE ****"
+  docker push $cr_url/$cr_repository/$IMAGE
 
   echo -e "\n*** Adding 'latest' tag to image ***"
-  echo "**** docker tag $IMAGE $cr_url:443/$cr_repository/$TAG_LATEST ****"
-  docker tag $IMAGE $cr_url:443/$cr_repository/$TAG_LATEST
+  echo "**** docker tag $IMAGE $cr_url/$cr_repository/$TAG_LATEST ****"
+  docker tag $IMAGE $cr_url/$cr_repository/$TAG_LATEST
 
-  echo -e "\n*** Pushing 'latest' to CR: $cr_url:443/$cr_repository/$TAG_LATEST ***"
-  echo "**** docker push $cr_url:443/$cr_repository/$TAG_LATEST ****"
-  docker push $cr_url:443/$cr_repository/$TAG_LATEST
+  echo -e "\n*** Pushing 'latest' to CR: $cr_url/$cr_repository/$TAG_LATEST ***"
+  echo "**** docker push $cr_url/$cr_repository/$TAG_LATEST ****"
+  docker push $cr_url/$cr_repository/$TAG_LATEST
 
-  echo "Done! Now you may use: $cr_url:443/$cr_repository/${IMAGE} and $cr_url:443/$cr_repository/${TAG_LATEST}"
+  echo "Done! Now you may use: $cr_url/$cr_repository/${IMAGE} and $cr_url/$cr_repository/${TAG_LATEST}"
   echo "** based on $BASE_IMAGE **"
   # exit 0
 }
