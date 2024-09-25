@@ -381,7 +381,8 @@ function build_nexus() {
   echo "CREATING DOCKER IMAGE $IMAGE and TAG $TAG_LATEST AND UPLOADING TO $cr_repository/$datevar"
 
   echo -e "\n*** Docker/Nexus Login ***"
-  docker login $cr_url --username "$cr_username" --password "$cr_password"
+  # docker login $cr_url --username "$cr_username" --password "$cr_password"
+  echo "$cr_password" | docker login "$cr_url" --username "$cr_username" --password-stdin
 
   echo -e "\n*** Pulling AWS public image to our private CR ***"
   docker pull --platform linux/${arch}64 $BASE_IMAGE
