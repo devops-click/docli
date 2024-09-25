@@ -20,7 +20,7 @@ PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/s
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runbuild
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=0.16
+DOCLI_MODULE_VERSION=0.17
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
@@ -151,6 +151,24 @@ else
     $DOCLI_DIR/functions/bash_os_check
   )
 fi
+
+############################################
+# DUMP BUILD INFORMATION
+############################################
+echo -e "* Dumping options to .docli_options file *"
+[[ -f .docli_options ]] && rm -rf .docli_options
+touch .docli_options
+echo "runbuild_option=$option" > .docli_options
+echo "runbuild_cloud_env=$cloud_env" >> .docli_options
+echo "runbuild_cloud=$cloud" >> .docli_options
+echo "runbuild_environment=$environment" >> .docli_options
+echo "runbuild_repo=$repo" >> .docli_options
+echo "runbuild_arch=$arch" >> .docli_options
+echo "runbuild_cr_type=$cr_type" >> .docli_options
+echo "runbuild_os_type=$os_type" >> .docli_options
+echo "runbuild_client=$client" >> .docli_options
+echo "runbuild_region=$region" >> .docli_options
+echo "runbuild_short_region=$short_region" >> .docli_options
 
 # Import all sources in FILE_OR_DIR_CHECK List and also check DIRS:
 source $DOCLI_DIR/functions/bash_basic_source_files_or_dir_check
