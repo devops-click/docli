@@ -180,7 +180,7 @@ awsprofile="$client-$short_region-$environment"
 
 # Check if provided Provider is valid, otherwise exit.
 source $DOCLI_DIR/functions/bash_basic_cloud_providers
-[[ $cloud_env != "local" || $cloud_env != "nexus" ]] && check_providers $cloud
+[[ $cloud_env != "local" && $cloud_env != "nexus" ]] && check_providers $cloud
 
 # Check for AWS Profile (~/.aws/config)
 [[ $cloud == "aws" ]] && check_aws_profiles $awsprofile
