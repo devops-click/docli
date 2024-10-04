@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 
 environment=$1
 

@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
-# set -euo pipefail
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
 # PS: This script is intended to be used as source for others.
 # Basic Bash Functions
 ###############################################################################
-# echo "++++++++++++++++++++++++++++++++++"
-# echo "++ Entered bash_basic_functions ++"
-# echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++ Entered bash_basic_functions ++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_functions
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.12
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Prevents script from being called directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -25,13 +23,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-# Disabled to don't interphere in docli --version and --version-short results
-# echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
-
 # Setting PATH
 export DOCLI="${DOCLI:-$HOME/devops}"
 export DOCLI_DIR="${DOCLI_DIR:-$DOCLI}"
-PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
+PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 banner() {
   local version="${1:-}"

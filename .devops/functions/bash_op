@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -9,7 +10,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_op
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.4
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Prevents script from being called directly
@@ -18,7 +19,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 bash_op_file_name="$(basename "$0")"
 bash_op_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
@@ -40,177 +42,177 @@ fi
 # ONEPASSWORD_URL=<company>.1password.com # Got From .docli_envs
 
 op_print_usage() {
-    echo
-    banner
-    echo "Usage: op (arguments) [OPTIONS]"
-    echo
-    echo "op create document        -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
-    echo "op create item            -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
-    echo "op signout                -> Sign out from all current sessions"
-    echo
-    print_options
-    exit 1
+  echo
+  banner
+  echo "Usage: op (arguments) [OPTIONS]"
+  echo
+  echo "op create document        -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+  echo "op create item            -> Cleans all AWS SSO Tokens (CLI and SSO caches)"
+  echo "op signout                -> Sign out from all current sessions"
+  echo
+  print_options
+  exit 1
 }
 
 op_check_connection() {
-    # Login to 1Password if not before start
-    check_op_con=$(op account get 2>&1 | tee /tmp/op_con.log || echo "failure" )
-    echo $check_op_con
-    if [[ $check_op_con == *"You are not currently signed in"* ]]; then
-        echo -e "\n**** 1Password CHECK: not_signed_in ;( >> Please enter your 1Password account password! << ****"
-        eval $(op signin --account $ONEPASSWORD_URL)
-    else
-        echo -e "** 1Password CHECK: already logged in ;)\n"
-    fi
+  # Login to 1Password if not before start
+  check_op_con=$(op account get 2>&1 | tee /tmp/op_con.log || echo "failure" )
+  echo $check_op_con
+  if [[ $check_op_con == *"You are not currently signed in"* ]]; then
+    echo -e "\n**** 1Password CHECK: not_signed_in ;( >> Please enter your 1Password account password! << ****"
+    eval $(op signin --account $ONEPASSWORD_URL)
+  else
+    echo -e "** 1Password CHECK: already logged in ;)\n"
+  fi
 }
 
 op_check_requirement() {
-    # Check OnePassword Requirement
-    echo -e "\n${TEXT_MAGENTA} Checking 1 Password requirement"
-    if contains "$DOCLI_PARAM_CLOUD" "${ONEPASSWORD_REQUIRED[@]}"; then
-        echo -e "==== 1Password Required ====\n ${END}"
-        op_check_connection
-    fi
+  # Check OnePassword Requirement
+  echo -e "\n${TEXT_MAGENTA} Checking 1 Password requirement"
+  if contains "$DOCLI_PARAM_CLOUD" "${ONEPASSWORD_REQUIRED[@]}"; then
+    echo -e "==== 1Password Required ====\n ${END}"
+    op_check_connection
+  fi
 }
 
 #:: ## Check if document exists and returns empty or notempty
 op_check_document() {
-    local file_name=$1
-    local file_vault=$2
-    local file_output="${3:-}"
-    check_doc=$(op document list | grep -i $file_name | awk '{ print $2 }' || echo "empty")
-    if [[ $check_doc == "empty" ]]; then
-        op_check_document_result="empty"
-    else
-        op_check_document_result="notempty"
-    fi
+  local file_name=$1
+  local file_vault=$2
+  local file_output="${3:-}"
+  check_doc=$(op document list | grep -i $file_name | awk '{ print $2 }' || echo "empty")
+  if [[ $check_doc == "empty" ]]; then
+    op_check_document_result="empty"
+  else
+    op_check_document_result="notempty"
+  fi
 }
 
 op_get_document() {
-    # Get a document from 1Password
-    local item_name=$1
-    local file_vault=$2
-    local file_output=$3
-    op document get $item_name --vault "$file_vault" --out-file "$file_output"
+  # Get a document from 1Password
+  local item_name=$1
+  local file_vault=$2
+  local file_output=$3
+  op document get $item_name --vault "$file_vault" --out-file "$file_output"
 }
 
 op_create_document() {
-    # Create a document from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_name=$3
-    local file_vault=$4
-    local tags=$5
-    echo "** Creating $item_name on 1Password..."
-    op_check_document $item_name $file_vault
-    if [[ $op_check_document_result == "empty" ]]; then
-        op document create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
-    else
-        echo "** Document already exists. You must use update or delete. **"
-    fi
+  # Create a document from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_name=$3
+  local file_vault=$4
+  local tags=$5
+  echo "** Creating $item_name on 1Password..."
+  op_check_document $item_name $file_vault
+  if [[ $op_check_document_result == "empty" ]]; then
+    op document create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
+  else
+    echo "** Document already exists. You must use update or delete. **"
+  fi
 }
 
 op_update_document() {
-    # Update a document from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_name=$3
-    local file_vault=$4
-    local tags="${5:-}"
-    echo "** Updating $item_name on 1Password..."
-    op_check_document $item_name $file_vault
-    if [[ $op_check_document_result == "notempty" ]]; then
-        if [[ -z $tags ]]; then
-            op document edit $item_name $file_source --vault $file_vault --file-name $file_name && echo "** Update succeeded!" || echo "** Update FAILED try again!"
-        else
-            op document edit $item_name $file_source --vault $file_vault --file-name $file_name --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
-        fi
+  # Update a document from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_name=$3
+  local file_vault=$4
+  local tags="${5:-}"
+  echo "** Updating $item_name on 1Password..."
+  op_check_document $item_name $file_vault
+  if [[ $op_check_document_result == "notempty" ]]; then
+    if [[ -z $tags ]]; then
+      op document edit $item_name $file_source --vault $file_vault --file-name $file_name && echo "** Update succeeded!" || echo "** Update FAILED try again!"
     else
-        echo "** Document does not exist. You must create it before trying to update. **"
+      op document edit $item_name $file_source --vault $file_vault --file-name $file_name --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
     fi
+  else
+    echo "** Document does not exist. You must create it before trying to update. **"
+  fi
 }
 
 op_update_document_fields() {
-    # Update a document from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_name=$3
-    local file_vault=$4
-    local tags=$5
-    local section=$6
-    echo "** Updating $item_name on 1Password..."
-    op_check_document $item_name $file_vault
-    if [[ $op_check_document_result == "notempty" ]]; then
-        op item edit $item_name "$section.$file_name[file]=${file_source}" --vault $file_vault --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
-    else
-        echo "** Document does not exist. You must create it before trying to update. **"
-    fi
+  # Update a document from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_name=$3
+  local file_vault=$4
+  local tags=$5
+  local section=$6
+  echo "** Updating $item_name on 1Password..."
+  op_check_document $item_name $file_vault
+  if [[ $op_check_document_result == "notempty" ]]; then
+    op item edit $item_name "$section.$file_name[file]=${file_source}" --vault $file_vault --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
+  else
+    echo "** Document does not exist. You must create it before trying to update. **"
+  fi
 }
 
 op_get_item() {
-    # Get a item from 1Password
-    local item_name=$1
-    local file_vault=$2
-    local fields=$3
-    local file_output="${4:-}"
-    if [[ -z $file_output ]]; then
-        op item get $item_name --vault $file_vault --fields $fields
-    else
-        op item get $item_name --vault $file_vault --fields $fields --out-file $file_output
-    fi
+  # Get a item from 1Password
+  local item_name=$1
+  local file_vault=$2
+  local fields=$3
+  local file_output="${4:-}"
+  if [[ -z $file_output ]]; then
+    op item get $item_name --vault $file_vault --fields $fields
+  else
+    op item get $item_name --vault $file_vault --fields $fields --out-file $file_output
+  fi
 }
 
 op_create_item() {
-    # Create a item from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_name=$3
-    local file_vault=$4
-    local tags=$5
-    echo "** Creating $item_name on 1Password..."
-    op item create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
+  # Create a item from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_name=$3
+  local file_vault=$4
+  local tags=$5
+  echo "** Creating $item_name on 1Password..."
+  op item create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
 }
 
 op_create_ca_item() {
-    # Create a item from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_vault=$3
-    local tags=$4
-    echo "** Creating $item_name on 1Password..."
-    # op item create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
-    op item create --category login --title $item_name --vault "$file_vault" --tags $tags \
-    --url=https://notused.com/ --generate-password=20,letters,digits \
-    username="no-user_ca-file" \
-    "Used By[text]=$item_name" \
-    "Create Command [text]=ops-config/tools/generate-ss-ca/run $short_region $environment" \
-    "p12.$item_name\.p12[file]=${file_source}/$item_name.p12" \
-    "key.$item_name\.key[file]=${file_source}/$item_name.key" \
-    "crt.$item_name\.crt[file]=${file_source}/$item_name.crt"
+  # Create a item from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_vault=$3
+  local tags=$4
+  echo "** Creating $item_name on 1Password..."
+  # op item create $file_source --title $item_name --vault "$file_vault" --file-name $file_name --tags $tags
+  op item create --category login --title $item_name --vault "$file_vault" --tags $tags \
+  --url=https://notused.com/ --generate-password=20,letters,digits \
+  username="no-user_ca-file" \
+  "Used By[text]=$item_name" \
+  "Create Command [text]=ops-config/tools/generate-ss-ca/run $short_region $environment" \
+  "p12.$item_name\.p12[file]=${file_source}/$item_name.p12" \
+  "key.$item_name\.key[file]=${file_source}/$item_name.key" \
+  "crt.$item_name\.crt[file]=${file_source}/$item_name.crt"
 }
 
 op_update_ca_items() {
-    # Update a document from 1Password
-    local item_name=$1
-    local file_source=$2
-    local file_vault=$3
-    local tags=$4
-    echo "** Updating $item_name on 1Password..."
-    op item edit $item_name --vault "$file_vault" --tags $tags \
-    "Used By[text]=$item_name" \
-    "Create Command [text]=ops-config/tools/generate-ss-ca/run $short_region $environment" \
-    "p12.$item_name\.p12[file]=${file_source}/$item_name.p12" \
-    "key.$item_name\.key[file]=${file_source}/$item_name.key" \
-    "crt.$item_name\.crt[file]=${file_source}/$item_name.crt" || echo "** Update FAILED try again!"
+  # Update a document from 1Password
+  local item_name=$1
+  local file_source=$2
+  local file_vault=$3
+  local tags=$4
+  echo "** Updating $item_name on 1Password..."
+  op item edit $item_name --vault "$file_vault" --tags $tags \
+  "Used By[text]=$item_name" \
+  "Create Command [text]=ops-config/tools/generate-ss-ca/run $short_region $environment" \
+  "p12.$item_name\.p12[file]=${file_source}/$item_name.p12" \
+  "key.$item_name\.key[file]=${file_source}/$item_name.key" \
+  "crt.$item_name\.crt[file]=${file_source}/$item_name.crt" || echo "** Update FAILED try again!"
 }
 
 # op_update_item() {
-#     # Update a item from 1Password
-#     local item_name=$1
-#     local file_source=$2
-#     local file_name=$3
-#     local file_vault=$4
-#     local tags=$5
-#     echo "** Updating $item_name on 1Password..."
-#     op document edit $item_name $file_source --vault $file_vault --file-name $file_name --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
+#   # Update a item from 1Password
+#   local item_name=$1
+#   local file_source=$2
+#   local file_name=$3
+#   local file_vault=$4
+#   local tags=$5
+#   echo "** Updating $item_name on 1Password..."
+#   op document edit $item_name $file_source --vault $file_vault --file-name $file_name --tags $tags && echo "** Update succeeded!" || echo "** Update FAILED try again!"
 # }

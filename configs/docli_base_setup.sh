@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -8,8 +10,11 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_base_setup
 DOCLI_MODULE_TYPE=config.devops.click
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Function to check and add line to a file
 check_and_add_line() {

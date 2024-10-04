@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -26,7 +27,8 @@ DOCLI_MODULE_TYPE=main
 DOCLI_MODULE_VERSION=$tf_version
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 #:: ## SYNOPSIS
 #:: `script.sh` [-h|--help]

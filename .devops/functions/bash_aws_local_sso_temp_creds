@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_aws_local_sso_temp_creds
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.2
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
+PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 sso_local_creds() {
   echo "** ######## AWS SSO INFORMATION ####### **"

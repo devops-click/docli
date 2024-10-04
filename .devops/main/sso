@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -12,9 +13,6 @@ set -euo pipefail
 #:: This program has the following functionalies:
 #:: `sso clean` -> Cleans all AWS SSO Tokens (CLI and SSO caches)
 #:: `sso <aws_profile>` -> Connect to the desired AWS SSO profile. (For more info how to configure go to https://devops.click/)
-eval $DOCLI_DEBUG && echo "+++++++++++++++++"
-eval $DOCLI_DEBUG && echo "++ Entered sso ++"
-eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 
 sso_version="1.1"
 sso_file_name="$(basename "$0")"
@@ -27,7 +25,8 @@ DOCLI_MODULE_TYPE=main
 DOCLI_MODULE_VERSION=$sso_version
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 sso_option=${1:-}      # always the company-short_region-environment (ex: xx-euc1-ent)
 sso_option2=${2:-}     # If mfa -> MFA TOKEN | If eks -> EKS_ASSIGN = true

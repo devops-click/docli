@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
 #                                   docli
 ###############################################################################
 
-docli_version="0.0.07"
+docli_version="0.0.01"
 docli_file_name="$(basename "$0")"
 docli_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 docli_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -17,6 +18,9 @@ DOCLI_MODULE=docli
 DOCLI_MODULE_TYPE=bin
 DOCLI_MODULE_VERSION="$docli_version"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 DOCLI_REMOTE_REPOSITORY_INSTALL_URL="https://raw.githubusercontent.com/devops-click/docli/main/install.sh"
 
@@ -225,7 +229,7 @@ parse_arguments() {
         # args+=("$1")
         # args+=("${1:-}")
         args+=("${current_arg}")
-        eval $DOCLI_DEBUG && echo "++ args+=$args"
+        [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++ args+=$args"
         # remaining_args+=("$current_arg")
         shift
         # return 0
@@ -244,7 +248,7 @@ parse_arguments() {
 }
 
 load_vars
-eval $DOCLI_DEBUG && echo "==> .docli -> load_vars"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "==> .docli -> load_vars"
 
 eval $DOCLI_VERBOSE && echo -e "\n**** Running $docli_file_name_upper script ****"
 
@@ -252,8 +256,8 @@ eval $DOCLI_VERBOSE && echo -e "\n**** Running $docli_file_name_upper script ***
 if [[ "$0" = "bash" ]] || [[ "$0" = "/bin/bash" ]] || [[ "$0" = "/bin/sh" ]] || [[ "$0" = "sh" ]] || [[ "$0" = "/bin/zsh" ]] || [[ "$0" = "zsh" ]]; then
   install_local="false" # used when running from a forked repository
 else
-  eval $DOCLI_DEBUG && echo -e "\n******************** INFO: docli installation sourced LOCALLY (DEVELOPER MODE) ********************"
-  eval $DOCLI_DEBUG && echo -e "\n** LOCAL RUN INFO: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)\n"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n******************** INFO: docli installation sourced LOCALLY (DEVELOPER MODE) ********************"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n** LOCAL RUN INFO: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)\n"
   install_local="true" # used when running from a forked repository
 fi
 
@@ -277,12 +281,12 @@ if (( args_silent )); then
   echo "Running in SILENT mode."
 fi
 
-eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
-eval $DOCLI_DEBUG && echo "++ Entered docli ++"
-eval $DOCLI_DEBUG && echo "+++++++++++++++++++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "+++++++++++++++++++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++ Entered docli ++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "+++++++++++++++++++"
 
-eval $DOCLI_DEBUG && echo "++> docli_command=$docli_command"
-eval $DOCLI_DEBUG && echo "++> docli_option=$docli_option"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> docli_command=$docli_command"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> docli_option=$docli_option"
 
 eval $DOCLI_VERBOSE && echo "==> docli -> source .docli"
 source $DOCLI/.docli
@@ -292,7 +296,7 @@ eval $DOCLI_VERBOSE && echo "args_help=${args_help:-}"
 
 # Check docli_eks_assign existence before set.
 : "${docli_eks_assign:=false}"
-eval $DOCLI_DEBUG && echo "++> docli_eks_assign=$docli_eks_assign"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> docli_eks_assign=$docli_eks_assign"
 
 # parse_arguments "$@"
 ## docli Markdown Generation:
@@ -403,11 +407,11 @@ main() {
         if [ "${1:-}" == "" ]; then
           packer_print_usage
         elif [[ $docli_option == "build" ]]; then
-          eval $DOCLI_DEBUG && echo "++> options -> packer -> build"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> packer -> build"
           run_packer_main "$@"
           return 0
         elif [[ -z $docli_option ]]; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> ERROR(exception)"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> ERROR(exception)"
           echo "** SSO ERROR: No options provided **"
           sso_print_usage
           exit 1
@@ -470,25 +474,25 @@ main() {
         if [ "${1:-}" == "" ]; then
           sso_print_usage
         elif [[ $docli_option == "clean" ]]; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> clean"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> clean"
           sso_clean
           return 0
         elif [[ $sso_eks_assign == "true" ]] ; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> sso_eks_assign=true"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> sso_eks_assign=true"
           sso $docli_option
           return 0
         elif [[ $sso_eks_assign == "false" ]] ; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> sso_eks_assign=false"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> sso_eks_assign=false"
           sso $docli_option
           return 0
         elif [[ $docli_option == "mfa" ]]; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> mfa"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> mfa"
           check_file_age
           sso_login_mfa
           return 0
         # Error if empty
         elif [[ -z $docli_option ]]; then
-          eval $DOCLI_DEBUG && echo "++> options -> sso -> ERROR(exception)"
+          [[ ${DOCLI_DEBUG:-false} == true ]] && echo "++> options -> sso -> ERROR(exception)"
           echo "** SSO ERROR: No options provided **"
           sso_print_usage
           exit 1

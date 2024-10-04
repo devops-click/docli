@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-set -euo pipefail
-# bash --version
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
 #                       docli Google Cloud - Cleanup Bucket
 #                      auxiliary script to lifecycle policy
 ###############################################################################
+# bash --version
 # v1.0
 # https://devops.click/category/gcp/
 

@@ -1,7 +1,8 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 
-export PATH="/opt/homebrew/bin:$HOME/devops/bin:$PATH"
+export PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 # Check for existence of docli_full_name and docli_user_email variables
 if [[ -z "$DOCLI_OWN_NAME" ]]; then
@@ -27,7 +28,7 @@ client_root_dir="$DOCLI/CA/clientsROOT"
 timestamp=$(date +%s)
 current_date=$(date)
 client_cert_user=$(whoami)
-consul_server="consul-test.use1.ent.devops.click"
+check_url="${DOCLI_PRIVATE_CA_URL:-localhost}"
 
 ## Mutual TLS Authentication with Consul Server
 
@@ -37,63 +38,24 @@ consul_server="consul-test.use1.ent.devops.click"
 # Testing/Using it via curl:
 echo "Command Line Authentication:"
 
-echo -e "\n** VERIFY SERVER CERTIFICATES **"
-# /opt/homebrew/bin/openssl s_client -showcerts -connect $consul_server:8501/ui/ || echo
-echo -e "\n** VERIFY SERVER CERTIFICATES WITH YOUR KEY/CERT **"
-# /opt/homebrew/bin/openssl s_client -connect $consul_server:8501/ui/ -cert $client_root_dir/$user_name.crt -key $client_root_dir/$user_name.key -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem || echo
+echo -e "\n** VERIFY SERVER CERTIFICATES (Curl HTTP/2) **"
+curl -vvv --http2 --cert new_client_cert.pem --key new_client_key.pem --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$check_url || echo
 
-curl -v --http2 --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-echo end verbose
-curl -vvv --http2 --cert new_client_cert.pem --key new_client_key.pem --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-echo end verbose2
-openssl s_client -connect $consul_server:8501/ui/ -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -cert new_client_cert.pem -key new_client_key.pem -debug -msg || echo
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-echo end verbose3
-/opt/homebrew/bin/openssl s_client -connect $consul_server:8501/ui/ -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -cert new_client_cert.pem -key new_client_key.pem -debug -msg || echo
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-echo end verbose-OPENSSL
-curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$consul_server:8501/ui/ || echo
+echo -e "\n** VERIFY SERVER CERTIFICATES (OpenSSL) **"
+openssl s_client -connect $check_url -CAfile $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -cert new_client_cert.pem -key new_client_key.pem -debug -msg || echo
 
+echo -e "\n** VERIFY SERVER CERTIFICATES WITH YOUR KEY/CERT (Curl) **"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$check_url || echo
 
 echo -e "\n** VERIFY TCP HANDSHAKES **"
-# sudo tcpdump -i any -s 0 -w output.pcap "port 8501 and host $consul_server"
+# sudo tcpdump -i any -s 0 -w output.pcap "port 8501 and host $check_url"
 
-# curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA BUNDLE CERT"
-curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA ENT CERT"
-curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT CERT ONLY"
+# curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem https://$check_url || echo "FAIL WITH CA BUNDLE CERT"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$check_url || echo "FAIL WITH CA ENT CERT"
+curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key https://$check_url || echo "FAIL WITH CLIENT CERT ONLY"
 
 
-curl --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$consul_server:8501/ui/ || echo "FAIL WITH CA ENT CERT ONLY"
-curl --key $client_root_dir/$user_name.key https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT KEY ONLY"
-curl --cert $client_root_dir/$user_name.crt https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT CERT ONLY"
-curl --cert $client_root_dir/$user_name.p12 https://$consul_server:8501/ui/ || echo "FAIL WITH CLIENT P12"
+curl --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem https://$check_url || echo "FAIL WITH CA ENT CERT ONLY"
+curl --key $client_root_dir/$user_name.key https://$check_url || echo "FAIL WITH CLIENT KEY ONLY"
+curl --cert $client_root_dir/$user_name.crt https://$check_url || echo "FAIL WITH CLIENT CERT ONLY"
+curl --cert $client_root_dir/$user_name.p12 https://$check_url || echo "FAIL WITH CLIENT P12"

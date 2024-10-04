@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-[[ ${DOCLI_DEBUG:-false} == true ]] && set -exo pipefail || set -eo pipefail
-[[ ${DOCLI_UNSET_VARS:-false} == true ]] && set -u
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -12,15 +12,16 @@
 # Default Generic HashiCorp Packer Run Script designed to be called from any sub-packer-stacks
 
 IFS=$'\n\t'
-PATH=/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:/opt/devops/bin:~/devops/bin:$PATH
+PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runpacker
 DOCLI_MODULE_TYPE=bin
-DOCLI_MODULE_VERSION=1.08
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 source $DOCLI/.docli_envs
 

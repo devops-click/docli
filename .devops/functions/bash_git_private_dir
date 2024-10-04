@@ -1,20 +1,34 @@
+#!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_git_private_dir
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.2
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
 
 create_git_private_dir() {
-    # Check if private dir exists
-    git_private_dir=$DOCLI_PROJECT_ROOT/private
+  # Check if private dir exists
+  git_private_dir=$DOCLI_PROJECT_ROOT/private
 
-    if [ ! -d "$git_private_dir" ]; then
-        echo "Private Directory does not exist. Creating $git_private_dir..."
-        mkdir -p "$git_private_dir"
-        echo "** INFO: Directory $git_private_dir created."
-    else
-        echo "** INFO: Directory $git_private_dir already exists. Skipping..."
-    fi
+  if [ ! -d "$git_private_dir" ]; then
+    echo "Private Directory does not exist. Creating $git_private_dir..."
+    mkdir -p "$git_private_dir"
+    echo "** INFO: Directory $git_private_dir created."
+  else
+    echo "** INFO: Directory $git_private_dir already exists. Skipping..."
+  fi
 }

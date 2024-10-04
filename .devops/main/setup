@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]] && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]] && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -16,7 +17,7 @@ set -euo pipefail
 #:: `setup --skip=setup_mac_terminal_touchid` -> Setup MacOS skipping MacOS Terminal TouchID Setup
 #:: `setup --help` -> Help Menu. (For more info how to configure go to https://devops.click/)
 
-setup_version="1.7"
+setup_version="1.8"
 setup_file_name="$(basename "$0")"
 setup_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 setup_current_dir="$(pwd)"

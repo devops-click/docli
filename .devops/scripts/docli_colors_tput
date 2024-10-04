@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -9,10 +10,11 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_colors_tput
 DOCLI_MODULE_TYPE=scripts
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-# echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Value	Color
 # 0	    Black
@@ -95,4 +97,4 @@ BG_MAGENTA=$(tput setab ${MAGENTA})
 BG_CYAN=$(tput setab ${CYAN})
 BG_WHITE=$(tput setab ${WHITE})
 
-# echo -e "${TEXT_GREEN}** set-bash-colors-tput.sh loaded! **${END}"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "${TEXT_GREEN}** set-bash-colors-tput.sh loaded! **${END}"
