@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -18,14 +19,26 @@ DOCLI_MODULE_TYPE=bin
 DOCLI_MODULE_VERSION="$docli_version"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
 OPTION=${1:-help}
+
+## SOURCES
+[[ -f $DOCLI/functions/bash_multios ]] && source $DOCLI/functions/bash_multios
 
 install_prerequisites() {
   echo -e "\n **** Installing Pre-Requisites ****"
-  sudo apt install sysstat || echo "cannot execute apt install"
-  sudo yum install sysstat || echo "cannot execute yum install"
-  sudo apt install linux-tools-common || echo "cannot execute apt install"
-  sudo yum install linux-tools-common || echo "cannot execute yum install"
+  sudo dnf install sysstat \
+  || sudo yum install sysstat \
+  || sudo apt-get install sysstat \
+  || sudo apt install sysstat \
+  || echo "cannot install sysstat"
+  sudo dnf install linux-tools-common \
+  || sudo yum install linux-tools-common \
+  || sudo apt-get install linux-tools-common \
+  || sudo apt install linux-tools-common \
+  || echo "cannot install linux-tools-common"
 }
 
 help() {

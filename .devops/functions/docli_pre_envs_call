@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]] && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]] && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -12,7 +14,7 @@
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=docli_pre_envs_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.0.3
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Prevents script from being called directly
@@ -21,7 +23,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 ############################################
 # DEVELOPER MODE
@@ -36,8 +39,9 @@ if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
 else
   export DOCLI_DIR=$DOCLI
 fi
+
 # Set the right /bin path after determine if Developer Mode is on or off
-PATH=$PATH:$DOCLI_DIR/bin
+PATH="$PATH:$DOCLI_DIR/bin:/opt/homebrew/bin"
 ############################################
 
 # source $DOCLI_DIR/functions/bash_basic_functions

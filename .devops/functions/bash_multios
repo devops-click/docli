@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                            docli multi-os script
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                        MULTI-OS CONFIGURATION SCRIPT                        |
+#-----------------------------------------------------------------------------'
+# Component to be loaded by multi-os scripts to define which actions or tools
+# to use
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE=bash_multios
+DOCLI_MODULE_TYPE=functions
+DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
+
+###############################################################################
+# USE SUDO
+# Defines if it will uses sudo or not
+###############################################################################
+if command -v sudo > /dev/null 2>&1; then
+  export use_sudo="sudo"
+else
+  export use_sudo=""
+fi
+
+###############################################################################
+# USE PACKAGE MANAGER
+# Defines which packege manager to use
+###############################################################################
+if command -v yum > /dev/null 2>&1; then
+  export use_pm="yum"
+  echo "* $DOCLI_MODULE: $use_pm package manager detected *"
+elif command -v dnf > /dev/null 2>&1; then
+  export use_pm="dnf"
+  echo "* $DOCLI_MODULE: $use_pm package manager detected *"
+elif command -v apt-get > /dev/null 2>&1; then
+  export use_pm="apt-get"
+  echo "* $DOCLI_MODULE: $use_pm package manager detected *"
+elif command -v apt > /dev/null 2>&1; then
+  export use_pm="apt"
+  echo "* $DOCLI_MODULE: $use_pm package manager detected *"
+else
+  echo "* ERROR: no package manager detected! *"
+  export DOCLI_ERROR=true
+fi

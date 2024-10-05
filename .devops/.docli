@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -13,7 +14,7 @@ set -euo pipefail
 #:: parse_arguments   - parse arguments and treat options ex: [-vdish]
 ###############################################################################
 
-root_version="1.1"
+root_version="1.2"
 root_file_name="$(basename "$0")"
 root_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
 root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -27,17 +28,17 @@ source_script_dir=${1:-not_available}
 # Return the root directory depth for every script in docli. Ex: ../../..
 root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
 
-eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
-eval $DOCLI_DEBUG && echo "++ Entered .docli (main source) ++"
-eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++++++++++++++++++++++++++++++++++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++ Entered .docli (main source) ++"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++++++++++++++++++++++++++++++++++"
 
 # echo "==> .docli -> source bash_basic_functions"
 # source $root_script_dir/functions/bash_basic_functions
 
-eval $DOCLI_DEBUG && echo "* INFO: .docli - before setting DOCLI_PROJECT_ROOT *"
-eval $DOCLI_DEBUG && echo $DOCLI_VERBOSE
-eval $DOCLI_DEBUG && echo $DOCLI_DEBUG
-eval $DOCLI_DEBUG && echo "================"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "* INFO: .docli - before setting DOCLI_PROJECT_ROOT *"
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo $DOCLI_VERBOSE
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo $DOCLI_DEBUG
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo "================"
 echo
 ## INITIAL CHECKUPS AND LOADS
 # Check if DOCLI_PROJECT_ROOT is already set
@@ -63,23 +64,23 @@ fi
 
 # Debug information for the begin of the routine/function.
 debug_begin(){
-  eval $DOCLI_DEBUG && echo -e "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-  eval $DOCLI_DEBUG && echo -e "==> $1 initiated... ++++"
-  eval $DOCLI_DEBUG && echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-  eval $DOCLI_DEBUG && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+"
-  eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[0] ${FUNCNAME[0]} called --++"
-  [[ -n ${FUNCNAME[1]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[1] ${FUNCNAME[1]} called --++"
-  [[ -n ${FUNCNAME[2]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[2] ${FUNCNAME[2]} called --++"
-  [[ -n ${FUNCNAME[3]+x} ]] && eval $DOCLI_DEBUG && echo -e "==> bash FUNCNAME[3] ${FUNCNAME[3]} called --++"
-  eval $DOCLI_DEBUG && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+\n"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> $1 initiated... ++++"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[0] ${FUNCNAME[0]} called --++"
+  [[ -n ${FUNCNAME[1]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[1] ${FUNCNAME[1]} called --++"
+  [[ -n ${FUNCNAME[2]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[2] ${FUNCNAME[2]} called --++"
+  [[ -n ${FUNCNAME[3]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[3] ${FUNCNAME[3]} called --++"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+\n"
   endofline=1
 }
 
 # Debug information for the end of the routine/function.
 debug_end(){
-  eval $DOCLI_DEBUG && echo -e "\n-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-  eval $DOCLI_DEBUG && echo -e "==> $1 executed successfully! -+-+"
-  eval $DOCLI_DEBUG && echo -e "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> $1 executed successfully! -+-+"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n"
   endofline=1
 }
 
@@ -115,14 +116,14 @@ source_all_docli() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   if [[ -f "$RECEIVED_ROOT_DIR/.docli" ]]; then
     echo "** source_all_docli FOUND on $RECEIVED_ROOT_DIR/.docli"
     source "$RECEIVED_ROOT_DIR/.docli"
   fi
   debug_end "${FUNCNAME[0]}"
-  eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -150,10 +151,10 @@ source_all_docli_ignore_root() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   debug_end "${FUNCNAME[0]}"
-  eval $DOCLI_DEBUG && eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -182,10 +183,10 @@ source_first_docli() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    eval $DOCLI_DEBUG && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   debug_end "${FUNCNAME[0]}"
-  eval $DOCLI_DEBUG && echo "** sourced all .docli files until root **"
+  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -211,7 +212,7 @@ source_first_docli() {
 
 #     # Move up to the parent directory
 #     SOURCE_PWD=${SOURCE_PWD%/*}
-#     eval $DOCLI_DEBUG && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#     [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
 #   done
 #   debug_end "${FUNCNAME[0]}"
 # }
@@ -239,7 +240,7 @@ source_first_docli() {
 
 #     # Move up to the parent directory
 #     SOURCE_PWD=$(dirname "$SOURCE_PWD")
-#     eval $DOCLI_DEBUG && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#     [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
 #   done
 #   debug_end "${FUNCNAME[0]}"
 # }

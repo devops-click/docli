@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
-# set -euo pipefail
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
 # PS: This script is intended to be used as source for others.
 # Basic Bash Environment Check for CI/CD pipelines
 ###############################################################################
-# echo "++++++++++++++++++++++++++++++++++"
-# echo "++ Entered bash_basic_environments ++"
-# echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++ Entered bash_basic_environments ++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=bash_basic_environments
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.4
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Prevents script from being called directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -25,30 +23,28 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
-
 # Usage: check_environment $environment
 
 function check_environment {
-    # Load Basic Functions such as contains
-    source "$DOCLI_DIR/functions/bash_basic_functions"
+  # Load Basic Functions such as contains
+  source "$DOCLI_DIR/functions/bash_basic_functions"
 
-    VALID_ENVIRONMENTS=(
-        dev
-        qas
-        stg
-        prd
-        sec
-        ent
-        val
-        fin
-        root
-    )
+  VALID_ENVIRONMENTS=(
+    dev
+    qas
+    stg
+    prd
+    sec
+    ent
+    val
+    fin
+    root
+  )
 
-        # Validate the provided environment
-    if ! contains "$1" "${VALID_ENVIRONMENTS[@]}"; then
-        echo "Error: Invalid environment."
-        help
-        exit 1
-    fi
+    # Validate the provided environment
+  if ! contains "$1" "${VALID_ENVIRONMENTS[@]}"; then
+    echo "Error: Invalid environment."
+    help
+    exit 1
+  fi
 }

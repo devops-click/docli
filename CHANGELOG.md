@@ -42,3 +42,13 @@ All notable changes to this project will be documented in this file.
   - Package Installation Lists and TAPS to reduce duplicated code.
 - `bin/runtf` functionalities:
   - Upgraded Default Terraform from `1.6.3` to `1.9.3` (latest).
+
+...
+
+## [0.0.22] - 2024-10-04
+### Improved
+- `all_modules` functionalities:
+  - Removes unused functions.
+  - Changes DOCLI_DEBUG call.
+  - Changes bash set options and set them dynamically.
+- RESETs all modules but .devops/version to version 0.0.01 so they can follow the same standards.

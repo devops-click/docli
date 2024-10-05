@@ -1,0 +1,20 @@
+### DNS TROUBLESHOOT
+
+# List all DNS resolvers
+scutil --dns
+
+# NSLookup
+nslookup www.amazon.com
+
+# Set Google DNS to test
+# networksetup -setdnsservers "Wi-Fi" 8.8.8.8
+
+
+### BANDWIDTH
+# Server:
+sudo iperf3 -s -V -p 5205
+
+## Client:
+# sudo iperf3 -c 127.0.0.1 -p 5205 -w 512k -P 60
+sudo iperf3 -c 127.0.0.1 -p 5205 -w 2048k -P 30
+# WiFi6: [SUM] 0.00-10.01 sec 20.8 GBytes 17.9 Gbits/sec receiver

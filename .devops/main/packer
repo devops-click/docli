@@ -1,5 +1,6 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -11,9 +12,6 @@ set -euo pipefail
 #:: ## DESCRIPTION
 #:: This program has the following functionalies:
 #:: `packer aws build ent do-euc1 hashicorp-consul-amzn2-amd.json` -> Build Packer on AWS - Enterprise Environment for do-euc1
-eval $DOCLI_DEBUG && echo "+++++++++++++++++"
-eval $DOCLI_DEBUG && echo "++ Entered packer ++"
-eval $DOCLI_DEBUG && echo "+++++++++++++++++"
 
 packer_version="1.2"
 packer_file_name="$(basename "$0")"
@@ -26,13 +24,12 @@ DOCLI_MODULE_TYPE=main
 DOCLI_MODULE_VERSION=$packer_version
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Read variables from environment
 current_key=$(basename $PWD)
 prefix_path=$(dirname -- "${BASH_SOURCE[0]}")
-
-
 
 # Load environment Vars
 [[ -f "$DOCLI_DIR/functions/bash_basic_functions" ]] && source $DOCLI_DIR/functions/bash_basic_functions

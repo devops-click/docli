@@ -1,8 +1,10 @@
-#!/bin/bash -euo pipefail
+#!/usr/bin/env bash
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 
 environments=("fin" "sec" "ent" "prd" "stg" "qas" "dev" "val")
 
 for environment in "${environments[@]}"; do
-    echo "Running command for environment: $environment"
-    ./run "$environment"
+  echo "Running command for environment: $environment"
+  ./run "$environment"
 done

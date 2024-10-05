@@ -1,213 +1,211 @@
 # #!/usr/bin/env bash
-# set -euo pipefail
+# # [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# # [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 # ############################################################################### #dltbr
 # #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 # ###############################################################################
 # # PS: Contains functions for basic Basic Argument Checks and interaction
 # ###############################################################################
-# echo "++ Entered bash_base_get_arguments ++"
-# # eval $DOCLI_DEBUG && echo "+++++++++++++++++++++++++++++++++++++"
-# # eval $DOCLI_DEBUG && echo "++ Entered bash_base_get_arguments ++"
-# # eval $DOCLI_DEBUG && echo "+++++++++++++++++++++++++++++++++++++"
 
-## DOCLI MODULE INFORMATION
-DOCLI_MODULE=bash_base_get_arguments
-DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.1
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+# ## DOCLI MODULE INFORMATION
+# DOCLI_MODULE=bash_base_get_arguments
+# DOCLI_MODULE_TYPE=functions
+# DOCLI_MODULE_VERSION=0.0.01
+# DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+# ## DEBUG INFORMATION
+# [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-# bash_base_get_arguments_file_name="$(basename "$0")"
-# bash_base_get_arguments_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
-# bash_base_get_arguments_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-# bash_base_get_arguments_current_dir="$(pwd)"
+# # bash_base_get_arguments_file_name="$(basename "$0")"
+# # bash_base_get_arguments_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+# # bash_base_get_arguments_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# # bash_base_get_arguments_current_dir="$(pwd)"
 
-# # source $bash_base_get_arguments_script_dir/../functions/bash_basic_functions
+# # # source $bash_base_get_arguments_script_dir/../functions/bash_basic_functions
 
-# # Check if the variable is set and if not, set it to its default value
-# : "${args_verbose:=0}"
-# : "${args_debug:=0}"
-# : "${args_ignore_questions:=0}"
-# : "${args_silent:=0}"
+# # # Check if the variable is set and if not, set it to its default value
+# # : "${args_verbose:=0}"
+# # : "${args_debug:=0}"
+# # : "${args_ignore_questions:=0}"
+# # : "${args_silent:=0}"
 
-# # Set defaults forced
-# # args_verbose=0
-# # args_debug=0
-# # args_ignore_questions=0
-# # args_silent=0
+# # # Set defaults forced
+# # # args_verbose=0
+# # # args_debug=0
+# # # args_ignore_questions=0
+# # # args_silent=0
 
-# # Usage/help message function
-# print_usage() {
-#     echo
-#     banner "${1:-}"
-#     echo
-#     echo "Usage: docli [COMMAND] [ARGS] [OPTIONS]"
-#     echo
-#     print_options
-#     exit 1
-# }
+# # # Usage/help message function
+# # print_usage() {
+# #     echo
+# #     banner "${1:-}"
+# #     echo
+# #     echo "Usage: docli [COMMAND] [ARGS] [OPTIONS]"
+# #     echo
+# #     print_options
+# #     exit 1
+# # }
 
-# print_options() {
-#     echo "Options:"
-#     echo "  -v, --verbose [true|false]   Turn on verbose"
-#     echo "  -d, --debug [true|false]     Turn on DEBUG mode"
-#     echo "  -i, --ignore-questions       Ignore questions (always yes)"
-#     echo "  -s, --silent                 Silent for CI/CD pipelines"
-#     echo "  -h, --help                   Show this help message"
-#     echo "  --version                    Show DevOps.Click CLI version"
-#     echo "  --version-short              Show only version number of DevOps.Click CLI"
-#     exit 1
-# }
+# # print_options() {
+# #     echo "Options:"
+# #     echo "  -v, --verbose [true|false]   Turn on verbose"
+# #     echo "  -d, --debug [true|false]     Turn on DEBUG mode"
+# #     echo "  -i, --ignore-questions       Ignore questions (always yes)"
+# #     echo "  -s, --silent                 Silent for CI/CD pipelines"
+# #     echo "  -h, --help                   Show this help message"
+# #     echo "  --version                    Show DevOps.Click CLI version"
+# #     echo "  --version-short              Show only version number of DevOps.Click CLI"
+# #     exit 1
+# # }
 
-# banner() {
-#   local version="${1:-}"
-#   local print_version=$([[ -f $version ]] && echo "v${version}")
-#   echo ",--------------------------------------------------------,"
-#   echo "|  ____              ___                  _ _      _     |" #dltbr
-#   echo "| |  _ \  _____   __/ _ \ _ __  ___   ___| (_) ___| | __ |" #dltbr
-#   echo "| | | | |/ _ \ \ / / | | | '_ \/ __| / __| | |/ __| |/ / |" #dltbr
-#   echo "| | |_| |  __/\ V /| |_| | |_) \__ \| (__| | | (__|   <  |" #dltbr
-#   echo "| |____/ \___| \_/  \___/| .__/|___(_)___|_|_|\___|_|\_\ |" #dltbr
-#   echo "|                        |_|                             |" #dltbr
-#   echo "|                                          docli v$root_version |"
-#   echo "|--------------------------------------------------------|" #dltbr
-#   echo "|   https://DevOps.click - DevOps taken seriously >:)    |" #dltbr
-#   echo "'--------------------------------------------------------'" #dltbr
-# #   echo "                     $bash_base_get_arguments_file_name_upper $version"
-# #   echo "'--------------------------------------------------------'"
-# }
+# # banner() {
+# #   local version="${1:-}"
+# #   local print_version=$([[ -f $version ]] && echo "v${version}")
+# #   echo ",--------------------------------------------------------,"
+# #   echo "|  ____              ___                  _ _      _     |" #dltbr
+# #   echo "| |  _ \  _____   __/ _ \ _ __  ___   ___| (_) ___| | __ |" #dltbr
+# #   echo "| | | | |/ _ \ \ / / | | | '_ \/ __| / __| | |/ __| |/ / |" #dltbr
+# #   echo "| | |_| |  __/\ V /| |_| | |_) \__ \| (__| | | (__|   <  |" #dltbr
+# #   echo "| |____/ \___| \_/  \___/| .__/|___(_)___|_|_|\___|_|\_\ |" #dltbr
+# #   echo "|                        |_|                             |" #dltbr
+# #   echo "|                                          docli v$root_version |"
+# #   echo "|--------------------------------------------------------|" #dltbr
+# #   echo "|   https://DevOps.click - DevOps taken seriously >:)    |" #dltbr
+# #   echo "'--------------------------------------------------------'" #dltbr
+# # #   echo "                     $bash_base_get_arguments_file_name_upper $version"
+# # #   echo "'--------------------------------------------------------'"
+# # }
 
-# # declare -a remaining_args
+# # # declare -a remaining_args
 
-# # declare -a args=()
+# # # declare -a args=()
 
-# #:: # Function redirect help output
-# #:: ## Usage example:
-# #:: help_x=$(help_index "$docli_command")
-# #:: echo "$help_x"  # Output: bash_op
-# help_index() {
-#   case "${1:-}" in
-#     "sso") echo ".main/sso";;
-#     "tf") echo ".main/tf";;
-#     "op") echo ".functions/bash_op";;
-#     "docli") echo "docli";;
-#     *) echo "${1:-}";;
-#   esac
-# }
+# # #:: # Function redirect help output
+# # #:: ## Usage example:
+# # #:: help_x=$(help_index "$docli_command")
+# # #:: echo "$help_x"  # Output: bash_op
+# # help_index() {
+# #   case "${1:-}" in
+# #     "sso") echo ".main/sso";;
+# #     "tf") echo ".main/tf";;
+# #     "op") echo ".functions/bash_op";;
+# #     "docli") echo "docli";;
+# #     *) echo "${1:-}";;
+# #   esac
+# # }
 
-# # Argument Parsing
-# parse_arguments() {
-#     # echo parse_arguments
-#     # local current_arg
-#     # local current_arg="${1:-}"
-#     # remaining_args=() # Clear the array
-#     while (( "$#" )); do
-#         # local current_arg="${1:-}"
-#         local current_arg="$1"
-#         case "$current_arg" in
-#             -v|--verbose)
-#                 if [ "${2:-}" == "true" ]; then
-#                     args_verbose=1
-#                     shift 2
-#                 elif [ "${2:-}" == "false" ]; then
-#                     args_verbose=0
-#                     shift 2
-#                 else
-#                     args_verbose=1
-#                     shift
-#                 fi
-#                 ;;
-#             --verbose=*)
-#                 if [ "${1#*=}" == "true" ]; then
-#                     args_verbose=1
-#                 else
-#                     args_verbose=0
-#                 fi
-#                 shift
-#                 ;;
-#             -d|--debug)
-#                 if [ "${2:-}" == "true" ]; then
-#                     args_debug=1
-#                     shift 2
-#                 elif [ "${2:-}" == "false" ]; then
-#                     args_debug=0
-#                     shift 2
-#                 else
-#                     args_debug=1
-#                     shift
-#                 fi
-#                 ;;
-#             --debug=*)
-#                 if [ "${1#*=}" == "true" ]; then
-#                     args_debug=1
-#                 else
-#                     args_debug=0
-#                 fi
-#                 shift
-#                 ;;
-#             -i|--ignore-questions)
-#                 args_ignore_questions=1
-#                 shift
-#                 ;;
-#             -s|--silent)
-#                 args_silent=1
-#                 shift
-#                 ;;
-#             --version)
-#                 # clear
-#                 echo -e "DevOps.click CLI v$docli_version"
-#                 exit 0
-#                 ;;
-#             --version-short)
-#                 # clear
-#                 echo -e "$docli_version"
-#                 exit 0
-#                 ;;
-#             -h|--help)
-#                 args_help=$docli_command
-#                 help_index $docli_command
-#                 # $bash_base_get_arguments_script_dir/../scripts/docli_help $docli_command
-#                 break
-#                 # return 0
-#                 ;;
-#             *)
-#                 # Preserve any other argument for later (used for other option validations menus like remaining_args=($(parse_arguments "$@")) )
-#                 # args+=("$1")
-#                 # args+=("${1:-}")
-#                 args+=("${current_arg}")
-#                 # remaining_args+=("$current_arg")
-#                 shift
-#                 # return 0
-#                 break
-#                 # # Unsupported options
-#                 # echo "Error: Unsupported option $1"
-#                 # print_usage
-#                 ;;
-#         esac
-#     done
-#     # This will print args to be used in next scripts.
-#     # TODO: Make a way to pass this without printing on screen
-#     # export exported_args=$(echo "${args[@]}")
-#     echo
-#     echo "${args[@]}"
-# }
+# # # Argument Parsing
+# # parse_arguments() {
+# #     # echo parse_arguments
+# #     # local current_arg
+# #     # local current_arg="${1:-}"
+# #     # remaining_args=() # Clear the array
+# #     while (( "$#" )); do
+# #         # local current_arg="${1:-}"
+# #         local current_arg="$1"
+# #         case "$current_arg" in
+# #             -v|--verbose)
+# #                 if [ "${2:-}" == "true" ]; then
+# #                     args_verbose=1
+# #                     shift 2
+# #                 elif [ "${2:-}" == "false" ]; then
+# #                     args_verbose=0
+# #                     shift 2
+# #                 else
+# #                     args_verbose=1
+# #                     shift
+# #                 fi
+# #                 ;;
+# #             --verbose=*)
+# #                 if [ "${1#*=}" == "true" ]; then
+# #                     args_verbose=1
+# #                 else
+# #                     args_verbose=0
+# #                 fi
+# #                 shift
+# #                 ;;
+# #             -d|--debug)
+# #                 if [ "${2:-}" == "true" ]; then
+# #                     args_debug=1
+# #                     shift 2
+# #                 elif [ "${2:-}" == "false" ]; then
+# #                     args_debug=0
+# #                     shift 2
+# #                 else
+# #                     args_debug=1
+# #                     shift
+# #                 fi
+# #                 ;;
+# #             --debug=*)
+# #                 if [ "${1#*=}" == "true" ]; then
+# #                     args_debug=1
+# #                 else
+# #                     args_debug=0
+# #                 fi
+# #                 shift
+# #                 ;;
+# #             -i|--ignore-questions)
+# #                 args_ignore_questions=1
+# #                 shift
+# #                 ;;
+# #             -s|--silent)
+# #                 args_silent=1
+# #                 shift
+# #                 ;;
+# #             --version)
+# #                 # clear
+# #                 echo -e "DevOps.click CLI v$docli_version"
+# #                 exit 0
+# #                 ;;
+# #             --version-short)
+# #                 # clear
+# #                 echo -e "$docli_version"
+# #                 exit 0
+# #                 ;;
+# #             -h|--help)
+# #                 args_help=$docli_command
+# #                 help_index $docli_command
+# #                 # $bash_base_get_arguments_script_dir/../scripts/docli_help $docli_command
+# #                 break
+# #                 # return 0
+# #                 ;;
+# #             *)
+# #                 # Preserve any other argument for later (used for other option validations menus like remaining_args=($(parse_arguments "$@")) )
+# #                 # args+=("$1")
+# #                 # args+=("${1:-}")
+# #                 args+=("${current_arg}")
+# #                 # remaining_args+=("$current_arg")
+# #                 shift
+# #                 # return 0
+# #                 break
+# #                 # # Unsupported options
+# #                 # echo "Error: Unsupported option $1"
+# #                 # print_usage
+# #                 ;;
+# #         esac
+# #     done
+# #     # This will print args to be used in next scripts.
+# #     # TODO: Make a way to pass this without printing on screen
+# #     # export exported_args=$(echo "${args[@]}")
+# #     echo
+# #     echo "${args[@]}"
+# # }
 
-# parse_arguments "$@"
+# # parse_arguments "$@"
 
-# # Use the options
-# if [ "$args_verbose" == "1" ]; then
-#     echo "Verbose mode is on."
-# fi
+# # # Use the options
+# # if [ "$args_verbose" == "1" ]; then
+# #     echo "Verbose mode is on."
+# # fi
 
-# if [ "$args_debug" == "1" ]; then
-#     echo "DEBUG mode is on."
-# fi
+# # if [ "$args_debug" == "1" ]; then
+# #     echo "DEBUG mode is on."
+# # fi
 
-# if (( args_ignore_questions )); then
-#     echo "Ignoring questions."
-# fi
+# # if (( args_ignore_questions )); then
+# #     echo "Ignoring questions."
+# # fi
 
-# if (( args_silent )); then
-#     echo "Running in silent mode."
-# fi
+# # if (( args_silent )); then
+# #     echo "Running in silent mode."
+# # fi

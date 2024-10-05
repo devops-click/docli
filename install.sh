@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -9,7 +10,7 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=install
 DOCLI_MODULE_TYPE=install
-DOCLI_MODULE_VERSION=0.0.19
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # TODO: REMOVE, kept for small period to keep compatibility
@@ -74,7 +75,7 @@ check_os_mac_linux_only() {
       echo "** Homebrew is already installed. **"
     fi
     # eval "$(/opt/homebrew/bin/brew shellenv)" # Do not use it, or a new shell will be instanced
-    export PATH=/opt/homebrew/bin:$PATH
+    export PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
   elif [ "$os_var" == "Linux" ]; then
     os="linux"
   else
@@ -225,6 +226,7 @@ check_and_create_dirs
 declare -a file_paths=(
   ".version"
   ".docli"
+  "bin/docheck"
   "bin/docli"
   "bin/runbuild"
   "bin/runpacker"
@@ -234,7 +236,7 @@ declare -a file_paths=(
   "functions/bash_aws_local_sso_temp_creds"
   "functions/bash_azure"
   # "functions/bash_base_get_arguments"
-  "functions/bash_base_get_arguments_local"
+  # "functions/bash_base_get_arguments_local"
   "functions/bash_basic_aws_profiles"
   "functions/bash_basic_cloud_providers"
   "functions/bash_basic_environments"
@@ -246,6 +248,7 @@ declare -a file_paths=(
   "functions/bash_hashicorp_vault"
   "functions/bash_k8s"
   "functions/bash_k8s_secrets"
+  "functions/bash_multios"
   "functions/bash_op"
   "functions/bash_os_check"
   "functions/bash_set"
@@ -253,10 +256,10 @@ declare -a file_paths=(
   "functions/bash_terraform_get_base_files"
   "functions/docli_pre_envs_call"
   "functions/docli_pre_envs"
+  "functions/output_source_files"
   "functions/runbuild_call"
   "functions/runtf_call"
   "functions/runpacker_call"
-  "functions/output_source_files"
   "main/packer"
   "main/setup"
   "main/sso"

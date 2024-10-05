@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
+[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -9,27 +10,28 @@ set -euo pipefail
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=sys
 DOCLI_MODULE_TYPE=main
-DOCLI_MODULE_VERSION=0.1
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 sys_print_usage() {
-    echo
-    banner
-    echo "Usage: docli sys (arguments) [OPTIONS]"
-    echo
-    echo "sys /path/file      -> Clean selected lines from files for Refactoring"
-    echo "sys $HOME/Documents/BitBucket/ops-config/"
-    echo
-    print_options
-    # echo "Options:"
-    # echo "  -v, --verbose [true|false]   Turn on verbose"
-    # echo "  -d, --debug [true|false]     Turn on DEBUG mode"
-    # echo "  -i, --ignore-questions       Ignore questions (always yes)"
-    # echo "  -s, --silent                 Silent for CI/CD pipelines"
-    # echo "  -h, --help                   Show this help message"
-    exit 1
+  echo
+  banner
+  echo "Usage: docli sys (arguments) [OPTIONS]"
+  echo
+  echo "sys /path/file      -> Clean selected lines from files for Refactoring"
+  echo "sys $HOME/Documents/BitBucket/ops-config/"
+  echo
+  print_options
+  # echo "Options:"
+  # echo "  -v, --verbose [true|false]   Turn on verbose"
+  # echo "  -d, --debug [true|false]     Turn on DEBUG mode"
+  # echo "  -i, --ignore-questions       Ignore questions (always yes)"
+  # echo "  -s, --silent                 Silent for CI/CD pipelines"
+  # echo "  -h, --help                   Show this help message"
+  exit 1
 }
 
 sys_clean_files() {

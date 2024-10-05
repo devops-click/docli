@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# set -euo pipefail
+# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
+# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -17,17 +18,11 @@
 # runtf aws-sso apply ent usw2 (when variable is already set)
 # runtf aws-sso apply ent usw2 "do" -force (no ask + when variable is not set)
 ###############################################################################
-# echo "++++++++++++++++++++++++++++++++++"
-# echo "++ Entered runtf_call ++"
-# echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
-# eval $DOCLI_DEBUG && echo "++ Entered runtf_call ++"
-# eval $DOCLI_DEBUG && echo "++++++++++++++++++++++++++++++++++"
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE=runtf_call
 DOCLI_MODULE_TYPE=functions
-DOCLI_MODULE_VERSION=0.6
+DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # Prevents script from being called directly
@@ -36,9 +31,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 
-echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## DEBUG INFORMATION
+[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-PATH="$DOCLI_DIR/bin:/opt/homebrew/bin:$PATH"
+PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 export DOCLI_PARAM_OPTIONS=("apply" "apply_unlock" "apply_force" "destroy" "destroy_force" "plan" "plan_destroy" "show" "apply_plan" "refresh" "state_list" "state_pull" "state_show" "import" "providers" "output_base64")
 
