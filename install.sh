@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+[[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+[[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -8,9 +8,9 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE=install
-DOCLI_MODULE_TYPE=install
 DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="install"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # TODO: REMOVE, kept for small period to keep compatibility
@@ -254,7 +254,7 @@ declare -a file_paths=(
   "functions/bash_set"
   "functions/bash_terraform"
   "functions/bash_terraform_get_base_files"
-  "functions/docli_pre_envs_call"
+  "functions/x_docli_pre_envs"
   "functions/docli_pre_envs"
   "functions/output_source_files"
   "functions/runbuild_call"
@@ -264,6 +264,9 @@ declare -a file_paths=(
   "main/setup"
   "main/sso"
   "main/sys"
+  "main/x_docheck"
+  "main/x_docli"
+  "main/x_runbuild"
   "scripts/docli_aws_copy_token_credentials"
   "scripts/docli_generate_markdown_doc"
   "scripts/docli_colors_tput"

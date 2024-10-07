@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ###############################################################################
 #                       docli AWS CLEAN MULTIREGION RESOURCES
 ###############################################################################

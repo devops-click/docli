@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                             docli pre-env script
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                                PRE ENV SCRIPT                               |
+#-----------------------------------------------------------------------------'
+# Component to be loaded by all docli modules
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***** $REAL_PATH *****\n"
+
+source $DOCLI/.docli_envs
+source $DOCLI_DIR/functions/bash_basic_functions
+
+############################################
+# AUTO-UPDATER - docli
+############################################
+# docli MAIN Installer - Define the URL and the destination path
+INSTALLER_LOCAL_VERSION=$(cat ${DOCLI_DIR:-$DOCLI}/.version || echo "0.0.0")
+INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version || echo "0.0.0")
+INSTALLER_MODULE="$DOCLI_MODULE"
+: "${INSTALLER_FLAG:=true}"
+: "${AUTOUPDATE_SKIP:=false}"
+: "${APPLY_UPDATE:=false}"
+
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\nINSTALLER_LOCAL_VERSION=$INSTALLER_LOCAL_VERSION"
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "INSTALLER_REMOTE_VERSION=$INSTALLER_REMOTE_VERSION\n"
+
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\n* AUTOUPDATE OPTIONS *"
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo INSTALLER_FLAG=$INSTALLER_FLAG
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo APPLY_UPDATE=$APPLY_UPDATE
+[[ "${DOCLI_VERBOSE:-off}" == "on" || "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "AUTOUPDATE_SKIP=$AUTOUPDATE_SKIP\n"
+
+if [[ $INSTALLER_FLAG == true && $AUTOUPDATE_SKIP != true ]]; then
+  check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION
+  if [[ $APPLY_UPDATE == false ]]; then
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "* $DOCLI_MODULE: skipping auto-update *"
+  else
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "* $DOCLI_MODULE: calling docli -um *"
+    $DOCLI_DIR/bin/docli -um
+  fi
+fi
+# Setting flag to false so it only runs once
+export INSTALLER_FLAG=false
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "INSTALLER_FLAG_POST=$INSTALLER_FLAG" || true
+
+# echo "* docli_pre_envs: calling check_new_versions *"
+# INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um || echo"
+# run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
+############################################

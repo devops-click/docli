@@ -1,68 +1,50 @@
 #!/usr/bin/env bash
-# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]] && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]] && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
 #                             docli pre-env script
 ###############################################################################
 #-----------------------------------------------------------------------------;
-#                                PRE ENV SCRIPT                               |
+#                                PRE ENVS SCRIPT                              |
 #-----------------------------------------------------------------------------'
-# Component to be loaded by all docli modules
+# Component to be loaded by all docli modules that calls docli_pre_envs
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE=docli_pre_envs
-DOCLI_MODULE_TYPE=functions
 DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
-REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
+
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Prevents script from being called directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   echo "* $DOCLI_MODULE: This module cannot be called directly! Exiting... *"
   exit 1
 fi
-
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "***** $REAL_PATH *****\n"
-
-source $DOCLI/.docli_envs
-
-# source $DOCLI_DIR/functions/bash_basic_functions "$@"
-source $DOCLI_DIR/functions/bash_basic_functions
-# docli_params_load
-
 ############################################
-# AUTO-UPDATER - docli
+# DEVELOPER MODE
 ############################################
-# docli MAIN Installer - Define the URL and the destination path
-INSTALLER_LOCAL_VERSION=$(cat $DOCLI/.version || echo "0.0.0")
-INSTALLER_REMOTE_VERSION=$(curl -s https://raw.githubusercontent.com/devops-click/docli/main/.devops/.version || echo "0.0.0")
-INSTALLER_MODULE="$DOCLI_MODULE"
-: "${INSTALLER_FLAG:=true}"
-: "${AUTOUPDATE_SKIP:=false}"
-: "${APPLY_UPDATE:=false}"
+: "${DOCLI:=$HOME/devops}"
+: "${DOCLI_DEVELOPER_MODE:=false}"
+: "${DOCLI_REPOSITORY:-$HOME/GitHub/docli}"
 
-echo -e "\n* AUTOUPDATE OPTIONS *"
-echo INSTALLER_FLAG_PRE=$INSTALLER_FLAG
-echo APPLY_UPDATE=$APPLY_UPDATE
-echo AUTOUPDATE_SKIP=$AUTOUPDATE_SKIP
-
-if [[ $INSTALLER_FLAG == true && $AUTOUPDATE_SKIP != true ]]; then
-  check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION
-  if [[ $APPLY_UPDATE == false ]]; then
-    echo "* $DOCLI_MODULE: skipping auto-update *"
-  else
-    $DOCLI_DIR/bin/docli -um
-  fi
+if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
+  [[ "${DOCLI_VERBOSE:-off}" == "on" && ${DOCLI_DEBUG:-false} == "true" ]] && echo -e "* $DOCLI_MODULE: DEVELOPER_MODE ONNN *"
+  export DOCLI_DIR="${DOCLI_REPOSITORY}/.devops"
+else
+  export DOCLI_DIR=$DOCLI
 fi
 
-# Setting flag to false so it only runs once
-export INSTALLER_FLAG=false
-echo INSTALLER_FLAG_POST=$INSTALLER_FLAG
-
-# echo "* docli_pre_envs: calling check_new_versions *"
-# INSTALLER_COMMAND="$DOCLI_DIR/bin/docli -um || echo"
-# run_once "$INSTALLER_MODULE" "check_new_versions docli $INSTALLER_LOCAL_VERSION $INSTALLER_REMOTE_VERSION \"$INSTALLER_COMMAND\""
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH="$PATH:$DOCLI_DIR/bin:/opt/homebrew/bin"
 ############################################
+
+# source $DOCLI_DIR/functions/bash_basic_functions
+# docli_params_load
+
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "* Sourcing: $DOCLI_DIR/functions/x_docli_pre_envs"
+source $DOCLI_DIR/functions/x_docli_pre_envs "$@"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -19,13 +19,13 @@ packer_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 packer_current_dir="$(pwd)"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE=packer
-DOCLI_MODULE_TYPE=main
-DOCLI_MODULE_VERSION=$packer_version
+DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-## DEBUG INFORMATION
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Read variables from environment
 current_key=$(basename $PWD)
@@ -46,7 +46,7 @@ else
   [[ $os == "linux" ]] && export DOCLI="/opt/devops"
 fi
 
-eval $DOCLI_VERBOSE && echo -e "\n**** Running $packer_file_name_upper script ****"
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n**** Running $packer_file_name_upper script ****"
 
 packer_print_usage() {
   echo
