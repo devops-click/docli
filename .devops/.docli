@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -28,22 +28,22 @@ source_script_dir=${1:-not_available}
 # Return the root directory depth for every script in docli. Ex: ../../..
 root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
 
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++++++++++++++++++++++++++++++++++"
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++ Entered .docli (main source) ++"
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo "++++++++++++++++++++++++++++++++++"
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++++++++++++++++++++++++++++++++++"
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++ Entered .docli (main source) ++"
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++++++++++++++++++++++++++++++++++"
 
 # echo "==> .docli -> source bash_basic_functions"
 # source $root_script_dir/functions/bash_basic_functions
 
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo "* INFO: .docli - before setting DOCLI_PROJECT_ROOT *"
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo $DOCLI_VERBOSE
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo $DOCLI_DEBUG
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo "================"
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "* INFO: .docli - before setting DOCLI_PROJECT_ROOT *"
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo $DOCLI_VERBOSE
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo $DOCLI_DEBUG
+[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "================"
 echo
 ## INITIAL CHECKUPS AND LOADS
 # Check if DOCLI_PROJECT_ROOT is already set
 if [[ -n "${DOCLI_PROJECT_ROOT:-}" ]]; then
-  eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT already set. Using: $DOCLI_PROJECT_ROOT **"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** DOCLI_PROJECT_ROOT already set. Using: $DOCLI_PROJECT_ROOT **"
 else
 # Load the .docli_envs file from the directory
   if [[ -f "$root_env_file" ]]; then
@@ -51,7 +51,7 @@ else
     export DOCLI_PROJECT_ROOT=$(grep -E '^DOCLI_PROJECT_ROOT=' "$root_env_file" | cut -d '=' -f 2-)
     # Check and confirm it's set after extraction
     if [[ -n "${DOCLI_PROJECT_ROOT}" ]]; then
-      eval $DOCLI_VERBOSE && echo "** DOCLI_PROJECT_ROOT set to: $DOCLI_PROJECT_ROOT **"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** DOCLI_PROJECT_ROOT set to: $DOCLI_PROJECT_ROOT **"
     else
       echo "** ERROR: Unable to set DOCLI_PROJECT_ROOT from .docli_envs file. **"
       exit 1
@@ -64,31 +64,31 @@ fi
 
 # Debug information for the begin of the routine/function.
 debug_begin(){
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> $1 initiated... ++++"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[0] ${FUNCNAME[0]} called --++"
-  [[ -n ${FUNCNAME[1]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[1] ${FUNCNAME[1]} called --++"
-  [[ -n ${FUNCNAME[2]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[2] ${FUNCNAME[2]} called --++"
-  [[ -n ${FUNCNAME[3]+x} ]] && [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> bash FUNCNAME[3] ${FUNCNAME[3]} called --++"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+\n"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> $1 initiated... ++++"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> bash FUNCNAME[0] ${FUNCNAME[0]} called --++"
+  [[ -n ${FUNCNAME[1]+x} ]] && [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> bash FUNCNAME[1] ${FUNCNAME[1]} called --++"
+  [[ -n ${FUNCNAME[2]+x} ]] && [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> bash FUNCNAME[2] ${FUNCNAME[2]} called --++"
+  [[ -n ${FUNCNAME[3]+x} ]] && [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> bash FUNCNAME[3] ${FUNCNAME[3]} called --++"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++--++--++--++--++--++--++--++--++--++--++--++--++--++--+\n"
   endofline=1
 }
 
 # Debug information for the end of the routine/function.
 debug_end(){
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "==> $1 executed successfully! -+-+"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\n-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "==> $1 executed successfully! -+-+"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n"
   endofline=1
 }
 
 # Source Functions - Verbose information
 source_verbose_info(){
-  eval $DOCLI_VERBOSE && echo -e "** Received Current Directory     : ${1:-} (RECEIVED_SCRIPT_DIR)"
-  eval $DOCLI_VERBOSE && echo -e "** Received Root Script Directory : ${2:-} (RECEIVED_ROOT_DIR)"
-  eval $DOCLI_VERBOSE && echo -e "*********************************************************\n"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Received Current Directory     : ${1:-} (RECEIVED_SCRIPT_DIR)"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Received Root Script Directory : ${2:-} (RECEIVED_ROOT_DIR)"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "*********************************************************\n"
   endofline=1
 }
 
@@ -101,13 +101,13 @@ source_all_docli() {
   # Get the directory of the current script
   local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***************** Sourcing ALL .docli *******************"
   source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
 
   # Loop while the directory is not the root directory
   # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
   while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
-    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
     # If a .docli file exists in this directory, source it
     if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
       echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
@@ -116,14 +116,14 @@ source_all_docli() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   if [[ -f "$RECEIVED_ROOT_DIR/.docli" ]]; then
     echo "** source_all_docli FOUND on $RECEIVED_ROOT_DIR/.docli"
     source "$RECEIVED_ROOT_DIR/.docli"
   fi
   debug_end "${FUNCNAME[0]}"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -136,13 +136,13 @@ source_all_docli_ignore_root() {
   # Get the directory of the current script
   local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***************** Sourcing ALL .docli *******************"
   source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
 
   # Loop while the directory is not the root directory
   # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
   while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
-    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
     # If a .docli file exists in this directory, source it
     if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
       echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
@@ -151,10 +151,10 @@ source_all_docli_ignore_root() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   debug_end "${FUNCNAME[0]}"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -167,13 +167,13 @@ source_first_docli() {
   # Get the directory of the current script
   local DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-  eval $DOCLI_VERBOSE && echo -e "***************** Sourcing ALL .docli *******************"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***************** Sourcing ALL .docli *******************"
   source_verbose_info $RECEIVED_SCRIPT_DIR $RECEIVED_ROOT_DIR
 
   # Loop while the directory is not the root directory
   # while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "/" ]]; do
   while [[ "$RECEIVED_SCRIPT_DIR" != "$RECEIVED_ROOT_DIR" ]]; do
-    eval $DOCLI_VERBOSE && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Looping... $RECEIVED_SCRIPT_DIR **"
     # If a .docli file exists in this directory, source it
     if [[ -f "$RECEIVED_SCRIPT_DIR/.docli" ]]; then
       echo "** source_all_docli FOUND on $RECEIVED_SCRIPT_DIR/.docli"
@@ -183,10 +183,10 @@ source_first_docli() {
 
     # Move up to the parent directory
     RECEIVED_SCRIPT_DIR=${RECEIVED_SCRIPT_DIR%/*}
-    [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
+    [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++ New value for iterate with RECEIVED_SCRIPT_DIR=$RECEIVED_SCRIPT_DIR ++"
   done
   debug_end "${FUNCNAME[0]}"
-  [[ ${DOCLI_DEBUG:-false} == true ]] && echo "** sourced all .docli files until root **"
+  [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "** sourced all .docli files until root **"
   endofline=1
 }
 
@@ -198,21 +198,21 @@ source_first_docli() {
 #   # Get the directory of the current script
 #   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-#   eval $DOCLI_VERBOSE && echo -e "******* Sourcing ALL .docli ignoring root/.docli ********"
+#   [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "******* Sourcing ALL .docli ignoring root/.docli ********"
 #   source_verbose_info $SOURCE_PWD $DIR
 
 #   # Loop while the directory is not the root directory
 #   while [[ "$SOURCE_PWD" != "$DIR" ]]; do
-#     eval $DOCLI_VERBOSE && echo -e "** Looping... $SOURCE_PWD **"
+#     [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Looping... $SOURCE_PWD **"
 #     # If a .docli file exists in this directory, source it
 #     if [[ -f "$SOURCE_PWD/.docli" && "$SOURCE_PWD" != "$DIR" ]]; then
-#       eval $DOCLI_VERBOSE && echo -e "** source_all_docli FOUND on $SOURCE_PWD/.docli **"
+#       [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** source_all_docli FOUND on $SOURCE_PWD/.docli **"
 #       source "$SOURCE_PWD/.docli"
 #     fi
 
 #     # Move up to the parent directory
 #     SOURCE_PWD=${SOURCE_PWD%/*}
-#     [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#     [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
 #   done
 #   debug_end "${FUNCNAME[0]}"
 # }
@@ -225,22 +225,22 @@ source_first_docli() {
 #   # Get the directory of the current script
 #   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-#   eval $DOCLI_VERBOSE && echo -e "************** Sourcing FIRST .docli only ***************"
+#   [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "************** Sourcing FIRST .docli only ***************"
 #   source_verbose_info $SOURCE_PWD $DIR
 
 #   # Loop while the directory is not the root directory ("/")
 #   while [[ "$SOURCE_PWD" != "" && "$SOURCE_PWD" != "$DIR" ]]; do
-#     eval $DOCLI_VERBOSE && echo -e "** Looping... $SOURCE_PWD **"
+#     [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** Looping... $SOURCE_PWD **"
 #     # If a .docli file exists in this directory, source it
 #     if [[ -f "$SOURCE_PWD/.docli" ]]; then
-#       eval $DOCLI_VERBOSE && echo -e "** source_first_docli FOUND on $SOURCE_PWD/.docli **"
+#       [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** source_first_docli FOUND on $SOURCE_PWD/.docli **"
 #       source "$SOURCE_PWD/.docli"
 #       break  # Exit the loop once the file is found and sourced
 #     fi
 
 #     # Move up to the parent directory
 #     SOURCE_PWD=$(dirname "$SOURCE_PWD")
-#     [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
+#     [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "++ New value for iterate with SOURCE_PWD=$SOURCE_PWD ++"
 #   done
 #   debug_end "${FUNCNAME[0]}"
 # }

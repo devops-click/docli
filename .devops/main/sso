@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+[[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+[[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -20,13 +20,13 @@ sso_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 sso_current_dir="$(pwd)"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE=sso
-DOCLI_MODULE_TYPE=main
-DOCLI_MODULE_VERSION=$sso_version
+DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-## DEBUG INFORMATION
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 sso_option=${1:-}      # always the company-short_region-environment (ex: xx-euc1-ent)
 sso_option2=${2:-}     # If mfa -> MFA TOKEN | If eks -> EKS_ASSIGN = true
@@ -42,7 +42,7 @@ fi
 # source $DOCLI_DIR/functions/bash_basic_functions
 # source $DOCLI_PROJECT_ROOT/.docli
 
-eval $DOCLI_VERBOSE && echo -e "\n**** Running $sso_file_name_upper script ****"
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n**** Running $sso_file_name_upper script ****"
 
 sso_print_usage() {
   echo
@@ -89,11 +89,11 @@ check_file_age() {
   OLD_FILES_DIR1=$(find "$DIR1" -name "*.json" -type f -mmin +420)
   OLD_FILES_DIR2=$(find "$DIR2" -name "*.json" -type f -mmin +420)
 
-  eval $DOCLI_VERBOSE && echo "** Checking SSO json files for token age..."
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** Checking SSO json files for token age..."
 
   # If old files are found in either directory, clear both directories
   if [[ -n "$OLD_FILES_DIR1" ]] || [[ -n "$OLD_FILES_DIR2" ]]; then
-    eval $DOCLI_VERBOSE && echo "** Old files detected. Clearing both directories..."
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** Old files detected. Clearing both directories..."
 
     # Use find to delete .json files in each directory to ensure only those files are removed
     find "$DIR1" -name "*.json" -type f -exec rm {} \;
@@ -106,18 +106,18 @@ check_file_age() {
 sso_clean() {
   check_os_mac_linux_only
   if [[ $os == "macos" ]]; then
-    find ~/.aws/cli/cache -name '*.json' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
-    find ~/.aws/sso/cache -name '*.json' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
-    find ~/.aws -name 'credentials-*' -delete -print 2>/dev/null || eval $DOCLI_VERBOSE && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
+    find ~/.aws/cli/cache -name '*.json' -delete -print 2>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
+    find ~/.aws/sso/cache -name '*.json' -delete -print 2>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
+    find ~/.aws -name 'credentials-*' -delete -print 2>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
   elif [[ $os == "linux" ]]; then
-    rm -rf ~/.aws/cli/cache/*.json &>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
-    rm -rf ~/.aws/sso/cache/*.json &>/dev/null || eval $DOCLI_VERBOSE && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
-    rm -rf ~/.aws/credentials-* &>/dev/null || eval $DOCLI_VERBOSE && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
+    rm -rf ~/.aws/cli/cache/*.json &>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** SSO CLI tokens already cleaned. (~/.aws/cli/cache/) **"
+    rm -rf ~/.aws/sso/cache/*.json &>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** SSO tokens already cleaned. (~/.aws/sso/cache/) **"
+    rm -rf ~/.aws/credentials-* &>/dev/null || [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "** Old Credentials already cleaned. (~/.aws/credentials-*) **"
   else
     echo "** ERROR: Not running MacOS or Linux. Could not clean SSO Credentials. **"
     return 0
   fi
-  eval $DOCLI_VERBOSE && echo -e "** SSO tokens cleaned successfully. **"
+  [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "** SSO tokens cleaned successfully. **"
   a=0 # Keep this line here...
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-[[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-[[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+[[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+[[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 
 echo -e "\n!!!! WARNING: You should only execute this script if the GPG KEY WAS LEAKED !!!!"
 echo -e "!!!! As soon as you change this, ALL TERRAFORM OBJECTS that depend on this key will be RECREATED !!!!\n"

@@ -1,6 +1,6 @@
 # #!/usr/bin/env bash
-# # [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# # [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# # [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# # [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 # ############################################################################### #dltbr
 # #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 # ###############################################################################
@@ -14,7 +14,7 @@
 # DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 # ## DEBUG INFORMATION
-# [[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # # bash_base_get_arguments_file_name="$(basename "$0")"
 # # bash_base_get_arguments_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
@@ -154,12 +154,12 @@
 # #                 ;;
 # #             --version)
 # #                 # clear
-# #                 echo -e "DevOps.click CLI v$docli_version"
+# #                 echo -e "DevOps.click CLI v$(cat $DOCLI_DIR/.version)"
 # #                 exit 0
 # #                 ;;
 # #             --version-short)
 # #                 # clear
-# #                 echo -e "$docli_version"
+# #                 echo -e "$(cat $DOCLI_DIR/.version)"
 # #                 exit 0
 # #                 ;;
 # #             -h|--help)

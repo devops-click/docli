@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [[ ${DOCLI_DEBUG:-false} == true ]]       && set -exo pipefail || set -eo pipefail
-# [[ ${DOCLI_UNSET_VARS:-false} == true ]]  && set -u
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -15,18 +15,18 @@ IFS=$'\n\t'
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE=runtf
-DOCLI_MODULE_TYPE=bin
 DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
-## DEBUG INFORMATION
-[[ ${DOCLI_DEBUG:-false} == true ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 source $DOCLI/.docli_envs
 
 # echo "==> runtf -> source docli_pre_envs"
-source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs_call
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
 
 # Set CURRENT_QUARTER variable for all recipes
 export TF_VAR_CURRENT_QUARTER=$(get_quarter)
@@ -984,47 +984,47 @@ main() {
 
     echo "** Running Terraform for $DOCLI_PARAM_CLOUD with S3 Backend **"
 
-    # eval $DOCLI_VERBOSE && echo "*- main -> cloud=aws -> terraform workspace select default"
+    # [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*- main -> cloud=aws -> terraform workspace select default"
     # terraform workspace select "default" > /dev/null 2>&1 || echo "... could not select default workspace to begin... executing terraform init..."
 
-    # eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select default"
+    # [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select default"
     # ( terraform workspace select default || terraform init ; )
 
     if [[ $DOCLI_PARAM_CON_TYPE == "sso" ]]; then
-      eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select default"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select default"
       ( terraform workspace select default || terraform init ; )
 
-      eval $DOCLI_VERBOSE && echo "*- main -> cloud=$DOCLI_PARAM_CLOUD -> connection_type=$DOCLI_PARAM_CON_TYPE"
-      eval $DOCLI_VERBOSE && echo "*-   > terraform init || -upgrade"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*- main -> cloud=$DOCLI_PARAM_CLOUD -> connection_type=$DOCLI_PARAM_CON_TYPE"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform init || -upgrade"
       ( terraform init || terraform init -upgrade ; ) #|| terraform init -migrate-state ; )
 
-      # eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select default"
+      # [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select default"
       # ( terraform workspace select default ; )
 
-      eval $DOCLI_VERBOSE && echo "*-   > terraform validate"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform validate"
       terraform_validate
 
-      eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select $tf_workspace || terraform workspace new $tf_workspace"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select $tf_workspace || terraform workspace new $tf_workspace"
       ( terraform workspace select "$tf_workspace" || terraform workspace new "$tf_workspace" ; )
 
     elif [[ $DOCLI_PARAM_CON_TYPE == "vault" ]]; then
       # unset AWS_VAULT
 
       # eval "$awsvault_command" -- terraform # -no-color 2>&1 | tee /tmp/terraform.log
-      eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select default"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select default"
       ( eval "$awsvault_command" -- terraform workspace select default || eval "$awsvault_command" -- terraform init ; )
 
-      eval $DOCLI_VERBOSE && echo "*- main -> cloud=aws -> aws-vault"
-      eval $DOCLI_VERBOSE && echo "*-   > terraform init || -upgrade"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*- main -> cloud=aws -> aws-vault"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform init || -upgrade"
       ( eval "$awsvault_command" -- terraform init || eval "$awsvault_command" -- terraform init -upgrade ; ) #|| eval "$awsvault_command" -- terraform init -migrate-state ; )
 
-      # eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select default"
+      # [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select default"
       # ( eval "$awsvault_command" -- terraform workspace select default ; )
 
-      eval $DOCLI_VERBOSE && echo "*-   > terraform validate"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform validate"
       terraform_validate
 
-      eval $DOCLI_VERBOSE && echo "*-   > terraform workspace select $tf_workspace || terraform workspace new $tf_workspace"
+      [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*-   > terraform workspace select $tf_workspace || terraform workspace new $tf_workspace"
       ( eval "$awsvault_command" -- terraform workspace select "$tf_workspace" || eval "$awsvault_command" -- terraform workspace new "$tf_workspace" ; )
     else
       echo "* ERROR: AWS TF allows only aws-sso or aws-vault authentication methods *"
@@ -1033,7 +1033,7 @@ main() {
     echo "** aws specific finished..."
   else
     # NOT USING S3... Running default config...
-    eval $DOCLI_VERBOSE && echo "*- NO BACKEND PROVIDED - Running Defaults"
+    [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "*- NO BACKEND PROVIDED - Running Defaults"
     ( terraform workspace select default ; )
     ( terraform init || terraform init -upgrade ; ) #|| terraform init -migrate-state ; )
     ( terraform workspace select default ; )

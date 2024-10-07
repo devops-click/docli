@@ -52,3 +52,8 @@ All notable changes to this project will be documented in this file.
   - Changes DOCLI_DEBUG call.
   - Changes bash set options and set them dynamically.
 - RESETs all modules but .devops/version to version 0.0.01 so they can follow the same standards.
+
+## [0.0.23] - 2024-10-08
+### Improved
+- `all_modules` functionalities:
+  - Fixes all DOCLI_DEBUG/UNSET/VERBOSE arguments. Changes from true/false to on/off so it does not break 1 line comparisons.
