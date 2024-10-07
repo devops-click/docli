@@ -22,8 +22,8 @@ source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs "$@"
 
 # Check if the directory ends with 'bin', then use the appropriate source command
 if [[ "$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")" == "bin" ]]; then
-  source "${DOCLI_DIR:-$DOCLI}/main/x_$(basename "$0")" "$@"
+  source "${DOCLI_DIR:-$DOCLI}/main/x_$(basename "${BASH_SOURCE[0]}")" "$@"
 else
-  # source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/x_$(basename "$0")" "$@"
-  source "${DOCLI_DIR:-$DOCLI}/"$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"/x_$(basename "$0")" "$@"
+  # source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")/x_$(basename "${BASH_SOURCE[0]}")" "$@"
+  source "${DOCLI_DIR:-$DOCLI}/"$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"/x_$(basename "${BASH_SOURCE[0]}")" "$@"
 fi
