@@ -14,6 +14,7 @@
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
+[[ "${BASH_SOURCE[0]}" != "" ]] && REAL_PATH=$(realpath "${BASH_SOURCE[0]}") || REAL_PATH=$(realpath "$0")
 DOCLI_MODULE_VERSION=0.0.01
 DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
 DOCLI_MODULE_TYPE="root"
