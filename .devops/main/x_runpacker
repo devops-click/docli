@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                               docli runpacker
+###############################################################################
+#-----------------------------------------------------------------------------;
+#                              RUN PACKER SCRIPT                              |
+#-----------------------------------------------------------------------------'
+# Default Generic HashiCorp Packer Run Script designed to be called from any sub-packer-stacks
+
+IFS=$'\n\t'
+PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE_VERSION="0.0.01"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
+
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+source $DOCLI/.docli_envs
+
+# echo "==> runpacker -> source docli_pre_envs"
+# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+
+############################################
+# SANITIZATION
+############################################
+# No sanitization needed
+
+# Get Packer option
+export PKR_OPTION=$1
+
+############################################
+# BASIC SCRIPT VARS
+############################################
+export PKR_VAR_CURRENT_DIR=$(basename $PWD)
+# Splitting the variable into three parts
+export PKR_VAR_MACHINE_PROFILE="${PKR_VAR_CURRENT_DIR%%-*}"
+temp="${PKR_VAR_CURRENT_DIR#*-}"
+export PKR_VAR_os_arch=$(get_full_arch_name "${temp%%-*}")
+export PKR_VAR_os_short="${temp##*-}"
+export PKR_VAR_os_version=$(get_full_os_name "$PKR_VAR_os_short")
+
+source $DOCLI_PROJECT_ROOT/packer/.packer-env
+
+############################################
+# DUMP PACKER INFORMATION
+############################################
+echo -e "* Dumping options to .docli_options file *"
+[[ -f .docli_options ]] && rm -rf .docli_options
+touch .docli_options
+echo "runpacker_option=\"${PKR_OPTION:-}\"" > .docli_options
+echo "runpacker_current_dir=\"${PKR_VAR_CURRENT_DIR:-}\"" >> .docli_options
+echo "runpacker_machine_profile=\"${PKR_VAR_MACHINE_PROFILE:-}\"" >> .docli_options
+echo "runpacker_os_version=\"${PKR_VAR_os_version:-}\"" >> .docli_options
+echo "runpacker_os_short=\"${PKR_VAR_os_short:-}\"" >> .docli_options
+echo "runpacker_os_arch=\"${PKR_VAR_os_arch:-}\"" >> .docli_options
+
+############################################
+# INPUT VARS
+############################################
+
+if [[ $PKR_OPTION == "build" ]]; then
+  read -p "Proceed with build? (y/n): " -n 1 -r
+  echo    # (optional) move to a new line
+  if [[ $REPLY =~ ^[Yy]$ ]]
+  then
+    # Build with Packer
+    packer build \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/$PKR_VAR_MACHINE_PROFILE.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/packer.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs.pkrvars.hcl" \
+    -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs-list.pkrvars.hcl" \
+    *.pkr.hcl
+  fi
+elif [[ $PKR_OPTION == "validate" ]]; then
+# Validate the Packer build
+packer validate \
+  *.pkr.hcl
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/$PKR_VAR_MACHINE_PROFILE.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/packer.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs.pkrvars.hcl" \
+  # -var-file="$DOCLI_PROJECT_ROOT/packer/envs/envs-list.pkrvars.hcl" \
+else
+  echo "Please choose an option!"
+  exit 1
+fi

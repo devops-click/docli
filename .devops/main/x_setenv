@@ -1,0 +1,73 @@
+#!/usr/bin/env zsh
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+#                                docli setenv
+###############################################################################
+# If needed, run 'chsh -s /bin/zsh <user>', to return your default shell to zsh
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE_VERSION="0.0.01"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
+
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Load General/Shared Environment Variables
+# source $DOCLI/.docli_envs
+
+# echo "==> setenv -> source docli_pre_envs"
+# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs
+
+# Loop through all current set environment variables
+export DO_TMP_PRJ_VAR="${DOCLI_PROJECT_ROOT:-empty}"
+export DO_TMP_REP_VAR="${DOCLI_REPOSITORY:-empty}"
+while IFS= read -r -d '' var; do
+  var_name=$(echo "$var" | cut -d'=' -f1)
+  unset "$var_name"
+# done < <(env -0 | grep -z '^DOCLI_') # NEVER ADD THIS OR DOCLI_PARAM here or recipes WILL BREAK due to the fact setenv runs in the middle of the script
+done < <(env -0 | grep -z '^DOCLI_AWS|^DOCLI_ARGS|^DOCLI_PROJECT')
+export DOCLI_PROJECT_ROOT="${DO_TMP_PRJ_VAR:-empty}"
+export DOCLI_REPOSITORY="${DO_TMP_REP_VAR:-empty}"
+
+### GENERAL pre-hook ###
+# 1st -> INITIAL step to run any needed pre-setenv steps before even load DOCLI general/shared envs
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_pre_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_pre_hook
+fi
+
+# 2nd -> Load General/Shared Environment Variables (DOCLI/.docli_envs)
+# Variables set specific for the environment running the commands. Not the deploy or iteractions.
+# Deployments will use $DOCLI_PROJECT_ROOT variables
+[[ -f $DOCLI/.docli_envs ]] && source $DOCLI/.docli_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI/.docli_envs \n"
+
+# 3rd -> Load Client Specific Environment Variables
+# In this steps, some DOCLI General/Shared Environment Variables may be overwritten by Project variables if needed
+[[ -f $DOCLI_PROJECT_ROOT/.docli_envs ]] && source $DOCLI_PROJECT_ROOT/.docli_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_envs \n"
+
+# 4th -> Load PRIVATE Client Specific Environment Variables
+# Private variables are loaded at this time. Those variables does not sync with any Source Control.
+# Inside .docli_priv_envs, you can also add integrations with 1Password/Vault/etc... So you can keep your data safe.
+[[ -f $DOCLI_PROJECT_ROOT/.docli_priv_envs ]] && source $DOCLI_PROJECT_ROOT/.docli_priv_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_priv_envs \n"
+
+# 5th -> Load Application Client Specific Environment Variables
+# Run the setenv effectively after loading all needed system and project envs.
+# In this step, application specific variables are set to work with different use cases.
+[[ -f $DOCLI_PROJECT_ROOT/.setenv ]] && source $DOCLI_PROJECT_ROOT/.setenv || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.setenv \n"
+
+### GENERAL pre-hook ###
+# 6th -> FINAL step to run any needed post-setenv steps like unset variables, or even cleaning sensitive data.
+# OPTIONAL -> Runs only if file exists
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_post_hook ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_post_hook
+fi
+
+# 7th -> Cleanup temporary variables
+unset DO_TMP_PRJ_VAR
+unset DO_TMP_REP_VAR

@@ -201,6 +201,7 @@ check_and_create_dirs() {
     "$DOCLI/exports"
     "$DOCLI/functions"
     "$DOCLI/install"
+    "$DOCLI/logs"
     "$DOCLI/main"
     "$DOCLI/s3"
     "$DOCLI/scripts"
