@@ -66,6 +66,10 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Fixes problems with realpath and sourced scripts.
 - Significant changes in DOCLI main info mode
-- Adds docli_generate_markdown_doc
-- Adds docli_module_array/x_docli_module_array
+- Adds `docli_generate_markdown_doc`
+- Adds `docli_module_array`/`x_docli_module_array`
+
+## [0.0.26] - 2024-10-08
+### Improved
+- Adds logging for all main functions into `$DOCLI/logs/`.
 
