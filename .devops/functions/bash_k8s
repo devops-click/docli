@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+# envsubst < deployment.yaml | kubectl apply -f -
+
+## DOCLI MODULE INFORMATION
+DOCLI_MODULE_VERSION=0.0.01
+DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+
+## VERBOSE INFORMATION
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Get current directory name and put into current_key variable:
+current_key=$(basename $PWD)
+# Get the depth of the directory. Ex: ../../../t.sh where x.sh source it, the return will be: ../../..
+dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
+# Get the directory of the script.sh file (Full dir since from root)
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+option=$custom_option
+environment=$custom_environment
+yaml_file="${3:-}"
+
+k8s_dir="${DOCLI_K8S_DIR:-$HOME/Documents/BitBucket/ops-config/kubernetes/deploy}"
+iam_user_info="${DOCLI_K8S_IAM_USER_INFO_ITEM:-svc-bitbucket-ops-config}"
+CUSTOM_APP="${DOCLI_CUSTOM_APP:-k8s}"
+
+run_k8s() {
+  echo -e "**** Running k8s ****"
+  case "$option" in
+    apply)
+      echo "Running $option for $current_key. Cluster: $environment"
+      # k apply -f $k8s_dir/ingress-controller/...
+      # k apply -f $k8s_dir/ingress-controller/...
+      # TODO: Remove this: Temporary running setup file...
+      $k8s_dir/setup
+      exit 0
+      # TODO: Substitution to use same yaml in Kubernetes for PRD and other envs... Example bellow:
+      # export CUSTOM_OPTION=$option
+      # export CUSTOM_ENVIRONMENT=$environment
+      # export CUSTOM_YAML_FILE=$yaml_file
+      # envsubst < $yaml_file | kubectl apply -f -
+      # # export TF_LOG=”DEBUG”
+      # eval "$tf_command $option $cmd_aws_args" -no-color 2>&1 | tee /tmp/$CUSTOM_APP.log
+      ;;
+    apply_force)
+      echo $option
+      option=${option//_force/}
+      echo $option
+      echo "Running '$CUSTOM_APP $option ${BOLD}WITH -auto-approve${END}' with profile: $DOCLI_PARAM_CLOUD_PROFILE"
+      eval "$tf_command $option $cmd_aws_args -auto-approve"
+      ;;
+    delete)
+      echo "Running '$CUSTOM_APP DESTROY' with profile: $DOCLI_PARAM_CLOUD_PROFILE"
+      eval "$tf_command $option $cmd_aws_args"
+      ;;
+    secret)
+      k8s_secrets_check_file_exists_hash
+      k8s_secrets_check_kubernetes_secret
+      [[ $secret_exists == false || $force == true ]] && k8s_secrets_create_kubernetes_secret
+      k8s_secrets_read_lines_kubernetes_secret
+      ;;
+    output_base64)
+      echo "Running '$CUSTOM_APP output -json' with profile: $DOCLI_PARAM_CLOUD_PROFILE"
+      option=${option//_base64/}
+      echo "** tf output part... "
+      custom_output=$(eval "$tf_command $option -json")
+      # eval "$tf_command $option -json" > myout.json
+      # echo "** echo: $custom_output"
+      echo "** iam_user_info part... "
+      # Extract the "iam_user_info" object from the $CUSTOM_APP output
+      iam_user_info=$(echo "$custom_output" | jq -r \'.iam_user_info.value."${iam_user_info}"\')
+      # Check if the "iam_user_info" object is not null
+      if [[ "$iam_user_info" != "null" ]]; then
+      # Extract the encrypted secret key and secret key from the "iam_user_info" object
+      iam_access_key_encrypted_secret=$(echo "$iam_user_info" | jq -r '.iam_access_key_encrypted_secret')
+      # iam_access_key_secret=$(echo "$iam_user_info" | jq -r '.iam_access_key_secret')
+      # Print the values of the encrypted secret key and secret key
+      echo "Encrypted Secret Key: $iam_access_key_encrypted_secret"
+      # echo "Secret Key: $iam_access_key_secret"
+      # Check if the encrypted secret key and secret key are not empty
+      if [[ -n "$iam_access_key_encrypted_secret" ]]; then
+      # if [[ -n "$iam_access_key_encrypted_secret" ]] && [[ -n "$iam_access_key_secret" ]]; then
+          # Decrypt the encrypted secret key using base64 and save it to a file
+          echo "$iam_access_key_encrypted_secret" | base64 --decode | gpg --decrypt > iam_access_key_encrypted_secret.txt
+          # Save the secret key to a file
+          # echo "$iam_access_key_secret" > iam_access_key_secret.txt
+          cat iam_access_key_encrypted_secret.txt
+          rm iam_access_key_encrypted_secret.txt
+          echo "Decryption completed successfully."
+      else
+          echo "Encrypted secret key or secret key is empty."
+      fi
+      else
+      echo "iam_user_info is null or empty."
+      fi
+      # done
+      ;;
+    *)
+      echo "Invalid $CUSTOM_APP command"
+      return 1
+      ;;
+  esac
+}
