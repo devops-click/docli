@@ -12,7 +12,7 @@
 [[ "${BASH_SOURCE[0]}" != "" ]] && REAL_PATH=$(realpath "${BASH_SOURCE[0]}") || REAL_PATH=$(realpath "$0")
 DOCLI_MODULE_VERSION="0.0.01"
 DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
-DOCLI_MODULE_TYPE="$(basename "$(dirname "$($REAL_PATH)")")"
+DOCLI_MODULE_TYPE="$(basename "$(dirname "$REAL_PATH")")"
 DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
 
 ## VERBOSE INFORMATION
