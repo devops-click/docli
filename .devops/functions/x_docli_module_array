@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+
+## !!! DO NOT ENABLE ANY MODULE INFORMATION HERE !!!
+## DOCLI MODULE INFORMATION
+# DOCLI_MODULE_VERSION="0.0.01"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
+## !!! DO NOT ENABLE ANY MODULE INFORMATION HERE !!!
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* x_docli_module_array: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
+
+#####################################################################################################
+## CREATE A DOCLI_MODULE ARRAY TO PERSIST DATA ACROSS MODULES AND ALLOW SCRIPTS TO USE THE VALID DATA
+#####################################################################################################
+DOCLI_MODULE_FILE="/tmp/docli_module_array"
+[[ ! -f "$DOCLI_MODULE_FILE" ]] && touch "$DOCLI_MODULE_FILE" || true
+
+docli_module_array_init() {
+  echo INITIALIZING ARRAY
+  local local_DOCLI_MODULE_VERSION=$1
+  local local_DOCLI_MODULE=$2
+  local local_DOCLI_MODULE_TYPE=$3
+  local local_DOCLI_MODULE_UPPER=$4
+
+  echo local_DOCLI_MODULE_VERSION=$local_DOCLI_MODULE_VERSION
+  echo local_DOCLI_MODULE=$local_DOCLI_MODULE
+  echo local_DOCLI_MODULE_TYPE=$local_DOCLI_MODULE_TYPE
+  echo local_DOCLI_MODULE_UPPER=$local_DOCLI_MODULE_UPPER
+
+  [[ "$local_DOCLI_MODULE_TYPE" == "bin" ]] && local local_DOCLI_MODULE_TYPE="main" && echo CHANGED FROM BIN TO MAIN
+
+  ## Check if DOCLI_MODULE array is already created, if not, create it
+  if ! declare -p DOCLI_MODULE_ARRAY &> /dev/null; then
+    declare -A DOCLI_MODULE_ARRAY
+  fi
+
+  ## Add information to DOCLI_MODULE associative array
+  DOCLI_MODULE_ARRAY["${local_DOCLI_MODULE}_module_version"]="$local_DOCLI_MODULE_VERSION"
+  DOCLI_MODULE_ARRAY["${local_DOCLI_MODULE}_module_name"]="$local_DOCLI_MODULE"
+  DOCLI_MODULE_ARRAY["${local_DOCLI_MODULE}_module_type"]="$local_DOCLI_MODULE_TYPE"
+  DOCLI_MODULE_ARRAY["${local_DOCLI_MODULE}_module_name_upper"]="$local_DOCLI_MODULE_UPPER"
+
+  ## Upsert information to DOCLI_MODULE_FILE
+  upsert_module_info "$local_DOCLI_MODULE" "$local_DOCLI_MODULE_VERSION" "$local_DOCLI_MODULE" "$local_DOCLI_MODULE_TYPE" "$local_DOCLI_MODULE_UPPER"
+}
+
+upsert_module_info() {
+  local module_name="$1"
+  local module_version="$2"
+  local module_name_value="$3"
+  local module_type="$4"
+  local module_upper="$5"
+  [[ "$module_type" == "bin" ]] && local module_type="main"
+
+  # Check if the module already exists in the file
+  if grep -q "^${module_name}_module_name=" "$DOCLI_MODULE_FILE"; then
+    # Update existing entries
+    sed -i.bak \
+        -e "s|^${module_name}_module_version=.*|${module_name}_module_version=${module_version}|" \
+        -e "s|^${module_name}_module_name=.*|${module_name}_module_name=${module_name_value}|" \
+        -e "s|^${module_name}_module_type=.*|${module_name}_module_type=${module_type}|" \
+        -e "s|^${module_name}_module_name_upper=.*|${module_name}_module_name_upper=${module_upper}|" \
+        "$DOCLI_MODULE_FILE"
+    # Remove the backup file created by sed
+    rm "${DOCLI_MODULE_FILE}.bak"
+  else
+    # Add new entries to the file
+    echo "${module_name}_module_version=${module_version}" >> "$DOCLI_MODULE_FILE"
+    echo "${module_name}_module_name=${module_name_value}" >> "$DOCLI_MODULE_FILE"
+    echo "${module_name}_module_type=${module_type}" >> "$DOCLI_MODULE_FILE"
+    echo "${module_name}_module_name_upper=${module_upper}" >> "$DOCLI_MODULE_FILE"
+  fi
+}
+
+docli_module_array_get_info_all() {
+  local module_name="$1"
+  grep "^${module_name}_" "$DOCLI_MODULE_FILE" | sed "s/^${module_name}_//"
+}
+
+docli_module_array_get_info_value() {
+  local module_name="$1"
+  local field_name="$2"  # Novo parâmetro para o campo desejado
+
+  # Verifica se o campo solicitado existe e retorna o valor
+  if grep -q "^${module_name}_${field_name}=" "$DOCLI_MODULE_FILE"; then
+    # Extrai apenas o valor, sem a chave
+    grep "^${module_name}_${field_name}=" "$DOCLI_MODULE_FILE" | sed "s/^${module_name}_${field_name}==//; s/^.*=//"
+  else
+    echo "Field ${field_name} for module ${module_name} not found."
+  fi
+}
+
+
+docli_module_array_get_info_keyvalue() {
+  local module_name="$1"
+  local field_name="$2"  # Novo parâmetro para o campo desejado
+
+  # Verifica se o campo solicitado existe e retorna o valor
+  if grep -q "^${module_name}_${field_name}=" "$DOCLI_MODULE_FILE"; then
+    grep "^${module_name}_${field_name}=" "$DOCLI_MODULE_FILE" | sed "s/^${module_name}_//"
+  else
+    echo "Field ${field_name} for module ${module_name} not found."
+  fi
+}
+
+# Initialize the module
+# docli_module_array_init ""
+
+# # Retrieve module information
+# docli_module_array_get_info_all "$DOCLI_MODULE"
+# docli_module_array_get_info_value "$DOCLI_MODULE" "module_name"
+# docli_module_array_get_info_value "$DOCLI_MODULE" "module_type"
+
+# get_module_info() {
+#   local module_name="$1"
+#   grep "^$module_name:" "$DOCLI_MODULE_FILE" | sed "s/^$module_name://"
+# }
+
+### USAGE EXAMPLE
+# # Initialize the module
+# initialize_module
+# # Retrieve module information
+# get_module_info "$DOCLI_MODULE"

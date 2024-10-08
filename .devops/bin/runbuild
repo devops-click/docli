@@ -6,23 +6,30 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-[[ "${BASH_SOURCE[0]}" != "" ]] && REAL_PATH=$(realpath "${BASH_SOURCE[0]}") || REAL_PATH=$(realpath "$0")
 DOCLI_MODULE_VERSION="0.0.01"
-DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
-DOCLI_MODULE_TYPE="$(basename "$(dirname "$REAL_PATH")")"
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 ## VERBOSE INFORMATION
 [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
 # Source docli_pre_envs to be able to load customizations like DEVELOPER_MODE
-# source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs "$@"
-[[ "${BASH_SOURCE[0]}" == "${0}" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs "$@"
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***** Sourcing ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs $@"
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs "$@"
 
 # Check if the directory ends with 'bin', then use the appropriate source command
-if [[ "$(basename "$(dirname "$REAL_PATH")")" == "bin" ]]; then
-  source "${DOCLI_DIR:-$DOCLI}/main/x_$(basename "${BASH_SOURCE[0]}")" "$@"
+if [[ "${BASH_SOURCE[0]}" != "" ]]; then
+  if [[ "$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")" == "bin" ]]; then
+    source "${DOCLI_DIR:-$DOCLI}/main/x_$(basename "${BASH_SOURCE[0]}")" "$@"
+  else
+    source "${DOCLI_DIR:-$DOCLI}/"$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"/x_$(basename "${BASH_SOURCE[0]}")" "$@"
+  fi
 else
-  # source "$(dirname "$REAL_PATH")/x_$(basename "${BASH_SOURCE[0]}")" "$@"
-  source "${DOCLI_DIR:-$DOCLI}/"$(basename "$(dirname "$REAL_PATH")")"/x_$(basename "${BASH_SOURCE[0]}")" "$@"
+  if [[ "$(basename "$(dirname "$(realpath "$0")")")" == "bin" ]]; then
+    source "${DOCLI_DIR:-$DOCLI}/main/x_$(basename "$0")" "$@"
+  else
+    source "${DOCLI_DIR:-$DOCLI}/"$(basename "$(dirname "$(realpath "$0")")")"/x_$(basename "$0")" "$@"
+  fi
 fi

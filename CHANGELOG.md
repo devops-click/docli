@@ -65,3 +65,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.25] - 2024-10-08
 ### Improved
 - Fixes problems with realpath and sourced scripts.
+- Significant changes in DOCLI main info mode
+- Adds docli_generate_markdown_doc
+- Adds docli_module_array/x_docli_module_array
+

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]] && set -exo pipefail || set -eo pipefail
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]] && set -u
+############################################################################### #dltbr
+#              https://DevOps.click - DevOps taken seriously                  # #dltbr
+###############################################################################
+
+## !!! DO NOT ENABLE ANY MODULE INFORMATION HERE !!!
+## DOCLI MODULE INFORMATION
+# DOCLI_MODULE_VERSION="0.0.01"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
+## !!! DO NOT ENABLE ANY MODULE INFORMATION HERE !!!
+
+## VERBOSE INFORMATION
+# [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
+
+# Prevents script from being called directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  echo "* docli_module_array: This module cannot be called directly! Exiting... *"
+  exit 1
+fi
+
+# Source docli_pre_envs to be able to load customizations like DEVELOPER_MODE
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***** Sourcing ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs $@"
+source ${DOCLI_DIR:-$DOCLI}/functions/docli_pre_envs "$@"
+
+# Set the right /bin path after determine if Developer Mode is on or off
+PATH="$PATH:$DOCLI_DIR/bin:/opt/homebrew/bin"
+
+## SOURCE DESIRED X_MODULE
+[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo "* Sourcing: $DOCLI_DIR/functions/x_docli_module_array"
+source $DOCLI_DIR/functions/x_docli_module_array "$@"

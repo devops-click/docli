@@ -8,11 +8,11 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-[[ "${BASH_SOURCE[0]}" != "" ]] && REAL_PATH=$(realpath "${BASH_SOURCE[0]}") || REAL_PATH=$(realpath "$0")
-DOCLI_MODULE_VERSION=0.0.01
-DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
+DOCLI_MODULE_VERSION="0.0.01"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 DOCLI_MODULE_TYPE="install"
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 # TODO: REMOVE, kept for small period to keep compatibility
 install_version="$DOCLI_MODULE_VERSION"
@@ -41,8 +41,8 @@ elif [[ $DOCLI_DEVELOPER_MODE == true ]]; then
   echo "* INFO: docli installation sourced LOCALLY (DEVELOPER MODE) *"
   echo -e "************************************************************\n"
   echo -e "\n** DETECTEC LOCAL RUN: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)"
-  install_file_name="$(basename "$0")"
-  install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+  [[ "${BASH_SOURCE[0]}" != "" ]] && install_file_name="$(basename "${BASH_SOURCE[0]}")"                                    || install_file_name="$(basename "$0")"
+  [[ "${BASH_SOURCE[0]}" != "" ]] && install_file_name_upper="$(basename "${BASH_SOURCE[0]}" | tr '[:lower:]' '[:upper:]')" || install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
   install_current_dir="$(pwd)"
   install_local="true" # used when running from a forked repository
 else
@@ -50,8 +50,8 @@ else
   echo "* INFO: docli installation sourced LOCALLY (DEVELOPER MODE) *"
   echo -e "************************************************************\n"
   echo -e "\n** DETECTEC LOCAL RUN: If DOCLI_REPOSITORY variable is set, we will get files locally from there! (Developers only)"
-  install_file_name="$(basename "$0")"
-  install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+  [[ "${BASH_SOURCE[0]}" != "" ]] && install_file_name="$(basename "${BASH_SOURCE[0]}")"                                    || install_file_name="$(basename "$0")"
+  [[ "${BASH_SOURCE[0]}" != "" ]] && install_file_name_upper="$(basename "${BASH_SOURCE[0]}" | tr '[:lower:]' '[:upper:]')" || install_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
   install_current_dir="$(pwd)"
   install_local="true" # used when running from a forked repository
 fi
@@ -256,7 +256,9 @@ declare -a file_paths=(
   "functions/bash_terraform"
   "functions/bash_terraform_get_base_files"
   "functions/x_docli_pre_envs"
+  "functions/x_docli_module_array"
   "functions/docli_pre_envs"
+  "functions/docli_module_array"
   "functions/output_source_files"
   "functions/runbuild_call"
   "functions/runtf_call"

@@ -12,11 +12,11 @@
 # Component of the Default Generic Terraform Run Script designed to be called from any sub-terraform-stacks
 
 ## DOCLI MODULE INFORMATION
-[[ "${BASH_SOURCE[0]}" != "" ]] && REAL_PATH=$(realpath "${BASH_SOURCE[0]}") || REAL_PATH=$(realpath "$0")
-DOCLI_MODULE_VERSION=0.0.01
-DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
-DOCLI_MODULE_TYPE="$(basename "$(dirname "$REAL_PATH")")"
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+DOCLI_MODULE_VERSION="0.0.01"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 ## VERBOSE INFORMATION
 [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
