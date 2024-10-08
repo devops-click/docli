@@ -13,10 +13,11 @@ set -a
 # Simple output to be called by other programs
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION=0.0.01
-DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
-DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+DOCLI_MODULE_VERSION="0.0.01"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 source "$1"
 env

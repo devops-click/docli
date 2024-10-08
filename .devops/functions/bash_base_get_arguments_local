@@ -9,16 +9,17 @@
 # ###############################################################################
 
 # ## DOCLI MODULE INFORMATION
-# DOCLI_MODULE=bash_base_get_arguments_local
-# DOCLI_MODULE_TYPE=functions
-# DOCLI_MODULE_VERSION=0.0.01
-# DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
+# DOCLI_MODULE_VERSION="0.0.01"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+# [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+# ##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 # ## DEBUG INFORMATION
 # [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****\n"
 
-# bash_base_get_arguments_local_file_name="$(basename "$0")"
-# bash_base_get_arguments_local_file_name_upper=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+# bash_base_get_arguments_local_file_name="$(basename "${BASH_SOURCE[0]}")"
+# bash_base_get_arguments_local_file_name_upper=$(basename "${BASH_SOURCE[0]}" | tr '[:lower:]' '[:upper:]')
 # bash_base_get_arguments_local_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # bash_base_get_arguments_local_current_dir="$(pwd)"
 

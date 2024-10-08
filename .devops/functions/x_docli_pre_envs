@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
 # [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+DOCLI_MODULE_ARRAY_SOURCE="off" # Keep disabled to avoid loops
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -13,10 +14,10 @@
 
 ## DOCLI MODULE INFORMATION
 DOCLI_MODULE_VERSION="0.0.01"
-DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"
-DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
-DOCLI_MODULE_UPPER=$(echo "$DOCLI_MODULE" | tr '[:lower:]' '[:upper:]')
-REAL_PATH=$(realpath "${BASH_SOURCE[0]}")
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
+##[[ "${DOCLI_MODULE_ARRAY_SOURCE:-on}" == "on" ]] && source ${DOCLI_DIR:-$DOCLI}/functions/docli_module_array
 
 # Prevents script from being called directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -24,7 +25,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   exit 1
 fi
 [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
-[[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "***** $REAL_PATH *****\n"
 
 source $DOCLI/.docli_envs
 source $DOCLI_DIR/functions/bash_basic_functions

@@ -57,3 +57,15 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - `all_modules` functionalities:
   - Fixes all DOCLI_DEBUG/UNSET/VERBOSE arguments. Changes from true/false to on/off so it does not break 1 line comparisons.
+
+## [0.0.24] - 2024-10-08
+### Improved
+- Fixes sourcing in docli, docheck and runbuild.
+
+## [0.0.25] - 2024-10-08
+### Improved
+- Fixes problems with realpath and sourced scripts.
+- Significant changes in DOCLI main info mode
+- Adds docli_generate_markdown_doc
+- Adds docli_module_array/x_docli_module_array
+

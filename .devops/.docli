@@ -14,10 +14,13 @@
 #:: parse_arguments   - parse arguments and treat options ex: [-vdish]
 ###############################################################################
 
+## DOCLI MODULE INFORMATION
+[[ "${BASH_SOURCE[0]}" != "" ]] && MODULE_PATH="${BASH_SOURCE[0]}" || MODULE_PATH="$0"
+
 root_version="1.2"
-root_file_name="$(basename "$0")"
-root_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
-root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+[[ "${BASH_SOURCE[0]}" != "" ]] && root_file_name="$(basename "${BASH_SOURCE[0]}")" || root_file_name="$(basename "$0")"
+[[ "${BASH_SOURCE[0]}" != "" ]] && root_file_name_upper="$(basename "${BASH_SOURCE[0]}" | tr '[:lower:]' '[:upper:]')" || root_file_name_upper="$(basename "$0" | tr '[:lower:]' '[:upper:]')"
+[[ "${BASH_SOURCE[0]}" != "" ]] && root_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" || root_script_dir="$( cd "$( dirname "$0" )" &> /dev/null && pwd )"
 root_current_dir="$(pwd)"
 
 # ENV file
@@ -26,7 +29,7 @@ root_env_file="$root_script_dir/.docli_envs"
 # Receives or not the directory from script sourcing it.
 source_script_dir=${1:-not_available}
 # Return the root directory depth for every script in docli. Ex: ../../..
-root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}")
+[[ "${BASH_SOURCE[0]}" != "" ]] && root_dir_depth=$(dirname -- "${BASH_SOURCE[0]}") || root_dir_depth=$(dirname -- "$0")
 
 [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++++++++++++++++++++++++++++++++++"
 [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++ Entered .docli (main source) ++"
