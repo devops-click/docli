@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-## Atutomatically export variables to scripts calling it
-set -a
+## !! SHOULD NOT HAVE ANY SET FOR SHELL HERE !! #
 DOCLI_MODULE_ARRAY_SOURCE="off" # Keep disabled to avoid loops
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr

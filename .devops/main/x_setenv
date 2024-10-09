@@ -1,6 +1,5 @@
 #!/usr/bin/env zsh
-## Atutomatically export variables to scripts calling it
-set -a
+## !! SHOULD NOT HAVE ANY SET FOR SHELL HERE !! #
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
