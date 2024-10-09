@@ -271,7 +271,7 @@ declare -a file_paths=(
   "main/x_docheck"
   "main/x_docli"
   "main/x_runbuild"
-  "main/x_runpacker
+  "main/x_runpacker"
   "main/x_runtf"
   "main/x_setenv"
   "scripts/docli_aws_copy_token_credentials"
