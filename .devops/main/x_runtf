@@ -758,12 +758,12 @@ catch() {
 # Download and build .private_envs file to be loaded by runtf if needed. (It generates this list only on the existence of .op_load_envs)
 export OP_LOAD_ENVS_DIR="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.private_op_load_envs_dir"
 op_load_envs() {
-  echo -e "${BOLD}${TEXT_GREEN}** 1password load envs: begin ${END}\n"
+  echo -e "${BOLD}${TEXT_GREEN}** 1password load envs: begin ${END}"
   # file_path="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key"
 
   # Check for the presence of .op_load_envs
   if [ ! -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/deploy/$current_key/.op_load_envs" ]; then
-    echo "* No ${DOCLI_PROJECT_ROOT}/terraform/${DOCLI_PARAM_CLOUD}/deploy/${current_key}/.op_load_envs file found in the script directory. Continuing... *"
+    echo "** SKIP: No .op_load_envs found in ${DOCLI_PROJECT_ROOT}/terraform/${DOCLI_PARAM_CLOUD}/deploy/${current_key}/ *"
     return 0
   fi
 

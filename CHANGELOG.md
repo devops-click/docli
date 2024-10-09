@@ -73,3 +73,7 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Adds logging for all main functions into `$DOCLI/logs/`.
 
+## [0.0.27] - 2024-10-09
+### Improved
+- Fixes setenv problem that causes shell to break.
+- Updates client cert generation process.

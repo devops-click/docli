@@ -45,21 +45,37 @@ fi
 # 2nd -> Load General/Shared Environment Variables (DOCLI/.docli_envs)
 # Variables set specific for the environment running the commands. Not the deploy or iteractions.
 # Deployments will use $DOCLI_PROJECT_ROOT variables
-[[ -f $DOCLI/.docli_envs ]] && source $DOCLI/.docli_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI/.docli_envs \n"
+if [[ -f $DOCLI/.docli_envs ]]; then
+  source $DOCLI/.docli_envs
+else
+  echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI/.docli_envs \n"
+fi
 
 # 3rd -> Load Client Specific Environment Variables
 # In this steps, some DOCLI General/Shared Environment Variables may be overwritten by Project variables if needed
-[[ -f $DOCLI_PROJECT_ROOT/.docli_envs ]] && source $DOCLI_PROJECT_ROOT/.docli_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_envs \n"
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_envs ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_envs
+else
+  echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_envs \n"
+fi
 
 # 4th -> Load PRIVATE Client Specific Environment Variables
 # Private variables are loaded at this time. Those variables does not sync with any Source Control.
 # Inside .docli_priv_envs, you can also add integrations with 1Password/Vault/etc... So you can keep your data safe.
-[[ -f $DOCLI_PROJECT_ROOT/.docli_priv_envs ]] && source $DOCLI_PROJECT_ROOT/.docli_priv_envs || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_priv_envs \n"
+if [[ -f $DOCLI_PROJECT_ROOT/.docli_priv_envs ]]; then
+  source $DOCLI_PROJECT_ROOT/.docli_priv_envs
+else
+  echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.docli_priv_envs \n"
+fi
 
 # 5th -> Load Application Client Specific Environment Variables
 # Run the setenv effectively after loading all needed system and project envs.
 # In this step, application specific variables are set to work with different use cases.
-[[ -f $DOCLI_PROJECT_ROOT/.setenv ]] && source $DOCLI_PROJECT_ROOT/.setenv || echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.setenv \n"
+if [[ -f $DOCLI_PROJECT_ROOT/.setenv ]]; then
+  source $DOCLI_PROJECT_ROOT/.setenv
+else
+  echo -e "\n* ATTENTION: COULD NOT FIND $DOCLI_PROJECT_ROOT/.setenv \n"
+fi
 
 ### GENERAL pre-hook ###
 # 6th -> FINAL step to run any needed post-setenv steps like unset variables, or even cleaning sensitive data.

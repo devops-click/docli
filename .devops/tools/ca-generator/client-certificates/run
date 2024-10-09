@@ -8,11 +8,10 @@ source $DOCLI_PROJECT_ROOT/.docli_envs
 DOCLI_OWN_NAME=${1:-$DOCLI_OWN_NAME}
 DOCLI_OWN_EMAIL=${2:-$DOCLI_OWN_EMAIL}
 
-# Check if certificate will be imported to firefox
-DOCLI_CERT_IMPORT_TO_FIREFOX=${DOCLI_CERT_IMPORT_TO_FIREFOX:-false}
-
-# Check if certificate will be CRL disabled
-DOCLI_CLIENT_CERT_CRL_DISABLED=${DOCLI_CLIENT_CERT_CRL_DISABLED:-false}
+## Initialize needed variables
+[[ -f ${DOCLI_PROJECT_ROOT:-$HOME/Documents/BitBucket/ops-config}/files/functions/bash_doenv ]] && source ${DOCLI_PROJECT_ROOT:-$HOME/Documents/BitBucket/ops-config}/files/functions/bash_doenv || echo "** ERROR: Could not find bash_doenv script **" && exit 1
+## Setting up SLACK
+doenv slack || echo "** WARN: Could not setup slack parameters. Notification will not work **"
 
 # Check for existence of DOCLI_OWN_NAME and DOCLI_OWN_EMAIL variables
 if [[ -z "$DOCLI_OWN_NAME" ]]; then
@@ -30,32 +29,40 @@ fi
 # Remove @domain from e-mails
 user_name="${user_email%%@*}"
 
-client_root_dir="$DOCLI/CA/clientsINTERMEDIATE" # $DOCLI/CA/clientsROOT
-client_root_dir="$DOCLI/CA/clientsINTERMEDIATE"
+DOCLI_CA_NAMESPACE=${DOCLI_CA_NAMESPACE:-"root"}
+use_client_dir=${use_client_dir:-"$DOCLI/CA/clientsINTERMEDIATE"}
 timestamp=$(date +%s)
 current_date=$(date)
 os_user=$(whoami)
 cert_check_url=${DOCLI_CERT_CHECK_URL:-"https://noserver.local"}
 
 ## Create Client Root Directory
-[[ ! -d $client_root_dir ]] && mkdir -p $client_root_dir
+[[ ! -d $use_client_dir ]] && mkdir -p $use_client_dir
 
 ## Client Certificate LOG GENERATION
-[[ ! -f $client_root_dir/gen_client_cert.log ]] && touch $client_root_dir/gen_client_cert.log
+[[ ! -f $use_client_dir/gen_client_cert.log ]] && touch $use_client_dir/gen_client_cert.log
 log_section=$(cat <<EOF
-$current_date:
-** Certification Generation Log **
-timestamp: \`$timestamp\`
-os_user:   \`$os_user\`
-#------------------- Certficate Information -------------------#
-User:  \`$user_name\`
-Email: \`$user_email\`
+:lock: *Private CA - Client Certification Generation Log*
+\`$current_date\`
+*Requesters Information*
+\`\`\`
+timestamp: $timestamp
+os_user:   $os_user
+\`\`\`
+*Clients Certficate Information*
+\`\`\`
+User:      $user_name
+Email:     $user_email
+Expiry:    $DOCLI_CERT_EXPIRY
+CRL Stat:  $DOCLI_CA_CLIENT_CERT_CRL_ATTACH
+CRL URL:   $DOCLI_CERT_CRL_URIS
+\`\`\`
 EOF
 )
-echo "$log_section" >> $client_root_dir/gen_client_cert.log
+echo "$log_section" >> $use_client_dir/gen_client_cert.log
 
 echo -e "\n** SSL Client Certificate: Generates Client Private Key **"
-[[ ! -f $client_root_dir/$user_name.key ]] && /usr/bin/openssl genpkey -algorithm RSA -out $client_root_dir/$user_name.key
+[[ ! -f $use_client_dir/$user_name.key ]] && /usr/bin/openssl genpkey -algorithm RSA -out $use_client_dir/$user_name.key
 
 ### TEMPLATEFILE
 echo -e "\n** SSL Client Certificate: Generates Template File (openssl.cnf)[current directory] **"
@@ -79,7 +86,7 @@ emailAddress            = $user_email
 
 [ req_ext ]
 extendedKeyUsage = clientAuth
-crlDistributionPoints = URI:${DOCLI_CERT_CRL_URL}
+crlDistributionPoints = ${DOCLI_CERT_CRL_URIS:-"URI:https://ca.devops.click/crl"}
 
 [ req_distinguished_name ]
 EOFtemplate
@@ -88,14 +95,14 @@ echo -e "\n** SSL Client Certificate: Applying template variable substitution **
 envsubst < openssl.cnf > cert-req.cnf
 
 echo -e "\n** SSL Client Certificate: Create a certificate signing request (CSR) for the client key: [ENTERPRISE] **"
-/usr/bin/openssl req -new -key $client_root_dir/$user_name.key -out $client_root_dir/$user_name.csr -config cert-req.cnf
+/usr/bin/openssl req -new -key $use_client_dir/$user_name.key -out $use_client_dir/$user_name.csr -config cert-req.cnf
 
-if [[ $DOCLI_CLIENT_CERT_CRL_DISABLED == false ]]; then
-  echo -e "\n** SSL Client Certificate: Sign the CSR with the CA using CRL **""
-  /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY -extfile cert-req.cnf -extensions req_ext
+if [[ ${DOCLI_CA_CLIENT_CERT_CRL_ATTACH:-on} == "on" ]]; then
+  echo -e "\n** SSL Client Certificate: Sign the CSR with the CA using CRL **"
+  /usr/bin/openssl x509 -req -in $use_client_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $use_client_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY -extfile cert-req.cnf -extensions req_ext
 else
-  echo -e "\n** SSL Client Certificate: Sign the CSR with the CA NOT using CRL **""
-  /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY
+  echo -e "\n** SSL Client Certificate: Sign the CSR with the CA NOT using CRL **"
+  /usr/bin/openssl x509 -req -in $use_client_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $use_client_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY
 fi
 
 echo -e "\n* Removing Temporary Template File *"
@@ -103,12 +110,12 @@ rm cert-req.cnf
 
 # ## OLD METHOD - WITHOUT CRL and not using TEMPLATE FILE
 # echo "Client Certificate: Create a certificate signing request (CSR) for the client key: [ENTERPRISE]"
-# /usr/bin/openssl req -new -key $client_root_dir/$user_name.key -out $client_root_dir/$user_name.csr -subj "/C=$SSL_COUNTRY/ST=$SSL_STATE/L=$SSL_LOCALITY/O=$SSL_COMPANY/OU=$SSL_OU/OU=ent/CN=$full_name ($user_email)"
+# /usr/bin/openssl req -new -key $use_client_dir/$user_name.key -out $use_client_dir/$user_name.csr -subj "/C=$SSL_COUNTRY/ST=$SSL_STATE/L=$SSL_LOCALITY/O=$SSL_COMPANY/OU=$SSL_OU/OU=ent/CN=$full_name ($user_email)"
 
 # echo "Client Certificate: Sign the CSR with the CA:"
-# /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY
-# /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/rootCA/certs/ca.cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days 1825
-# /usr/bin/openssl x509 -req -in $client_root_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $client_root_dir/$user_name.crt -days 1825
+# /usr/bin/openssl x509 -req -in $use_client_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/intermediate.ent.cert.pem -CAkey $DOCLI/CA/intermediateCA/private/intermediate.ent.key.pem -CAcreateserial -out $use_client_dir/$user_name.crt -days $DOCLI_CERT_EXPIRY
+# /usr/bin/openssl x509 -req -in $use_client_dir/$user_name.csr -CA $DOCLI/CA/rootCA/certs/ca.cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $use_client_dir/$user_name.crt -days 1825
+# /usr/bin/openssl x509 -req -in $use_client_dir/$user_name.csr -CA $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem -CAkey $DOCLI/CA/rootCA/private/ca.key.pem -CAcreateserial -out $use_client_dir/$user_name.crt -days 1825
 
 # # MACOS ONLY
 # # Find and delete the associated key
@@ -141,33 +148,33 @@ security delete-identity -t -c "$full_name ($user_email)" || echo "* INFO: $full
 # awk '/SHA-1 hash:/{system("sudo security delete-certificate -Z "$3" ~/Library/Keychains/login.keychain-db")}' || echo "* INFO: $full_name ($user_email) not found! *"
 
 ############# IMPORT #############
-# sudo security import $client_root_dir/$user_name.p12 -k ~/Library/Keychains/login.keychain-db
-sudo security import $client_root_dir/$user_name.key -k ~/Library/Keychains/login.keychain-db || echo "* Key already exists *"
-sudo security import $client_root_dir/$user_name.crt -k ~/Library/Keychains/login.keychain-db || echo "* Certificate already exists *"
+# sudo security import $use_client_dir/$user_name.p12 -k ~/Library/Keychains/login.keychain-db
+sudo security import $use_client_dir/$user_name.key -k ~/Library/Keychains/login.keychain-db || echo "* Key already exists *"
+sudo security import $use_client_dir/$user_name.crt -k ~/Library/Keychains/login.keychain-db || echo "* Certificate already exists *"
 
-ls -larth $client_root_dir/
+ls -larth $use_client_dir/
 
 # Create a PKCS12 certificate
-openssl pkcs12 -export -in $client_root_dir/$user_name.crt -inkey $client_root_dir/$user_name.key -out $client_root_dir/$user_name.p12 -name "$full_name ($user_email)" -passout pass:
+openssl pkcs12 -export -in $use_client_dir/$user_name.crt -inkey $use_client_dir/$user_name.key -out $use_client_dir/$user_name.p12 -name "$full_name ($user_email)" -passout pass:
 
 ## MUST BE LIBRESSL TO IMPORT ##
 # echo "MacOS: Import the PKCS#12 file into your macOS keychain:"
 
-ls -larth $client_root_dir
+[[ "${DOCLI_CA_CLIENT_CERT_LIST_FOLDERS:-off}" == "on" ]] && ls -larth $use_client_dir
 
 echo
 
 ## FIREFOX
-if [[ $DOCLI_CERT_IMPORT_TO_FIREFOX == "true" ]]; then
+if [[ ${DOCLI_CA_CLIENT_CERT_IMPORT_TO_FIREFOX:-on} == "on" ]]; then
   # Find Firefox profiles and import the certificate
   while read -r profile; do
     # Clean actual Firefox certificates
-    echo "* Own Client Certificate -> Removing $client_root_dir/$user_name.crt from Firefox Profiles *"
+    echo "* Own Client Certificate -> Removing $use_client_dir/$user_name.crt from Firefox Profiles *"
     certutil -D -n "$full_name ($user_email)" -d "sql:$profile" || echo "* $full_name ($user_email) does not exist *"
 
     # Import PCKS12
     echo "Importing certificate into Firefox profile in directory: $profile"
-    pk12util -i $client_root_dir/$user_name.p12 -d "$profile" -W ''
+    pk12util -i $use_client_dir/$user_name.p12 -d "$profile" -W ''
 
     # List if all Keys were cleaned
     echo -e "\n======================================================================================"
@@ -189,26 +196,36 @@ fi
 # Browser-based Authentication:
 # If you're trying to access the Consul UI, some browsers like Chrome and Safari will automatically prompt you to choose a client certificate for mutual TLS authentication.
 
-# Testing/Using it via curl:
-echo "** TEST: curl using --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem **"
-curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $cert_check_url > cert_chain_test_output.log && echo "* OK: Successfully validated certificate using cacert *" || echo "* ERROR: Could not validate certificate using cacert *"
-echo "** TEST: curl using --capath $DOCLI/CA/c_rehash **"
-curl --cert $client_root_dir/$user_name.crt --key $client_root_dir/$user_name.key --capath $DOCLI/CA/c_rehash $cert_check_url > cert_c_rehashtest_output.log && echo "* OK: Successfully validated certificate using capath *" || echo "* ERROR: Could not validate certificate using capath *"
+if [[ "${DOCLI_CA_CLIENT_CERT_TESTS:-off}" == "on" ]]; then
+  # Testing/Using it via curl:
+  echo "** TEST: curl using --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem **"
+  curl --cert $use_client_dir/$user_name.crt --key $use_client_dir/$user_name.key --cacert $DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem $cert_check_url > cert_chain_test_output.log && echo "* OK: Successfully validated certificate using cacert *" || echo "* ERROR: Could not validate certificate using cacert *"
+  echo "** TEST: curl using --capath $DOCLI/CA/c_rehash **"
+  curl --cert $use_client_dir/$user_name.crt --key $use_client_dir/$user_name.key --capath $DOCLI/CA/c_rehash $cert_check_url > cert_c_rehashtest_output.log && echo "* OK: Successfully validated certificate using capath *" || echo "* ERROR: Could not validate certificate using capath *"
+else
+  echo "Skipping Client Certificate Validation"
+fi
 
-zip $HOME/Downloads/$user_name.zip $client_root_dir/$user_name.key $client_root_dir/$user_name.crt $client_root_dir/$user_name.p12
-# TODO: do a process to send user zip to devops@domain.com or in a slack channel.
+if [[ "${DOCLI_CA_CLIENT_CERT_ZIP:-on}" == "on" ]]; then
+  zip -j $HOME/Downloads/$user_name.zip $use_client_dir/$user_name.key $use_client_dir/$user_name.crt $use_client_dir/$user_name.p12
+else
+  echo "Skipping Zip file creation"
+fi
 
-# rm -rf $client_root_dir/*
+if [[ "${DOCLI_CA_CLIENT_CERT_DIR_CLEANUP:-off}" == "on" ]]; then
+  rm -rf $use_client_dir/*
+else
+  echo "Client Root Dir will not be deleted ($use_client_dir)"
+fi
 
-echo "** Notification: Sending Slack notification **"
-# curl -X POST \
-#   https://slack.com/api/chat.postMessage \
-#   -H 'Content-Type: application/json' \
-#   -d '{"text": "'"${log_section}"'", "channel": "#devops-info"}' \
-#   -H "Authorization: Bearer $SLACK_TOKEN_BOT"
 
-curl -X POST \
-  https://slack.com/api/chat.postMessage \
-  -H 'Content-Type: application/json' \
-  -d "$(jq -n --arg text "$log_section" '{text: $text, channel: "#devops-info"}')" \
-  -H "Authorization: Bearer $SLACK_TOKEN_BOT"
+if [[ "${DOCLI_SLACK_NOTIFY:-off}" == "on" ]]; then
+  echo "** Notification: Sending Slack notification **"
+  curl -X POST \
+    https://slack.com/api/chat.postMessage \
+    -H 'Content-Type: application/json' \
+    -d "$(jq -n --arg text "$log_section" "{icon_emoji: "${DOCLI_PRIVATE_CA_SLACK_ICON_EMOJI:-":fire:"}", username: "${DOCLI_PRIVATE_CA_SLACK_USERNAME:-"DevOps.click-Bot"}" , text: $text, channel: "#${DOCLI_PRIVATE_CA_SLACK_CHANNEL:-general}"}")" \
+    -H "Authorization: Bearer $SLACK_TOKEN_BOT"
+else
+  echo "Slack notification disabled"
+fi

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-[[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
-[[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+####################### NEVER ENABLE SET FOR THIS SCRIPT #############################
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail #
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u                                #
+######################################################################################
+###############################################################################
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
