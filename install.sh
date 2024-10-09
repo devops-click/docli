@@ -271,12 +271,14 @@ declare -a file_paths=(
   "main/x_docheck"
   "main/x_docli"
   "main/x_runbuild"
-  "main/x_runpacker"
+  "main/x_runpacker
   "main/x_runtf"
   "main/x_setenv"
   "scripts/docli_aws_copy_token_credentials"
   "scripts/docli_generate_markdown_doc"
   "scripts/docli_colors_tput"
+  "tools/ca-generator/client-certificates/run"
+  "tools/ca-generator/client-certificates/validate_remote_cert"
 )
 
 # Define special directories for tools
@@ -328,6 +330,8 @@ copy_or_download() {
       #   cp -R "$repo_path/.devops/$dir/"* "$target_path/$dir"
       # fi
     else
+      # echo "Downloading $dir"
+      # curl -sL "$DOCLI_REMOTE_REPOSITORY/.devops/$file_path" -H "Cache-Control: no-cache, no-store" -o "$target_path/$file_path" || echo "* Error downloading $file_path *"
       # TODO: Download tools logic here...
       echo "Download logic for tools not implemented"
     fi
