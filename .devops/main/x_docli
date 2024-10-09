@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail
-# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u
+## Atutomatically export variables to scripts calling it
+set -a
 ############################################################################### #dltbr
 #              https://DevOps.click - DevOps taken seriously                  # #dltbr
 ###############################################################################
@@ -285,10 +285,6 @@ fi
 if (( args_silent )); then
   echo "Running in SILENT mode."
 fi
-
-[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "+++++++++++++++++++"
-[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++ Entered docli ++"
-[[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "+++++++++++++++++++"
 
 [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++> docli_command=$docli_command"
 [[ "${DOCLI_DEBUG:-off}" == "on" ]] && echo "++> docli_option=$docli_option"
