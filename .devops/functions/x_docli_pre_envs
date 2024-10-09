@@ -26,8 +26,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 [[ "${DOCLI_VERBOSE:-off}" == "on" ]] && echo -e "\n***** $DOCLI_MODULE version $DOCLI_MODULE_VERSION ($DOCLI_MODULE_TYPE) *****"
 
-source $DOCLI/.docli_envs
-source $DOCLI_DIR/functions/bash_basic_functions
+[[ -f "$DOCLI/.docli_envs" ]]                         && source $DOCLI/.docli_envs                        || exit 1
+[[ -f "$DOCLI_PROJECT_ROOT/.docli_envs" ]]            && source $DOCLI_PROJECT_ROOT/.docli_envs           # Optional
+[[ -f "$DOCLI_DIR/functions/bash_basic_functions" ]]  && source $DOCLI_DIR/functions/bash_basic_functions || exit 1
 
 ############################################
 # AUTO-UPDATER - docli
