@@ -39,14 +39,10 @@ cert_check_url=${DOCLI_CERT_CHECK_URL:-"https://noserver.local"}
 ## Create Client Root Directory
 [[ ! -d $use_client_dir ]] && mkdir -p $use_client_dir
 
-echo AHHHHHHHHHHHHHHHHHHHHHH MOTHERRRRRRRRRRRF
-echo AHHHHHHHHHHHHHHHHHHHHHH MOTHERRRRRRRRRRRF
-echo AHHHHHHHHHHHHHHHHHHHHHH MOTHERRRRRRRRRRRF
-
 ## Client Certificate LOG GENERATION
 [[ ! -f $use_client_dir/gen_client_cert.log ]] && touch $use_client_dir/gen_client_cert.log
 log_section=$(cat <<EOF
-\:lock\: *Private CA - Client Certification Generation Log*
+:lock: *Private CA - Client Certification Generation Log*
 \`$current_date\`
 *Requesters Information*
 \`\`\`
@@ -64,6 +60,8 @@ CRL URL:   $DOCLI_CERT_CRL_URIS
 EOF
 )
 echo "$log_section" >> $use_client_dir/gen_client_cert.log
+
+echo $log_section
 
 echo -e "\n** SSL Client Certificate: Generates Client Private Key **"
 [[ ! -f $use_client_dir/$user_name.key ]] && /usr/bin/openssl genpkey -algorithm RSA -out $use_client_dir/$user_name.key
@@ -222,14 +220,21 @@ else
   echo "Client Root Dir will not be deleted ($use_client_dir)"
 fi
 
-
+echo NEWVER
 if [[ "${DOCLI_SLACK_NOTIFY:-off}" == "on" ]]; then
   echo "** Notification: Sending Slack notification **"
-  curl -X POST \
-    https://slack.com/api/chat.postMessage \
+
+  # Use --arg to pass the entire $log_section safely into jq
+  payload=$(jq -n --arg icon_emoji "${DOCLI_PRIVATE_CA_SLACK_ICON_EMOJI:-':fire:'}" \
+                      --arg username "${DOCLI_PRIVATE_CA_SLACK_USERNAME:-'DevOps.click-Bot'}" \
+                      --arg channel "#${DOCLI_PRIVATE_CA_SLACK_CHANNEL:-general}" \
+                      --arg text "$log_section" \
+                      '{icon_emoji: $icon_emoji, username: $username, channel: $channel, text: $text}')
+
+  curl -X POST https://slack.com/api/chat.postMessage \
     -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg text "$log_section" "{\"icon_emoji\":\"${DOCLI_PRIVATE_CA_SLACK_ICON_EMOJI:-':fire:'}\", \"username\":\"${DOCLI_PRIVATE_CA_SLACK_USERNAME:-'DevOps.click-Bot'}\", \"channel\":\"#${DOCLI_PRIVATE_CA_SLACK_CHANNEL:-general}\", \"text\":$text}")" \
-    -H "Authorization: Bearer $SLACK_TOKEN_BOT"
+    -H "Authorization: Bearer $SLACK_TOKEN_BOT" \
+    --data "$payload"
 else
   echo "Slack notification disabled"
 fi
