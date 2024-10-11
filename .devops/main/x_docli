@@ -104,8 +104,7 @@ docli_update() {
   echo -e "\n** Running DOCLI UPDATE (Update docli app and macos setup skipping package upgrades) **"
   # Check if $DOCLI_UPDATE_SKIP_OPTIONS is set and not empty; otherwise, use the default string
   skip_options=${DOCLI_UPDATE_SKIP_OPTIONS:-"setup_mac_terminal_touchid,setup_mac_vscode_extensions,setup_homebrew_and_packages,setup_macos_system_config_sudoers,setup_java,setup_omzsh,setup_aws_tools,setup_macos_system_config"}
-  # if [[ -v install_local && -n $install_local && $install_local == true ]]; then
-  if [ -n "$install_local" ] && [ "$install_local" = true ]; then
+  if [[ ${install_local:-false} == true ]]; then
     if [[ $DOCLI_DEVELOPER_MODE == true ]]; then
       $DOCLI_REPOSITORY/install.sh && $DOCLI_REPOSITORY/.devops/main/setup --profile=devops --skip="$skip_options"
     else
