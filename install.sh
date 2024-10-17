@@ -278,7 +278,7 @@ declare -a file_paths=(
   "scripts/docli_generate_markdown_doc"
   "scripts/docli_colors_tput"
   "tools/ca-generator/client-certificates/run"
-  "tools/ca-generator/client-certificates/validate_remote_cert"
+  "tools/ca-generator/client-certificates/verify"
 )
 
 # Define special directories for tools
