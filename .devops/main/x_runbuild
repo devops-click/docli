@@ -18,7 +18,7 @@
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -278,7 +278,15 @@ fi
 #############################################################################################
 function build_local() {
   echo "CREATING DOCKER IMAGE $IMAGE AND UPLOADING TO local docker"
-  docker buildx create --name multiarch --use
+
+  # Check if the builder "multiarch" exists
+  if ! docker buildx inspect multiarch > /dev/null 2>&1; then
+    docker buildx create --name multiarch --use
+  else
+    echo "Using existing builder instance 'multiarch'"
+    docker buildx use multiarch
+  fi
+
   docker buildx inspect --bootstrap
 
   if [[ $CACHEBUST == "disabled" ]]; then
