@@ -18,7 +18,7 @@
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.03"
+DOCLI_MODULE_VERSION="0.0.04"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -263,11 +263,13 @@ elif [ $os_type == "u2204" ]; then
   fi
 fi
 
-if [ $cloud == "nexus" || $cloud == "local" ]; then
+if [ $cloud == "nexus" ]; then
   IMAGE="$MACHINE_PROFILE-${os_type}-${arch}"
   TAG_LATEST="latest"
   # TAG_LATEST=$(eval "echo $IMAGE|sed 's/.*/$MACHINE_PROFILE-${os_type}-${arch}-latest/g'")
   # TAG_LATEST=$(echo "$IMAGE" | sed "s/.*/$MACHINE_PROFILE-${os_type}-${arch}-latest/")
+elif [ $cloud == "local" ]; then
+  IMAGE="$MACHINE_PROFILE-${os_type}-${arch}"
 else
   IMAGE="$repo:$MACHINE_PROFILE-${os_type}-${arch}-$datevar"
   TAG_LATEST=$(eval "echo $IMAGE|sed 's/:.*/:$MACHINE_PROFILE-${os_type}-${arch}-latest/g'")
