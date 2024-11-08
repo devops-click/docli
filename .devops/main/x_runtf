@@ -14,7 +14,7 @@ IFS=$'\n\t'
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -38,6 +38,19 @@ export TF_VAR_CURRENT_QUARTER=$(get_quarter)
 unset AWS_ROLE_SESSION_NAME
 # ToDo: Do shell checking
 
+############################################
+# ARM PROCESSOR TERRAFORM BUGFIX
+############################################
+# Detect the processor architecture
+ARCH=$(uname -m)
+
+# Check if the architecture is ARM64
+if [[ "$ARCH" == "arm64" ]] || [[ "$ARCH" == "aarch64" ]]; then
+    export GODEBUG=asyncpreemptoff=1
+    echo "* GODEBUG=asyncpreemptoff=1 has been set for ARM64 architecture. *"
+else
+    echo "* System architecture is $ARCH. No changes made. *"
+fi
 
 ############################################
 # BASIC SCRIPT VARS
