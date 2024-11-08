@@ -1146,8 +1146,8 @@ setup_aws_tools() {
 setup_terraform() {
   echo -e "\n**** HASHICORP TOOLS ****"
   echo "** Installing Terraform **"
-  tfenv install 1.9.3
-  tfenv use 1.9.3
+  tfenv install 1.9.8
+  tfenv use 1.9.8
   ### Sets into $HOME/.zshrc and $HOME/.bash_profile:
   # autoload -U +X bashcompinit && bashcompinit
   # complete -o nospace -C /opt/homebrew/Cellar/tfenv/3.0.0/versions/1.5.6/terraform terraform
