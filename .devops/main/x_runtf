@@ -405,7 +405,7 @@ CUSTOM_SECRETS=(
   sso-oidc
   engines
 )
-REQUIRED_TF_VERSION="1.9.3"
+REQUIRED_TF_VERSION="${REQUIRED_TF_VERSION:-1.9.8}"
 FILE_OR_DIR_CHECK=(
   $DOCLI_DIR/functions/bash_colors_tput
   $DOCLI_DIR/bin
