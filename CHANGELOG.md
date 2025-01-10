@@ -77,3 +77,7 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Fixes setenv problem that causes shell to break.
 - Updates client cert generation process.
+
+## [0.0.37] - 2025-01-10
+### Fixes
+- Fix to Nexus Container Image generation.

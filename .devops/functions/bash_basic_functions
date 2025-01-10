@@ -8,7 +8,7 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -85,6 +85,16 @@ load_vars() {
   DOCLI_DEBUG="[[ $DOCLI_ARGS_DEBUG == 1 ]]"
   scape=x
 }
+
+# Create a safe temporary directory for sensitive data
+export DOCLI_TMP_DIR=$(mktemp -d)
+#:: # Function to clean up the temporary directory on exit
+#:: ## Usage example:
+#:: `cleanup` or abort program
+cleanup() {
+  rm -rf "$DOCLI_TMP_DIR"
+}
+trap cleanup EXIT
 
 #:: # Function to calculate MD5 hash of a file and store into a variable
 #:: ## Usage example:
@@ -435,6 +445,49 @@ help_index() {
     "docli") echo "bin/docli";;
     *) echo "${1:-bin/docli}";;
   esac
+}
+
+#:: # Function to notify via Slack API
+#:: ## Usage example:
+#:: $API_URL $API_TOKEN from environment variables
+#:: notify_slack_api "$region")
+#::
+notify_slack_api() {
+  # Define variables
+  WEBHOOK_URL="${WEBHOOK_URL:-"https://hooks.slack.com/services/yourwebhookurl"}"
+  SLACK_CHANNEL="${SLACK_CHANNEL:-"mytrash"}"
+  SLACK_USERNAME="${SLACK_USERNAME:-"username"}"
+  SLACK_EMOJI="${SLACK_EMOJI:-":linux:"}"
+  SLACK_MESSAGE="${SLACK_MESSAGE:-"Missing SLACK_MESSAGE field"}"
+  SLACK_MESSAGE_COLOR="${SLACK_MESSAGE_COLOR:-"#36a64f"}"
+
+  # Payload template
+  PAYLOAD=$(cat <<EOF
+{
+  "channel_name": "${SLACK_CHANNEL}",
+  "channel": "${SLACK_CHANNEL}",
+  "message": "${SLACK_MESSAGE}",
+  "text": "${SLACK_MESSAGE}",
+  "custom_username": "${SLACK_USERNAME}",
+  "icon_emoji": "${SLACK_EMOJI}",
+  "color": "${SLACK_MESSAGE_COLOR}"
+}
+EOF
+  )
+
+  # Check if URL is Slack's and send accordingly
+  if [[ "$WEBHOOK_URL" == *"slack.com"* ]]; then
+    curl -s -X POST "$WEBHOOK_URL" \
+      -H "Content-Type: application/json" \
+      -d "$PAYLOAD"
+  else
+    curl -s -X POST "$WEBHOOK_URL" \
+      -H "Content-Type: application/json" \
+      -d "$PAYLOAD" \
+      --cert "$DOCLI_TMP_DIR/tls.crt" \
+      --key "$DOCLI_TMP_DIR/tls.key" \
+      --cacert "$DOCLI_TMP_DIR/ca-chain-cert.pem" -vvv
+  fi
 }
 
 #:: # Function to convert region to short_region
