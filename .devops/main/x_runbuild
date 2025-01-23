@@ -18,7 +18,7 @@
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.05"
+DOCLI_MODULE_VERSION="0.0.06"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -293,14 +293,14 @@ function build_local() {
 
   if [[ $CACHEBUST == "disabled" ]]; then
     # Build for amd64
-    [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
+    [[ $arch == "amd" ]] && docker buildx build --load --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
     # Build for arm64
-    [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
+    [[ $arch == "arm" ]] && docker buildx build --load --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --load .
   else
-    [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
-    # [[ $arch == "amd" ]] && docker buildx build --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
-    [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
-    # [[ $arch == "arm" ]] && docker buildx build --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
+    [[ $arch == "amd" ]] && docker buildx build --load --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
+    # [[ $arch == "amd" ]] && docker buildx build --load --platform linux/amd64 -t $IMAGE:amd64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
+    [[ $arch == "arm" ]] && docker buildx build --load --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --build-arg CACHEBUST=$CACHEBUST --load .
+    # [[ $arch == "arm" ]] && docker buildx build --load --platform linux/arm64 -t $IMAGE:arm64 -t $IMAGE:latest --build-arg IMG_FROM=$BASE_IMAGE --no-cache --load .
   fi
 
 
@@ -330,7 +330,7 @@ function destroy_local() {
 [[ $cloud_env == "aws" ]] && cmd_aws_sso="--profile $awsprofile-sso "
 
 function build_aws() {
-  echo "CREATING DOCKER IMAGE $IMAGE and TAG $TAG_LATEST AND UPLOADING TO $cr_repository/$repo"
+  echo -e "\n\nCREATING DOCKER IMAGE $IMAGE and TAG $TAG_LATEST AND UPLOADING TO $cr_repository/$repo"
 
   # [[ $cr_type == "public" ]]  && eval "$cmd_aws_vault aws ecr-public get-login-password --region $region | docker login --username AWS --password-stdin $company_public_ecr_repo"
 
@@ -348,19 +348,19 @@ function build_aws() {
     echo -e "\n*** Private Container Register selected. Proceeding with login... ***"
     eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login $cr_repository --username AWS --password-stdin"
   fi
-  echo -e "\n*** Tagging Image ***"
+  echo -e "\n*** Tagging BASE Image $BASE_IMAGE -> $cr_repository/$DEST_IMAGE ***"
   eval "$cmd_aws_vault docker tag $BASE_IMAGE $cr_repository/$DEST_IMAGE"
-  echo -e "\n*** Pushing Image ***"
+  echo -e "\n*** Pushing BASE Image $cr_repository/$DEST_IMAGE ***"
   eval "$cmd_aws_vault docker push $cr_repository/$DEST_IMAGE"
 
   # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
   # If we use new relic in the future...
   # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
   echo -e "\n*** Building linux/${arch}64 architecture image... ***"
-  eval "$cmd_aws_vault docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
+  eval "$cmd_aws_vault docker buildx build --load --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_repository/$DEST_IMAGE ."
 
   echo -e "\n*** Pushing to CR: $cr_repository/$IMAGE ***"
-  echo "**** docker tag $IMAGE $cr_repository/$IMAGE ****"
+  echo "**** docker tag $IMAGE -> $cr_repository/$IMAGE ****"
   eval "$cmd_aws_vault docker tag $IMAGE $cr_repository/$IMAGE"
 
   echo "**** docker push $cr_repository/$IMAGE ****"
@@ -411,7 +411,7 @@ function build_nexus() {
   # If we use new relic in the future...
   # docker buildx build --platform linux/amd64,linux/arm64 -t $cr_repository/$IMAGE --build-arg IMG_FROM=$cr_url/$cr_repository/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
   echo -e "\n*** Building linux/${arch}64 architecture image... ***"
-  docker buildx build --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_url/$cr_repository/$DEST_IMAGE ${BUILD_EXTRA_ARGS:-} .
+  docker buildx build --load --platform linux/${arch}64 -t $IMAGE --build-arg IMG_FROM=$cr_url/$cr_repository/$DEST_IMAGE ${BUILD_EXTRA_ARGS:-} .
 
   echo -e "\n*** Pushing MAIN Image to CR: $cr_url/$cr_repository/$IMAGE ***"
   echo "**** docker push $cr_url/$cr_repository/$IMAGE ****"
@@ -461,7 +461,7 @@ function build_azure() {
   docker push --platform linux/arm64 $CR.azurecr.io/$DEST_IMAGE
 
   # if you need ARGS: https://docs.docker.com/engine/reference/builder/#arg
-  docker buildx build --platform linux/arm64 -t $CR.azurecr.io/$IMAGE --build-arg IMG_FROM=$CR.azurecr.io/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
+  docker buildx build --load --platform linux/arm64 -t $CR.azurecr.io/$IMAGE --build-arg IMG_FROM=$CR.azurecr.io/$DEST_IMAGE --build-arg NR_LIC=$nr_key .
   # docker buildx build --platform linux/arm64 -t $CR.azurecr.io/$IMAGE .
   docker tag $CR.azurecr.io/$IMAGE $CR.azurecr.io/$TAG_LATEST
   docker push $CR.azurecr.io/$IMAGE
