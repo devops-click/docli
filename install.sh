@@ -8,7 +8,7 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 DOCLI_MODULE_TYPE="install"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -205,7 +205,7 @@ check_and_create_dirs() {
     "$DOCLI/main"
     "$DOCLI/s3"
     "$DOCLI/scripts"
-    "$DOCLI/tools"
+    "$DOCLI/tools/ca-generator/client-certificates/"
     "$DOCLI/tmp"
     "$DOCLI/.private"
   )
