@@ -81,3 +81,15 @@ All notable changes to this project will be documented in this file.
 ## [0.0.37] - 2025-01-10
 ### Fixes
 - Fix to Nexus Container Image generation.
+
+## [0.0.38] - 2025-01-23
+### Fixes
+- Fix build images.
+
+## [0.0.39] - 2025-01-27
+### Fixes
+- Fix in tools installation.
+
+## [0.0.40] - 2025-02-11
+### Improved
+- Uploaded required scripts.

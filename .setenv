@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+####################### NEVER ENABLE SET FOR THIS SCRIPT #############################
+# [[ "${DOCLI_DEBUG:-off}" == "on" ]]       && set -exo pipefail || set -eo pipefail #
+# [[ "${DOCLI_UNSET_VARS:-off}" == "on" ]]  && set -u                                #
+######################################################################################
+
+###########################################
+# EXAMPLE FILE
+###########################################
+
+env="${1:-prd}"
+srg="${2:-use1}"
+sys="${3:-tf}"
+clt="${4:-$DOCLI_PROJECT_CLIENT}"
+
+# Set here to make an extra check and fix a determined client
+[[ "${clt}" != "do" ]] && echo "ERROR: You are running setenv for the wrong client!"
+
+if [[ "$1" == "" ]]; then
+  echo "** You must provide a environment **"
+  echo "Client is optional if it is already set by DOCLI_PROJECT_CLIENT variable"
+  echo "Usage:"
+  echo "./setenv <environment> <short_region> <system> <client>"
+  echo "Example:"
+  echo "./setenv prd use1 tf do"
+  echo "./setenv ent usw2 eks do"
+  echo "./setenv prd eastus azure do"
+  exit 1
+fi
+
+echo -e "* setting variables for: ${clt}-${srg}-${env}-${sys} *"
+
+if [[ "${srg}-${env}-${sys}" != "" ]]; then
+  echo -e "\n* setting generic variables *"
+  # Place any generic variable in here that may apply to all setenvs
+fi
+
+# Example of custom setenv for setting Azure CLI variables
+if [[ "${srg}-${env}-${sys}" == "eastus-prd-azure" ]]; then
+  docli_clear_az_account=false # Set to true if needed
+  az config set defaults.location=eastus
+  az login --allow-no-subscriptions
+  if [[ $docli_clear_az_account == true ]]; then
+    az config set core.allow_broker=true
+    az account clear
+    az login
+  fi
+  az account show
+fi
+
+# Example of custom setenv for setting HashiCorp Nomad required variables
+if [[ "${srg}-${env}-${sys}" == "use1-qas-nomad" ]]; then
+  export docli_short_region=use1
+  export datacenter=dc-$env
+  export docli_environment=$env
+  export NOMAD_ADDR="https://nomad-server-1.${srg}.${env}.$product_public_dns_name:4646"
+  export NOMAD_CACERT=$DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem
+  export NOMAD_CLIENT_KEY=$DOCLI/CA/clientsINTERMEDIATE/$DOCLI_OWN_USERNAME.key
+  export NOMAD_CLIENT_CERT=$DOCLI/CA/clientsINTERMEDIATE/$DOCLI_OWN_USERNAME.crt
+  export CONSUL_HTTP_ADDR="consul-server-$datacenter.${srg}.${env}.$product_public_dns_name:443"
+  export CONSUL_HTTP_SSL=true
+  # export CONSUL_NAMESPACE=""
+  # export CONSUL_HTTP_TOKEN=""
+  # export CONSUL_HTTP_TOKEN_FILE=""
+  # export CONSUL_TLS_SERVER_NAME=consulserver.domain
+  export CONSUL_HTTP_SSL_VERIFY=true
+  export CONSUL_CACERT=$DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem
+  export CONSUL_GRPC_CACERT=$DOCLI/CA/intermediateCA/certs/ca-chain-cert.pem
+  export CONSUL_GRPC_ADDRESS="consul-server-1.${srg}.${env}.$product_public_dns_name:8503"
+  export CONSUL_CLIENT_CERT=$DOCLI/CA/clientsINTERMEDIATE/$DOCLI_OWN_USERNAME.crt
+  export CONSUL_CLIENT_KEY=$DOCLI/CA/clientsINTERMEDIATE/$DOCLI_OWN_USERNAME.key
+fi
+
+# Example of custom setenv for setting Terraform required variables
+if [[ "${srg}-${env}-${sys}" == "use1-prd-tf" ]]; then
+  export docli_short_region=use1
+  export datacenter=nam
+  export docli_environment=$env
+  export DOCLI_PROJECT_SSO_SESSION=sso-session-devops
+  export DOCLI_PROJECT_S3_BACKUP_BUCKET=nam-$env-us-east-1-$clt-backup
+  export DOCLI_PROJECT_CURRENT_TENANT=nam
+  export DOCLI_PROJECT_CLIENT=$clt
+  # export AWS_PROFILE=$clt-$srg-$env-sso
+  export AWS_PROFILE=$clt-$srg-$env
+  export AWS_DEFAULT_PROFILE=$AWS_PROFILE
+  export AWS_REGION=us-east-1
+  export AWS_DEFAULT_REGION=us-east-1
+fi
+
+# Example of custom setenv for setting EKS Kubernetes Context
+if [[ "${srg}-${env}-${sys}" == "usw2-ent-eks" ]]; then
+  aws eks --region us-west-2 update-kubeconfig --name nam-${sys}-${env}-${srg}-v01
+  kubectl config set-context --current --namespace=ent
+fi
+
+echo -e "** variables successfully loaded **\n"
