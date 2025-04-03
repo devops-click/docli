@@ -266,7 +266,7 @@ run_terraform() {
     # If the key is not on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, load $current_key.tfvars
     if [[ $key_found -eq 0 ]]; then
       if [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository" ]]; then
-        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/workspace/configs/\$current_key.tfvars\""
+        cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
       elif [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository-variables" ]]; then
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/envs.tfvars\""
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""

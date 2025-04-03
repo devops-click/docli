@@ -93,3 +93,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.40] - 2025-02-11
 ### Improved
 - Uploaded required scripts.
+
+## [0.0.41] - 2025-04-03
+### Improved
+- Makes BitBucket `repository` terraform flexible, able to work with multiple terraform states in a per-project basis.
