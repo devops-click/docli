@@ -55,7 +55,7 @@ if [ $# -eq 0 ]; then
 else
   # Process arguments to check for --force and remove it
   for arg in "$@"; do
-    if [ "$arg" = "-f" || "$arg" = "--force" ]; then
+    if [ "$arg" = "-f" ] || [ "$arg" = "--force" ]; then
       DOCLI_PARAM_FORCE=1
       default_packer_command=build_force
     else

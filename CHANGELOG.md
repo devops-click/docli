@@ -97,3 +97,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.41] - 2025-04-03
 ### Improved
 - Makes BitBucket `repository` terraform flexible, able to work with multiple terraform states in a per-project basis.
+
+## [0.0.42] - 2025-04-04
+### Fix
+- Fix a issue in `runpacker_call` where a condition had incorrect brackets.
