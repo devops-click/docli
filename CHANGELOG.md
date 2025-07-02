@@ -101,3 +101,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.42] - 2025-04-04
 ### Fix
 - Fix a issue in `runpacker_call` where a condition had incorrect brackets.
+
+## [0.0.43] - 2025-06-02
+### Improved
+- Refactored `x_runbuild` to be more efficient when generating container images.
