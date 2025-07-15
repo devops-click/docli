@@ -105,3 +105,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.43] - 2025-06-02
 ### Improved
 - Refactored `x_runbuild` to be more efficient when generating container images.
+
+## [0.0.44] - 2025-07-15
+### Improved
+- `REQUIRED_TF_VERSION` set to `1.12.2` as default.
