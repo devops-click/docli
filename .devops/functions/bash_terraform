@@ -11,7 +11,7 @@
 # Component of the Default Generic Terraform Run Script designed to be called from any sub-terraform-stacks
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -253,17 +253,36 @@ run_terraform() {
               -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/envs-list.tfvars\""
 
     ################################## $current_key.tfvars load ##################################
-    # Skips the load of $current_key.tfvars for specific terraform recipes
+    # Loads "forced" or not the $current_key.tfvars for specific terraform recipes.
+    # If present in DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, the load is optional and only happens when file exists
     ##############################################################################################
     key_found=0
     # Loop through the array to check if current_key exists
     for terraform_current_directory in "${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[@]}"; do
       if [[ "$terraform_current_directory" == "$current_key" ]]; then
         key_found=1
+        if [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository" ]]; then
+          if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_BITB_REPO/configs/$current_key.tfvars" ]]; then
+            cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
+          fi
+        elif [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository-variables" ]]; then
+          if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_BITB_REPO/configs/envs.tfvars" ]]; then
+            cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/envs.tfvars\""
+          fi
+          if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_BITB_REPO/configs/$current_key.tfvars" ]]; then
+            cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
+          fi
+        elif [[ $DOCLI_PARAM_CLOUD == "azure" ]]; then
+          if [[ -f "$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_CLOUD/envs/$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/$current_key.tfvars" ]]; then
+            cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/\$current_key.tfvars\""
+          fi
+        else
+          cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/\$current_key.tfvars\""
+        fi
         break
       fi
     done
-    # If the key is not on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, load $current_key.tfvars
+    # If the key is not on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD, "force" the load of $current_key.tfvars
     if [[ $key_found -eq 0 ]]; then
       if [[ $DOCLI_PARAM_CLOUD == "bitbucket" && $current_key == "repository" ]]; then
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_BITB_REPO/configs/\$current_key.tfvars\""
@@ -275,9 +294,9 @@ run_terraform() {
       else
         cmd_args="$cmd_args -var-file=\"\$DOCLI_PROJECT_ROOT/terraform/\$DOCLI_PARAM_CLOUD/envs/\$DOCLI_PARAM_CLOUD_CONFIG_DIR/configs/\$current_key.tfvars\""
       fi
-      echo "* DOCLI: current_key.tfvars loaded! ($current_key.tfvars)"
+      echo "* DOCLI: current_key.tfvars loaded! ($current_key.tfvars) [key_found=0]"
     else
-      echo "* DOCLI: current_key.tfvars IGNORED! ($current_key.tfvars found on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD list)"
+      echo "* DOCLI: current_key.tfvars load set as OPTIONAL! ($current_key.tfvars found on DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD list) [key_found=1]"
       echo "* DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD=${DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD[*]}"
     fi
     ##############################################################################################

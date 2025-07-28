@@ -109,3 +109,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.44] - 2025-07-15
 ### Improved
 - `REQUIRED_TF_VERSION` set to `1.12.2` as default.
+
+## [0.0.45] - 2025-07-28
+### Improved
+- Now, when the recipe is declared on `DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD`, env files are loaded when found. The default behavior that forces the file to exist when env not on `DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD` remains untouched.
