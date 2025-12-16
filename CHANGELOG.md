@@ -113,3 +113,9 @@ All notable changes to this project will be documented in this file.
 ## [0.0.45] - 2025-07-28
 ### Improved
 - Now, when the recipe is declared on `DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD`, env files are loaded when found. The default behavior that forces the file to exist when env not on `DOCLI_PARAM_SKIP_BASEDIR_ENV_LOAD` remains untouched.
+
+## [0.0.46] - 2025-12-16
+### Improved
+- Now, DynamoDB is only loaded if `DOCLI_TF_WITH_DYNAMODB="on"` is passed. Otherwise, uses S3 lockfile.
+- Improved `x_runtf` to show DynamoDB info when using DynamoDB.
+- Improved `x_runbuild` to work with `BUILD_EXTRA_ARGS` for each specific build.

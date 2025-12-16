@@ -14,7 +14,7 @@ IFS=$'\n\t'
 PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/bin:/usr/local/bin:/usr/local/sbin:$HOME/devops/bin:$PATH"
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.04"
+DOCLI_MODULE_VERSION="0.0.05"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -509,14 +509,18 @@ if [[ $DOCLI_PARAM_BACKEND_TYPE == "local" ]]; then
 
 elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   export backend_remote_state_provider=s3
-  export backend_remote_state_description="Amazon S3 + Dynamo DB"
+  if [[ ${DOCLI_TF_WITH_DYNAMODB:-"off"} == "on" ]]; then
+    export backend_remote_state_description="Amazon S3 + Dynamo DB"
+  else
+    export backend_remote_state_description="Amazon S3 + S3 Lockfile"
+  fi
   export backend_remote_state_url="https://developer.hashicorp.com/terraform/language/settings/backends/s3"
 
   ### EXPORTING BACKEND VARIABLES
   backend_hcl="$DOCLI_PROJECT_ROOT/terraform/$DOCLI_PARAM_BACKEND_PROVIDER/envs/$DOCLI_PARAM_BACKEND_CONFIG_DIR/configs/backend.hcl"
   bucket=$(grep '^bucket' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   region=$(grep '^region' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
-  dynamodb_table=$(grep '^dynamodb_table' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
+  [[ ${DOCLI_TF_WITH_DYNAMODB:-"off"} == "on" ]] && dynamodb_table=$(grep '^dynamodb_table' $backend_hcl | cut -d '=' -f 2 | tr -d ' "') || true
   encrypt=$(grep '^encrypt' $backend_hcl | cut -d '=' -f 2 | tr -d ' "')
   tf_region=$region
 
@@ -537,7 +541,7 @@ elif [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
   echo -e "** Cloud Provider: $DOCLI_PARAM_CLOUD **"
   echo -e "** Backend config: $backend_hcl"
   echo -e "** bucket:         $bucket"
-  echo -e "** dynamodb_table: $dynamodb_table"
+  [[ ${DOCLI_TF_WITH_DYNAMODB:-"off"} == "on" ]] && echo -e "** dynamodb_table: $dynamodb_table"
   echo -e "** tf_region:      $region"
   echo -e "** encrypt:        $encrypt"
   echo -e "**"
@@ -971,18 +975,18 @@ main() {
 
   echo "** Using TF_CLI_ARGS_init=${TF_CLI_ARGS_init}"
 
-  if [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
-    echo "** bitbucket specific initiated..."
-    op_check_requirement
-    [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]]     && rm "$DOCLI/.private/.bitb-workspace.tfvars" && echo "** getting workspace secrets from 1Password..."
-    echo "** getting workspace secrets from 1Password..." && op_get_document "bitbucket-workspace" DevOps "$DOCLI/.private/.bitb-workspace.tfvars"
-    # source "$DOCLI/.private/.bitb-workspace.tfvars"                 # Bug with OAUTH
-    # export BITBUCKET_OAUTH_CLIENT_ID=$bitb_oauth_client_id          # Bug with OAUTH
-    # export BITBUCKET_OAUTH_CLIENT_SECRET=$bitb_oauth_client_secret  # Bug with OAUTH
-    [[ $current_key == "repository-variables" ]] && [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]]  && rm "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" && echo "** getting $current_key secrets from 1Password..."
-    [[ $current_key == "repository-variables" ]] && echo "** getting $current_key secrets from 1Password..."        && op_get_document "bitbucket-variables-$DOCLI_PARAM_BITB_REPO" DevOps "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars"
-    echo "** bitbucket specific finished..."
-  fi
+  # if [[ $DOCLI_PARAM_CLOUD == "bitbucket" ]]; then
+  #   echo "** bitbucket specific initiated..."
+  #   op_check_requirement
+  #   [[ -f "$DOCLI/.private/.bitb-workspace.tfvars" ]]     && rm "$DOCLI/.private/.bitb-workspace.tfvars" && echo "** getting workspace secrets from 1Password..."
+  #   echo "** getting workspace secrets from 1Password..." && op_get_document "bitbucket-workspace" DevOps "$DOCLI/.private/.bitb-workspace.tfvars" || true
+  #   # source "$DOCLI/.private/.bitb-workspace.tfvars"                 # Bug with OAUTH
+  #   # export BITBUCKET_OAUTH_CLIENT_ID=$bitb_oauth_client_id          # Bug with OAUTH
+  #   # export BITBUCKET_OAUTH_CLIENT_SECRET=$bitb_oauth_client_secret  # Bug with OAUTH
+  #   [[ $current_key == "repository-variables" ]] && [[ -f "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" ]]  && rm "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" && echo "** getting $current_key secrets from 1Password..."
+  #   [[ $current_key == "repository-variables" ]] && echo "** getting $current_key secrets from 1Password..."        && op_get_document "bitbucket-variables-$DOCLI_PARAM_BITB_REPO" DevOps "$DOCLI/.private/.bitb-$DOCLI_PARAM_BITB_REPO.tfvars" || true
+  #   echo "** bitbucket specific finished..."
+  # fi
 
   if [[ $DOCLI_PARAM_CLOUD == "elastic" ]]; then
     echo "** elastic cloud specific initiated..."
@@ -993,7 +997,7 @@ main() {
   # We set the default workspace always, because when changing projects, terraform complain about the non-existent namespace on remote state.
   if [[ $DOCLI_PARAM_BACKEND_TYPE == "s3" ]]; then
     create_bucket_if_not_exist
-    create_dynamodb_if_not_exist
+    [[ ${DOCLI_TF_WITH_DYNAMODB:-"off"} == "on" ]] && create_dynamodb_if_not_exist || echo "DYNAMODB DISABLED BY DEFAULT. To enable it, set DOCLI_TF_WITH_DYNAMODB=on"
 
     echo "** Running Terraform for $DOCLI_PARAM_CLOUD with S3 Backend **"
 
