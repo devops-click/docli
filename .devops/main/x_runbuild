@@ -21,7 +21,7 @@ PATH="${DOCLI_DIR:-/opt/devops}/bin:/opt/homebrew/bin:/usr/sbin:/sbin:/usr/bin:/
 
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.07"
+DOCLI_MODULE_VERSION="0.0.08"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -466,9 +466,10 @@ function build_nexus() {
   ## In case we have a ECR private as base image
   if [[ $cr_type == "private" ]]; then
     echo -e "\n*** Private Container Register selected. Proceeding with login... ***"
-    eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login $cr_repository --username AWS --password-stdin"
+    aws_cr_repo="ent-repo"
+    aws_cr_url=$(aws ecr describe-repositories --profile $AWS_PROFILE --query 'repositories[?contains(repositoryName, `ent-repo`)].repositoryUri' --output text)
+    eval "$cmd_aws_vault aws ecr get-login-password --region $region $cmd_aws_sso | docker login ${aws_cr_url%%/*} --username AWS --password-stdin"
   fi
-
 
   if [[ $arch == "multi" ]]; then
     echo -e "\n*** MULTI-ARCH IMAGE ***"

@@ -119,3 +119,7 @@ All notable changes to this project will be documented in this file.
 - Now, DynamoDB is only loaded if `DOCLI_TF_WITH_DYNAMODB="on"` is passed. Otherwise, uses S3 lockfile.
 - Improved `x_runtf` to show DynamoDB info when using DynamoDB.
 - Improved `x_runbuild` to work with `BUILD_EXTRA_ARGS` for each specific build.
+
+## [0.0.47] - 2026-01-05
+### Fix
+- Fixed `x_runbuild` when running with Nexus + AWS private repository.
