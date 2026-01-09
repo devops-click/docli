@@ -14,7 +14,7 @@
 #:: `packer aws build ent do-euc1 hashicorp-consul-amzn2-amd.json` -> Build Packer on AWS - Enterprise Environment for do-euc1
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.01"
+DOCLI_MODULE_VERSION="0.0.02"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -85,7 +85,7 @@ source $packer_current_dir/.packer-env
 # List of valid parameters
 VALID_PROVIDERS=("aws" "azure" "gcp")
 VALID_COMMANDS=("build")
-VALID_ENVIRONMENTS=("dev" "qas" "stg" "prd" "sec" "ent" "val" "fin")
+VALID_ENVIRONMENTS=${VALID_ENVIRONMENTS:-("dev" "qas" "stg" "prd" "sec" "ent" "val" "fin" "sbx")}
 REQUIRED_PACKER_VERSION="v$packer_version"
 FILE_OR_DIR_CHECK=(
     $DOCLI_DIR/scripts/docli_colors_tput

@@ -123,3 +123,8 @@ All notable changes to this project will be documented in this file.
 ## [0.0.47] - 2026-01-05
 ### Fix
 - Fixed `x_runbuild` when running with Nexus + AWS private repository.
+
+## [0.0.48] - 2026-01-09
+### Improved
+- Added the possibility to use your own `VALID_ENVIRONMENTS` during docli execution.
+- Added `sbx` to `VALID_ENVIRONMENTS` defaults.
