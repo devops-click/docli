@@ -8,7 +8,7 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.02"
+DOCLI_MODULE_VERSION="0.0.03"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -29,18 +29,21 @@ function check_environment {
   # Load Basic Functions such as contains
   source "$DOCLI_DIR/functions/bash_basic_functions"
 
-  VALID_ENVIRONMENTS=${VALID_ENVIRONMENTS:-(
-    dev
-    qas
-    stg
-    prd
-    sec
-    ent
-    val
-    fin
-    sbx
-    root
-  )}
+  # Only set default VALID_ENVIRONMENTS if not already defined
+  if [[ -z "${VALID_ENVIRONMENTS+x}" ]]; then
+    VALID_ENVIRONMENTS=(
+      dev
+      qas
+      stg
+      prd
+      sec
+      ent
+      val
+      fin
+      sbx
+      root
+    )
+  fi
 
     # Validate the provided environment
   if ! contains "$1" "${VALID_ENVIRONMENTS[@]}"; then

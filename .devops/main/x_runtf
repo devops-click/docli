@@ -83,6 +83,7 @@ tf_clt=$DOCLI_PARAM_CLIENT                        # Received client. Ex: co (als
 tf_arg1=$DOCLI_PARAM_ARG1                         # Received additional argument 1 - ex: used by BitBucket
 tf_arg2=$DOCLI_PARAM_ARG2                         # Received additional argument 2
 tf_arg3=$DOCLI_PARAM_ARG3                         # Received additional argument 3
+tf_target=$DOCLI_PARAM_TARGET                     # Received target resource. Ex: resource.bitbucket_deployment_variable.environments
 
 field0=username
 

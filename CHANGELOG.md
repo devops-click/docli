@@ -128,3 +128,13 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Added the possibility to use your own `VALID_ENVIRONMENTS` during docli execution.
 - Added `sbx` to `VALID_ENVIRONMENTS` defaults.
+
+## [0.0.49] - 2026-01-15
+### Fix
+- Fixed `VALID_ENVIRONMENTS` not being loaded when using your own `VALID_ENVIRONMENTS` during docli execution.
+
+## [0.0.50] - 2026-01-16
+### Added
+- Added `--target` parameter support to `runtf` for targeted Terraform operations.
+- The `--target` flag can now be used with apply, apply_force, apply_unlock, destroy, destroy_force, plan, plan_destroy, and refresh commands.
+- Usage example: `./runtf apply --cloud=aws --short-region=euc1 --env=ent --target=resource.bitbucket_deployment_variable.environments`

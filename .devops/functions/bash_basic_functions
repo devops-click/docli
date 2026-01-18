@@ -216,6 +216,7 @@ docli_params_load() {
 
   # Used in specific modules
   : "${DOCLI_PARAM_BITB_REPO:=}}"
+  : "${DOCLI_PARAM_TARGET:=}}"
 
   # Iterate over all arguments
   # ONLY SET WHEN PARAMETER IS SPECIFIED...
@@ -299,6 +300,11 @@ docli_params_load() {
       -a3=*|--arg3=*)
         export DOCLI_PARAM_ARG3="${1#*=}"
         echo opt_DOCLI_PARAM_ARG3=$DOCLI_PARAM_ARG3
+        ;;
+
+      -t=*|--target=*)
+        export DOCLI_PARAM_TARGET="${1#*=}"
+        echo opt_DOCLI_PARAM_TARGET=$DOCLI_PARAM_TARGET
         ;;
 
       *)

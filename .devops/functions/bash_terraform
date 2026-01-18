@@ -323,20 +323,26 @@ run_terraform() {
   fi
 
   local command=$tf_opt
+  local target_args=""
+  if [[ -n "${tf_target:-}" ]]; then
+    target_args="-target=${tf_target}"
+    echo "** Using target: ${tf_target} **"
+  fi
+
   case "$command" in
     apply)
       echo "Running 'terraform $tf_opt' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      # export TF_LOG=”DEBUG”
-      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log
+      # export TF_LOG="DEBUG"
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -no-color 2>&1 | tee /tmp/terraform.log
       # echo "option=$tf_opt" > /tmp/terraform.log
       # echo "aws_profile=$DOCLI_PARAM_BACKEND_PROFILE" >> /tmp/terraform.log
       ;;
     apply_unlock)
       tf_opt=${tf_opt//_unlock/}
       echo "Running 'terraform $tf_opt' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log || echo "Unable to acquire state lock. Retrying with -lock=false..."
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -no-color 2>&1 | tee /tmp/terraform.log || echo "Unable to acquire state lock. Retrying with -lock=false..."
       if grep -q "Error acquiring the state lock" /tmp/terraform.log; then
-        eval "$tf_command $tf_opt $cmd_args" -no-color -lock=false 2>&1 | tee /tmp/terraform.log
+        eval "$tf_command $tf_opt $cmd_args ${target_args}" -no-color -lock=false 2>&1 | tee /tmp/terraform.log
       fi
       ;;
     apply_force)
@@ -344,25 +350,25 @@ run_terraform() {
       tf_opt=${tf_opt//_force/}
       echo $tf_opt
       echo "Running 'terraform $tf_opt ${BOLD}WITH -auto-approve${END}' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args -auto-approve" 2>&1 | tee /tmp/terraform.log
+      eval "$tf_command $tf_opt $cmd_args ${target_args} -auto-approve" 2>&1 | tee /tmp/terraform.log
       ;;
     destroy)
       echo "Running 'terraform DESTROY' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args" -no-color 2>&1 | tee /tmp/terraform.log
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -no-color 2>&1 | tee /tmp/terraform.log
       ;;
     destroy_force)
       tf_opt=${tf_opt//_force/}
       echo "Running 'terraform DESTROY ${BOLD}WITH -auto-approve${END}' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args" -auto-approve -no-color 2>&1 | tee /tmp/terraform.log
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -auto-approve -no-color 2>&1 | tee /tmp/terraform.log
       ;;
     plan)
       echo "Running 'terraform $tf_opt' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args" -out=tf.plan -no-color #-lock=false #  -no-color is need to disable symbols on logs
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -out=tf.plan -no-color #-lock=false #  -no-color is need to disable symbols on logs
       ;;
     plan_destroy)
       tf_opt=${tf_opt//_destroy/}
       echo "Running 'terraform plan -DESTROY' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args"  -out=tf.plan -no-color -destroy
+      eval "$tf_command $tf_opt $cmd_args ${target_args}"  -out=tf.plan -no-color -destroy
       ;;
     show)
       echo "Running 'terraform $tf_opt' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
@@ -375,7 +381,7 @@ run_terraform() {
       ;;
     refresh)
       echo "Running 'terraform plan -refresh-only' with CLOUD_PROFILE=$DOCLI_PARAM_CLOUD_PROFILE BACKEND_PROFILE=$DOCLI_PARAM_BACKEND_PROFILE"
-      eval "$tf_command $tf_opt $cmd_args" -refresh-only -no-color
+      eval "$tf_command $tf_opt $cmd_args ${target_args}" -refresh-only -no-color
       ;;
     state_list)
       tf_opt="state list"
