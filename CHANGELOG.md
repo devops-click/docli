@@ -133,6 +133,18 @@ All notable changes to this project will be documented in this file.
 ### Fix
 - Fixed `VALID_ENVIRONMENTS` not being loaded when using your own `VALID_ENVIRONMENTS` during docli execution.
 
+## [0.0.52] - 2026-02-03
+### Added
+- Added automated deployment workflow for new versions:
+  - Created deploy-new-version.md with comprehensive deployment guide
+  - Created deploy-version-script with automated bash script
+  - Includes module version detection and update logic
+  - Follows DevOps.click standards for version management
+  - Interactive script with color output and confirmations
+  - Handles patch/minor/major version increments
+  - Automatic CHANGELOG.md updates
+  - Proper git commit formatting
+
 ## [0.0.51] - 2026-02-03
 ### Added
 - Enhanced Slack notification functions with full API support:
