@@ -8,7 +8,7 @@
 ###############################################################################
 
 ## DOCLI MODULE INFORMATION
-DOCLI_MODULE_VERSION="0.0.02"
+DOCLI_MODULE_VERSION="0.0.03"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE="$(basename "${BASH_SOURCE[0]}")"                                             || DOCLI_MODULE="$(basename "$0")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"             || DOCLI_MODULE_TYPE="$(basename "$(dirname "$(realpath "$0")")")"
 [[ "${BASH_SOURCE[0]}" != "" ]] && DOCLI_MODULE_UPPER=$(echo "$(basename "${BASH_SOURCE[0]}")"  | tr '[:lower:]' '[:upper:]') || DOCLI_MODULE_UPPER=$(echo "$(basename "$0")" | tr '[:lower:]' '[:upper:]')
@@ -494,6 +494,439 @@ EOF
       --key "$DOCLI_TMP_DIR/tls.key" \
       --cacert "$DOCLI_TMP_DIR/ca-chain-cert.pem" -vvv
   fi
+}
+
+#:: # Function to notify via Slack API using full API capabilities
+#:: ## Usage example:
+#:: # Basic usage:
+#:: notify_slack "Hello World"
+#:: 
+#:: # Advanced usage with custom parameters:
+#:: notify_slack "Deployment completed" \
+#::   --channel "#deployments" \
+#::   --username "DeployBot" \
+#::   --emoji ":rocket:" \
+#::   --color "good" \
+#::   --thread-id "1234567890" \
+#::   --reply-broadcast \
+#::   --blocks "$(cat slack_blocks.json)"
+#::
+#:: # Environment variables:
+#:: # SLACK_BOT_TOKEN - Bot token (required for API calls)
+#:: # SLACK_CHANNEL - Default channel (default: #general)
+#:: # SLACK_USERNAME - Default username (default: docli)
+#:: # SLACK_EMOJI - Default emoji (default: :robot_face:)
+#:: # SLACK_THREAD_ID - Default thread ID (optional)
+#:: # SLACK_BROADCAST_REPLY - Default reply broadcast (default: false)
+#::
+notify_slack() {
+  local message="$1"
+  shift
+  
+  # Validate required message
+  if [[ -z "$message" ]]; then
+    echo "ERROR: Message is required" >&2
+    return 1
+  fi
+  
+  # Parse command line arguments
+  local channel="${SLACK_CHANNEL:-#general}"
+  local username="${SLACK_USERNAME:-docli}"
+  local emoji="${SLACK_EMOJI:-:robot_face:}"
+  local color="good"
+  local thread_id="${SLACK_THREAD_ID:-}"
+  local reply_broadcast="${SLACK_BROADCAST_REPLY:-false}"
+  local blocks=""
+  local attachments=""
+  local api_method="chat.postMessage"
+  local use_webhook=false
+  local webhook_url="${WEBHOOK_URL:-}"
+  
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --channel)
+        channel="$2"
+        shift 2
+        ;;
+      --username)
+        username="$2"
+        shift 2
+        ;;
+      --emoji)
+        emoji="$2"
+        shift 2
+        ;;
+      --color)
+        color="$2"
+        shift 2
+        ;;
+      --thread-id)
+        thread_id="$2"
+        shift 2
+        ;;
+      --reply-broadcast)
+        reply_broadcast="true"
+        shift
+        ;;
+      --blocks)
+        blocks="$2"
+        shift 2
+        ;;
+      --attachments)
+        attachments="$2"
+        shift 2
+        ;;
+      --webhook)
+        use_webhook=true
+        webhook_url="$2"
+        shift 2
+        ;;
+      --method)
+        api_method="$2"
+        shift 2
+        ;;
+      *)
+        echo "ERROR: Unknown option: $1" >&2
+        return 1
+        ;;
+    esac
+  done
+  
+  # Check if we should use webhook instead of API
+  if [[ "$use_webhook" == "true" ]]; then
+    if [[ -z "$webhook_url" ]]; then
+      echo "ERROR: Webhook URL is required when using --webhook option" >&2
+      return 1
+    fi
+    
+    # Build webhook payload
+    local webhook_payload
+    webhook_payload=$(cat <<EOF
+{
+  "channel": "$channel",
+  "username": "$username",
+  "icon_emoji": "$emoji",
+  "text": "$message"
+EOF
+    )
+    
+    # Add thread info if provided
+    if [[ -n "$thread_id" ]]; then
+      webhook_payload+=",\n  \"thread_ts\": \"$thread_id\""
+      if [[ "$reply_broadcast" == "true" ]]; then
+        webhook_payload+=",\n  \"reply_broadcast\": true"
+      fi
+    fi
+    
+    # Add blocks if provided
+    if [[ -n "$blocks" ]]; then
+      webhook_payload+=",\n  \"blocks\": $blocks"
+    fi
+    
+    # Add attachments if provided
+    if [[ -n "$attachments" ]]; then
+      webhook_payload+=",\n  \"attachments\": $attachments"
+    fi
+    
+    webhook_payload+="\n}"
+    
+    # Send webhook
+    local response
+    response=$(curl -s -X POST "$webhook_url" \
+      -H "Content-Type: application/json" \
+      -d "$webhook_payload")
+    
+    local curl_exit_code=$?
+    if [[ $curl_exit_code -ne 0 ]]; then
+      echo "ERROR: Failed to send webhook (curl exit code: $curl_exit_code)" >&2
+      return $curl_exit_code
+    fi
+    
+    echo "Webhook sent successfully to $channel"
+    return 0
+  fi
+  
+  # Validate required API token
+  local bot_token="${SLACK_BOT_TOKEN:-}"
+  if [[ -z "$bot_token" ]]; then
+    echo "ERROR: SLACK_BOT_TOKEN environment variable is required for API calls" >&2
+    echo "Set it with: export SLACK_BOT_TOKEN=xoxb-your-bot-token" >&2
+    return 1
+  fi
+  
+  # Validate token format
+  if [[ ! "$bot_token" =~ ^xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+$ ]]; then
+    echo "ERROR: Invalid SLACK_BOT_TOKEN format. Expected format: xoxb-..." >&2
+    return 1
+  fi
+  
+  # Build API payload
+  local api_payload
+  api_payload=$(cat <<EOF
+{
+  "channel": "$channel",
+  "text": "$message",
+  "username": "$username",
+  "icon_emoji": "$emoji"
+EOF
+  )
+  
+  # Add thread info if provided
+  if [[ -n "$thread_id" ]]; then
+    api_payload+=",\n  \"thread_ts\": \"$thread_id\""
+    if [[ "$reply_broadcast" == "true" ]]; then
+      api_payload+=",\n  \"reply_broadcast\": true"
+    fi
+  fi
+  
+  # Add blocks if provided
+  if [[ -n "$blocks" ]]; then
+    api_payload+=",\n  \"blocks\": $blocks"
+  fi
+  
+  # Add attachments if provided
+  if [[ -n "$attachments" ]]; then
+    api_payload+=",\n  \"attachments\": $attachments"
+  fi
+  
+  api_payload+="\n}"
+  
+  # Make API call
+  local api_url="https://slack.com/api/$api_method"
+  local response
+  response=$(curl -s -X POST "$api_url" \
+    -H "Authorization: Bearer $bot_token" \
+    -H "Content-Type: application/json" \
+    -d "$api_payload")
+  
+  local curl_exit_code=$?
+  if [[ $curl_exit_code -ne 0 ]]; then
+    echo "ERROR: Failed to call Slack API (curl exit code: $curl_exit_code)" >&2
+    return $curl_exit_code
+  fi
+  
+  # Parse API response
+  local success
+  success=$(echo "$response" | jq -r '.ok // false' 2>/dev/null || echo "false")
+  
+  if [[ "$success" == "true" ]]; then
+    local ts
+    ts=$(echo "$response" | jq -r '.ts // ""' 2>/dev/null || echo "")
+    echo "Message sent successfully to $channel"
+    [[ -n "$ts" ]] && echo "Message timestamp: $ts"
+    return 0
+  else
+    local error
+    error=$(echo "$response" | jq -r '.error // "Unknown error"' 2>/dev/null || echo "Unknown error")
+    echo "ERROR: Slack API failed: $error" >&2
+    echo "Response: $response" >&2
+    return 1
+  fi
+}
+
+#:: # Function to upload files to Slack
+#:: ## Usage example:
+#:: notify_slack_upload "/path/to/file.txt" "File upload" \
+#::   --channel "#uploads" \
+#::   --thread-id "1234567890"
+#::
+notify_slack_upload() {
+  local file_path="$1"
+  local title="${2:-File upload}"
+  shift 2
+  
+  if [[ -z "$file_path" ]]; then
+    echo "ERROR: File path is required" >&2
+    return 1
+  fi
+  
+  if [[ ! -f "$file_path" ]]; then
+    echo "ERROR: File not found: $file_path" >&2
+    return 1
+  fi
+  
+  # Parse arguments
+  local channel="${SLACK_CHANNEL:-#general}"
+  local thread_id="${SLACK_THREAD_ID:-}"
+  local initial_comment=""
+  
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --channel)
+        channel="$2"
+        shift 2
+        ;;
+      --thread-id)
+        thread_id="$2"
+        shift 2
+        ;;
+      --comment)
+        initial_comment="$2"
+        shift 2
+        ;;
+      *)
+        echo "ERROR: Unknown option: $1" >&2
+        return 1
+        ;;
+    esac
+  done
+  
+  # Validate required API token
+  local bot_token="${SLACK_BOT_TOKEN:-}"
+  if [[ -z "$bot_token" ]]; then
+    echo "ERROR: SLACK_BOT_TOKEN environment variable is required" >&2
+    return 1
+  fi
+  
+  # Build curl command
+  local curl_cmd="curl -s -X POST https://slack.com/api/files.upload"
+  curl_cmd+=" -H \"Authorization: Bearer $bot_token\""
+  curl_cmd+=" -F \"file=@$file_path\""
+  curl_cmd+=" -F \"channels=$channel\""
+  curl_cmd+=" -F \"title=$title\""
+  
+  if [[ -n "$thread_id" ]]; then
+    curl_cmd+=" -F \"thread_ts=$thread_id\""
+  fi
+  
+  if [[ -n "$initial_comment" ]]; then
+    curl_cmd+=" -F \"initial_comment=$initial_comment\""
+  fi
+  
+  # Execute upload
+  local response
+  response=$(eval "$curl_cmd")
+  local curl_exit_code=$?
+  
+  if [[ $curl_exit_code -ne 0 ]]; then
+    echo "ERROR: Failed to upload file (curl exit code: $curl_exit_code)" >&2
+    return $curl_exit_code
+  fi
+  
+  # Parse response
+  local success
+  success=$(echo "$response" | jq -r '.ok // false' 2>/dev/null || echo "false")
+  
+  if [[ "$success" == "true" ]]; then
+    local file_id
+    file_id=$(echo "$response" | jq -r '.file.id // ""' 2>/dev/null || echo "")
+    echo "File uploaded successfully to $channel"
+    [[ -n "$file_id" ]] && echo "File ID: $file_id"
+    return 0
+  else
+    local error
+    error=$(echo "$response" | jq -r '.error // "Unknown error"' 2>/dev/null || echo "Unknown error")
+    echo "ERROR: File upload failed: $error" >&2
+    return 1
+  fi
+}
+
+#:: # Function to create rich Slack message with blocks
+#:: ## Usage example:
+#:: notify_slack_rich "Deployment Status" \
+#::   --status "success" \
+#::   --channel "#deployments" \
+#::   --fields "Environment=prod,Version=1.2.3,Duration=5m"
+#::
+notify_slack_rich() {
+  local title="$1"
+  shift
+  
+  if [[ -z "$title" ]]; then
+    echo "ERROR: Title is required" >&2
+    return 1
+  fi
+  
+  # Parse arguments
+  local channel="${SLACK_CHANNEL:-#general}"
+  local status="info"
+  local text=""
+  local fields=""
+  
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --channel)
+        channel="$2"
+        shift 2
+        ;;
+      --status)
+        status="$2"
+        shift 2
+        ;;
+      --text)
+        text="$2"
+        shift 2
+        ;;
+      --fields)
+        fields="$2"
+        shift 2
+        ;;
+      *)
+        echo "ERROR: Unknown option: $1" >&2
+        return 1
+        ;;
+    esac
+  done
+  
+  # Define status colors and emojis
+  local color="good"
+  local emoji=":information_source:"
+  
+  case "$status" in
+    success|ok)
+      color="good"
+      emoji=":white_check_mark:"
+      ;;
+    warning|warn)
+      color="warning"
+      emoji=":warning:"
+      ;;
+    error|fail|failed)
+      color="danger"
+      emoji=":x:"
+      ;;
+    info)
+      color="good"
+      emoji=":information_source:"
+      ;;
+  esac
+  
+  # Build blocks
+  local blocks="["
+  blocks+="{\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\"$title\",\"emoji\":true}}"
+  
+  if [[ -n "$text" ]]; then
+    blocks+=",{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"$text\"}}"
+  fi
+  
+  # Add fields if provided
+  if [[ -n "$fields" ]]; then
+    blocks+=",{\"type\":\"section\",\"fields\":["
+    local field_array=($(echo "$fields" | tr ',' ' '))
+    local first_field=true
+    
+    for field in "${field_array[@]}"; do
+      local key="${field%%=*}"
+      local value="${field##*=}"
+      
+      if [[ "$first_field" == "true" ]]; then
+        first_field=false
+      else
+        blocks+=","
+      fi
+      
+      blocks+="{\"type\":\"mrkdwn\",\"text\":\"*$key*:\\n$value\"}"
+    done
+    
+    blocks+="]}"
+  fi
+  
+  blocks+=",{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"$emoji Status: $status\"}]}"
+  blocks+="]"
+  
+  # Send rich message
+  notify_slack "$title" --channel "$channel" --blocks "$blocks"
 }
 
 #:: # Function to convert region to short_region

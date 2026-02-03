@@ -133,6 +133,16 @@ All notable changes to this project will be documented in this file.
 ### Fix
 - Fixed `VALID_ENVIRONMENTS` not being loaded when using your own `VALID_ENVIRONMENTS` during docli execution.
 
+## [0.0.51] - 2026-02-03
+### Added
+- Enhanced Slack notification functions with full API support:
+  - Added `notify_slack()` function with comprehensive Slack API capabilities
+  - Added `notify_slack_upload()` for file uploads to Slack
+  - Added `notify_slack_rich()` for rich messages with blocks
+  - Maintained `notify_slack_api()` for backward compatibility
+  - Support for threads, broadcasts, custom blocks, and webhook fallback
+  - Flexible parameter system with environment variable defaults
+
 ## [0.0.50] - 2026-01-16
 ### Added
 - Added `--target` parameter support to `runtf` for targeted Terraform operations.
