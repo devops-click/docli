@@ -120,3 +120,26 @@ scimsession
 
 # Temporary Download Area for Packer
 *packer-temp/
+.devops/bin/runtf.md
+.devops/bin/setenv.template
+.devops/functions/bash_hashicorp_vault.md
+.devops/main/setup-mac-defaults-config
+.devops/main/setup-to-clean
+.devops/scripts/docli_setup_streampipe
+.devops/TEST.md
+.devops/tools/ai/openai_log_analyzer.py
+.devops/tools/aws-rds-connectivity-tests/run-hc
+.devops/tools/aws-vpcs-check-connectivity-old/run
+.devops/tools/aws-vpcs-check-connectivity-old/run-with-list
+.devops/tools/aws-vpcs-check-connectivity-old/run.py
+.devops/tools/ca-generator/cert-reqs/wildcard.ALL-req-template.notused
+.devops/tools/ca-generator/client-certificates/create_and_share
+.devops/tools/ca-generator/client-certificates/openssl.cnf
+.github/workflow/ossf-scorecard.yaml
+ca-chain-cert.pem
+PROMPT.md
+resources/omz-zsh/themes/INFO.md
+STRUCTURE.md
+tls.crt
+tls.key
+to_organize.sh
