@@ -6,3 +6,5 @@ That's why we focus on Bash for our interactions, but when really needed, other 
 If you want to contribute with the code, fork the project and submit your Pull Requests! (Guide Link)
 
 <!-- Security scan triggered at 2026-08-31 18:14:04 -->
+
+<!-- Security scan triggered at 2026-09-04 14:19:14 -->
